@@ -2,6 +2,8 @@
 
 An independent, English-language internet-culture playground with original character art, a filterable gallery, art-detail dialogs, accessibility controls, and real PageSquire browser actions. No host-application content or credentials are used.
 
+**Live demo:** [Open OFFBEAT on Vercel](https://pagesquire-offbeat-demo.vercel.app/). Guided actions work now; live AI chat remains locked.
+
 ## Run locally
 
 From the repository root, using Node.js 24 or later:
@@ -25,6 +27,19 @@ Live AI chat is **locked**. These are explicitly labeled guided actions, not mod
 No environment variables are needed to build or deploy the current demo. Copy [env.example](env.example) to `.env.local` inside this directory if you want to prepare future server-only configuration. The local file is ignored by Git, the source archive, and Vercel CLI uploads. Do not put real secrets in the template or any `NEXT_PUBLIC_` variable.
 
 The listed variables are reserved, not implemented switches. **Adding keys will not unlock AI.** A future live backend must first implement durable atomic conversation/budget storage, server-only provider access, authorization, CSRF/origin checks, quotas, and abuse protection. Use a PostgreSQL-backed store or another atomic shared backend if Redis is unsuitable; an in-memory/file store is not a safe serverless substitute. Keep production secrets in the deployment platform's environment settings, not in frontend code.
+
+### Planned storage: Supabase PostgreSQL
+
+Supabase PostgreSQL is the selected target for this demo's future shared conversation state and usage limits. **The adapter and database schema are not implemented yet.** The deployed static demo has no Redis dependency or existing database to migrate. PageSquire's shared packages remain storage-provider independent.
+
+To prepare:
+
+1. Create a separate, empty Supabase project for PageSquire. A [Free plan](https://supabase.com/pricing) is available with usage limits; review its current limits before choosing a plan.
+2. Keep the database password private. Do not create chat tables, public read policies, or seed data manually; the backend integration must provide reviewed migrations, private storage, atomic locking/updates, quotas, and expiry cleanup.
+3. For the planned server-side PostgreSQL connection on Vercel, copy the **Transaction pooler** connection string from the project's **Connect** dialog into `PAGESQUIRE_DATABASE_URL` in your ignored `.env.local`. Follow the [Supabase serverless connection guide](https://supabase.com/docs/guides/database/connecting-to-postgres); driver settings and migrations will be implemented with the adapter. Copy the actual host rather than guessing it, replace the password placeholder, and URL-encode special characters in credentials.
+4. Never paste the connection string or a secret/service-role API key into chat, GitHub, or a `NEXT_PUBLIC_` variable. Add production credentials through Vercel's environment settings only when the server backend is ready. A direct PostgreSQL connection does not require a Supabase API key; an alternative Data API integration would need its own server-only credentials and authorization.
+
+Until the backend and database tests pass, leave `PAGESQUIRE_STORAGE_DRIVER` unset and keep live AI locked. Creating a Supabase project or filling these placeholders does not activate inference or connect the static website to the database.
 
 ## Vercel
 

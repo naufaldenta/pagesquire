@@ -38,6 +38,34 @@ test('OFFBEAT style filters are unique and each declared category has original a
   }
 });
 
+test('public READMEs link the live demo and distinguish planned Supabase storage from implemented features', async () => {
+  for (const file of ['README.md', 'examples/brutalist-demo/README.md']) {
+    const contents = await readFile(
+      new URL(`../../${file}`, import.meta.url),
+      'utf8',
+    );
+    assert.match(
+      contents,
+      /\]\(https:\/\/pagesquire-offbeat-demo\.vercel\.app\/\)/,
+    );
+    assert.match(contents, /live AI chat (?:is|remains) locked/i);
+    assert.match(contents, /Supabase PostgreSQL/);
+    assert.match(contents, /not implemented yet/);
+  }
+  const guide = await readFile(
+    new URL('../../examples/brutalist-demo/README.md', import.meta.url),
+    'utf8',
+  );
+  assert.match(guide, /Transaction pooler/);
+  assert.match(guide, /Never paste the connection string/);
+  const template = await readFile(
+    new URL('../../examples/brutalist-demo/env.example', import.meta.url),
+    'utf8',
+  );
+  assert.match(template, /^PAGESQUIRE_DATABASE_URL=$/m);
+  assert.match(template, /^PAGESQUIRE_STORAGE_DRIVER=$/m);
+});
+
 test('public deployment serves only a static export and has no API or environment activation switch', async () => {
   const config = JSON.parse(
     await readFile(new URL('../../vercel.json', import.meta.url), 'utf8'),
