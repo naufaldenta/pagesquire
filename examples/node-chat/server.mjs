@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { Readable } from 'node:stream';
 import { randomBytes } from 'node:crypto';
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { mkdtemp, readFile, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -13,7 +13,9 @@ import { DemoProvider } from './provider.mjs';
 
 const origin = 'http://127.0.0.1:4175';
 const sessions = new Map(); // Local fixture only: production must use the host's real session/auth service.
-const directory = await mkdtemp(join(tmpdir(), 'pagesquire-node-demo-'));
+const directory = await realpath(
+  await mkdtemp(join(await realpath(tmpdir()), 'pagesquire-node-demo-')),
+);
 const manifest = JSON.parse(
   await readFile('tests/fixtures/dist/manifest.json', 'utf8'),
 );
