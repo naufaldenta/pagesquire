@@ -10,3 +10,7 @@ composer.lock
 packages/php/resources/schemas/
 .next/
 .cache/
+.vercel/
+out/
+examples/brutalist-demo/public/pagesquire-license.txt
+examples/brutalist-demo/public/fonts/OFL.txt

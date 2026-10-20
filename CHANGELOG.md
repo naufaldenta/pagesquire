@@ -6,6 +6,8 @@ All canonical release notes are English. PageSquire uses SemVer for packages and
 
 ### Added
 
+- OFFBEAT, an independent brutalist art/culture landing demo with original characters, a filterable gallery, accessible dialogs, verified guided browser actions and six expression previews. Static Vercel deployment keeps live AI locked; no database or provider credentials are required.
+
 - Independent capability registry, versioned schemas and CSP-safe compiled validators.
 - Browser observation, verified actions, ambiguity/staleness checks, cancellation and navigation continuation.
 - Conversation widget with six emotion callbacks, including thinking during loading.

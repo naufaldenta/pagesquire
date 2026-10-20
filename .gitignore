@@ -13,6 +13,9 @@ test-results/
 .DS_Store
 .next/
 .cache/
+.vercel/
+out/
+examples/brutalist-demo/public/pagesquire-license.txt
 /task_plan.md
 /progress.md
 /findings.md

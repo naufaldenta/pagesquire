@@ -73,6 +73,8 @@ test('CI isolates browser artifacts and enumerates every verification component'
     'release:check',
     'test:release',
     'test:next-build',
+    'demo:build',
+    'test:demo',
     'format:check',
     'release:prepare',
   ])
@@ -259,6 +261,8 @@ test('distribution paths exclude traversal, links-to-secrets names, dependencies
     'foo/key.pem',
     'node_modules/x/index.js',
     'packages/cli/dist/bin.js',
+    'examples/brutalist-demo/out/index.html',
+    '.vercel/project.json',
   ])
     assert.equal(distributionPathAllowed(name), false, name);
   assert.equal(distributionPathAllowed('packages/core/src/index.ts'), true);
@@ -275,6 +279,10 @@ test('source inventory excludes local planning logs/cache and includes release/c
     '.github/PULL_REQUEST_TEMPLATE.md',
     'scripts/release.mjs',
     'docs/releasing.md',
+    'vercel.json',
+    '.vercelignore',
+    'playwright.offbeat.config.mjs',
+    'examples/brutalist-demo/env.example',
   ])
     assert.ok(files.has(name), name);
   for (const name of ['task_plan.md', 'findings.md', 'progress.md'])

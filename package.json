@@ -27,6 +27,10 @@
     "test:wordpress": "playwright test --config playwright.wordpress.config.mjs",
     "test": "npm run build && npm run typecheck && npm run test:unit && npm run test:php && npm run test:browser && npm run test:wordpress && npm run test:package && npm run release:check && npm run test:release",
     "demo": "node scripts/serve-demo.mjs",
+    "demo:build": "node scripts/build-offbeat.mjs",
+    "demo:dev": "node scripts/build-offbeat.mjs --prepare-only && next dev examples/brutalist-demo --webpack --hostname 127.0.0.1 --port 4180",
+    "demo:serve": "node scripts/serve-offbeat.mjs",
+    "test:demo": "playwright test --config playwright.offbeat.config.mjs",
     "demo:chat": "php -S 127.0.0.1:4174 examples/php-chat/router.php",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

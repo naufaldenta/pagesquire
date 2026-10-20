@@ -33,6 +33,8 @@ The development repository is [naufaldenta/pagesquire](https://github.com/naufal
 
 ## Run the foundation demo
 
+For the independent, public-facing art playground, see [OFFBEAT](examples/brutalist-demo/README.md). Run `npm run demo:build` then `npm run demo:serve`. Its guided PageSquire actions work without keys; live AI chat stays locked. Root `vercel.json` deploys only this static demo, not the local conversation servers.
+
 Requirements: Node.js 24 or later, npm, PHP 8.3, and Composer. PHP dependencies and browser binaries are required for the full test suite. The tested local host is Windows.
 
 ```sh
