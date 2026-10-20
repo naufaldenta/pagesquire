@@ -66,6 +66,7 @@ await writeFile(
   `<?php
 define('DB_NAME','pagesquire_fixture');define('DB_USER','fixture');define('DB_PASSWORD','fixture');define('DB_HOST','localhost');define('DB_CHARSET','utf8mb4');define('DB_COLLATE','');
 define('DB_DIR',${normalized(path.join(fixture, 'database'))});define('DB_FILE','pagesquire.sqlite');
+define('WP_HOME','http://127.0.0.1:4177');define('WP_SITEURL','http://127.0.0.1:4177');
 define('AUTH_KEY','pagesquire-local-fixture-auth');define('SECURE_AUTH_KEY','pagesquire-local-fixture-secure');define('LOGGED_IN_KEY','pagesquire-local-fixture-login');define('NONCE_KEY','pagesquire-local-fixture-nonce');define('AUTH_SALT','pagesquire-local-fixture-auth-salt');define('SECURE_AUTH_SALT','pagesquire-local-fixture-secure-salt');define('LOGGED_IN_SALT','pagesquire-local-fixture-login-salt');define('NONCE_SALT','pagesquire-local-fixture-nonce-salt');
 define('WP_DEBUG',true);define('WP_DEBUG_DISPLAY',false);define('WP_DEBUG_LOG',true);define('DISABLE_WP_CRON',true);define('AUTOMATIC_UPDATER_DISABLED',true);define('PAGESQUIRE_FIXTURE',true);define('PAGESQUIRE_API_KEY','pagesquire-fixture-server-key');
 $table_prefix='wp_';if(!defined('ABSPATH'))define('ABSPATH',__DIR__.'/');require_once ABSPATH.'wp-settings.php';
