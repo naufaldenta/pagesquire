@@ -10,14 +10,16 @@ The discovered service provider registers no endpoint until `pagesquire.enabled`
 php artisan vendor:publish --tag=pagesquire-config --no-interaction
 ```
 
-Configure an HTTPS **Chat Completions endpoint**, provider key and model on the server:
+Select a server-side provider preset, its key and an account-owned model ID:
 
 ```dotenv
 PAGESQUIRE_ENABLED=true
-PAGESQUIRE_PROVIDER_ENDPOINT=https://your-provider.example/v1/chat/completions
-PAGESQUIRE_PROVIDER_KEY=your-server-only-key
-PAGESQUIRE_PROVIDER_MODEL=your-provider-model
+PAGESQUIRE_PROVIDER=groq
+PAGESQUIRE_API_KEY=your-server-only-key
+PAGESQUIRE_MODEL=your-provider-model
 ```
+
+Custom/regional gateways also require the full HTTPS `PAGESQUIRE_PROVIDER_URL`. Existing `PAGESQUIRE_PROVIDER_ENDPOINT/KEY/MODEL` aliases remain available. Merge new provider-name/dialect entries into previously published configuration and refresh the host config cache on deployment. See the [provider matrix and Laravel tutorial](https://github.com/naufaldenta/pagesquire/blob/main/docs/providers.md#laravel--reactinertia).
 
 These values must never become Inertia shared props, Vite variables, widget options, scan artifacts or public exports. Requests to the configured external provider transmit approved capability descriptions, the visitor's conversation and the filtered page snapshot. Explain this data transfer and provider charges to visitors before activation. Inference is not free merely because PageSquire is open source.
 
@@ -57,7 +59,7 @@ The session lock outlasts the configured provider timeout. Each inference attemp
 
 Configuration bounds request size, conversation lifetime, action steps, inference attempts and output tokens. Rate limits apply to both session and IP. These controls are not dollar-denominated billing guarantees; use the provider's own account spending controls and host-specific abuse prevention as well. JSON is bounded in application memory; configure matching request/response limits at the web server and reverse proxy for hostile traffic.
 
-The initial provider uses JSON-object Chat Completions responses. The selected provider/model must support that format and the configured output-token parameter. HTTP timeouts are explicit; redirects, insecure TLS and automatic retries are not enabled. Header and progress callbacks abort oversized responses; the transport requests identity encoding and rejects compressed responses to keep decompression from bypassing the byte limit. Aborting a browser request does not guarantee cancellation of an already-running provider request.
+The provider supports explicit JSON-object or prompt-only JSON mode and either output-token field, without guessing from model names. The response must still pass strict validation; a preset is not live certification of every model. HTTP timeouts are explicit; redirects, insecure TLS and automatic retries are not enabled. Header and progress callbacks abort oversized responses; the transport requests identity encoding and rejects compressed responses to keep decompression from bypassing the byte limit. Aborting a browser request does not guarantee cancellation of an already-running provider request.
 
 Bind your own `PageSquire\Server\Provider` implementation in the host container to support another API. There is no required model vendor, remote PageSquire service, telemetry or live-provider call in the tests.
 

@@ -8,6 +8,8 @@ The package is unpublished. Build this checkout first (`npm ci`, `npm run build`
 
 ## Endpoint
 
+Configure server-only `PAGESQUIRE_PROVIDER`, `PAGESQUIRE_API_KEY` and `PAGESQUIRE_MODEL`; add `PAGESQUIRE_PROVIDER_URL` for custom/regional gateways. PHP does not load dotenv automatically. See the [provider matrix and PHP tutorial](providers.md) for presets, compatibility overrides and legacy aliases.
+
 The following is a host-owned endpoint sketch. `hostAuthorizeAssistant`, `hostPublicOrigin` and `hostPrivateAssistantDirectory` are your reviewed application integrations, not PageSquire functions:
 
 ```php
@@ -27,12 +29,7 @@ session_write_close();
 
 $validator = new ProtocolValidator;
 $manifest = json_decode(file_get_contents(__DIR__.'/../pagesquire/capabilities.json'), true, 64, JSON_THROW_ON_ERROR);
-$provider = new OpenAiCompatibleProvider(
-    $validator,
-    getenv('ASSISTANT_PROVIDER_URL'),
-    getenv('ASSISTANT_PROVIDER_KEY'),
-    getenv('ASSISTANT_MODEL'),
-);
+$provider = OpenAiCompatibleProvider::fromEnvironment($validator, getenv());
 $endpoint = new ChatEndpoint(
     new ConversationEngine($provider, $validator, $manifest),
     $validator,

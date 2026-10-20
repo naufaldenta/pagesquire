@@ -14,7 +14,7 @@ Create a host helper, for example `createSiteRuntime(document, navigation)`, ret
 
 ## 3. Configure the server
 
-Set `PAGESQUIRE_ENABLED=true`, server-only `PAGESQUIRE_PROVIDER_ENDPOINT` (the full HTTPS chat-completions URL), `PAGESQUIRE_PROVIDER_MODEL`, and `PAGESQUIRE_PROVIDER_KEY`. The transport requires JSON-object response support and the `max_tokens` field. Provider dialects differ; use a custom `Provider` binding if needed. No default model or paid endpoint is selected.
+Set `PAGESQUIRE_ENABLED=true` and server-only `PAGESQUIRE_PROVIDER`, `PAGESQUIRE_MODEL`, and `PAGESQUIRE_API_KEY`. Hosted presets choose the endpoint; custom/regional gateways also need the full HTTPS `PAGESQUIRE_PROVIDER_URL`. Legacy `PAGESQUIRE_PROVIDER_ENDPOINT`, `PAGESQUIRE_PROVIDER_MODEL`, and `PAGESQUIRE_PROVIDER_KEY` remain accepted. Review or merge the new published config entries, then refresh the host's config cache when changing production settings. See [provider presets and the Laravel tutorial](providers.md) for JSON/prompt mode, token-field and model compatibility controls. No model is hardcoded; a genuinely different API protocol still needs a custom `Provider` binding.
 
 Publish `pagesquire-config`, set a trusted manifest, use server-side sessions and a durable cache with atomic locks, then define `pagesquire.use` and `pagesquire.capability` gates. Both deny by default. Permissions are reevaluated for every request. Never define a blanket allow gate for an unreviewed manifest. Test auth/guest transitions and production proxy/rate-limit settings.
 

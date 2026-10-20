@@ -6,6 +6,8 @@ An independent English art/culture playground, not a copy of any host applicatio
 
 ## Architecture
 
+Choose a server-only provider preset with `PAGESQUIRE_PROVIDER`, plus `PAGESQUIRE_API_KEY` and `PAGESQUIRE_MODEL`. Most hosted presets need no URL; Qwen, 9Router and Custom require `PAGESQUIRE_PROVIDER_URL`. See the [full support matrix and setup tutorials](../../docs/providers.md). Existing URL-only configuration remains compatible and does not change the owner's model, key or budgets.
+
 The static Next.js frontend and a native Vercel Node function deploy to **one Vercel project**. Exact rewrites route `/api/session` and `/api/chat` to `api/assistant.mjs`. Supabase PostgreSQL supplies external durable storage; Redis, PHP and Composer are not needed for this deployment.
 
 The API reuses PageSquire's Node conversation engine and OpenAI-compatible provider. It authorizes only this demo's thirteen reversible capabilities, each with local postcondition checks:
@@ -49,7 +51,8 @@ Copy [env.example](env.example) to `.env.local` in this directory and fill it pr
 
 | Variable                            | Value                                                                                                                    |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `PAGESQUIRE_PROVIDER_URL`           | Full HTTPS OpenAI-compatible chat-completions URL, including `/v1/chat/completions` when required by your provider.      |
+| `PAGESQUIRE_PROVIDER`               | Preset ID, for example `sumopod`, `groq`, `openai` or `custom`. Unset keeps legacy explicit-URL configuration.           |
+| `PAGESQUIRE_PROVIDER_URL`           | Optional full HTTPS endpoint override; required for `qwen`, `9router` and `custom`. Never a browser-supplied value.      |
 | `PAGESQUIRE_MODEL`                  | Your provider's exact model ID. No model is hardcoded; change this env and redeploy to switch.                           |
 | `PAGESQUIRE_API_KEY`                | Server-only provider API key.                                                                                            |
 | `PAGESQUIRE_SESSION_SECRET`         | Cryptographically random 32 bytes encoded as 64 hex characters.                                                          |

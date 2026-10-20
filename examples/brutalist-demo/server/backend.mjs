@@ -26,6 +26,7 @@ export function createBackend({ config, store, provider, now }) {
   const baseProvider =
     provider ??
     new OpenAiCompatibleProvider({
+      ...config.providerConfig,
       endpoint: config.providerUrl,
       model: config.model,
       apiKey: config.apiKey,

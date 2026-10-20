@@ -16,6 +16,8 @@ PageSquire is an experimental, disabled-by-default assistant. Configure an exter
 
 == External services ==
 
+The administrator can select Sumopod, OpenAI, OpenRouter, Groq, DeepSeek, Qwen/Alibaba Cloud, GLM via Z.AI or Zhipu, 9Router, Gemini, Mistral, Together AI, Fireworks AI, Cerebras, xAI or a Custom OpenAI-compatible HTTPS endpoint. Presets are connection profiles, not accounts, free credits or live certification of every model. API key and exact model ID are required; custom/regional gateways also require a full endpoint. Review https://github.com/naufaldenta/pagesquire/blob/main/docs/providers.md for each service's official documentation and setup instructions before consenting to external processing.
+
 When enabled, visitor messages, filtered visible page observations and selected public metadata are sent to the provider endpoint chosen by the site administrator. No external model service is selected or contacted on activation, draft saving, inspection or context export. The administrator must supply the provider API key, review that provider's terms/privacy policy, configure spending controls and obtain appropriate visitor consent. Review public metadata before sharing AI integration exports with any coding service. PageSquire does not ship analytics or a hosted inference service.
 
 == Installation ==

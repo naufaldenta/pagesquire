@@ -1,6 +1,15 @@
 import type { CapabilityDefinition } from '@pagesquire/protocol';
 import { fail, encode, abortable } from './engine.js';
 import type { Provider, ProviderMessage } from './engine.js';
+import {
+  completionRequest,
+  decodeCompletion,
+  resolveProviderConfiguration,
+} from './providers.js';
+import type {
+  ProviderConfiguration,
+  ResolvedProviderConfiguration,
+} from './providers.js';
 
 export async function readBounded(
   response: Response | Request,
@@ -32,17 +41,16 @@ export async function readBounded(
     void reader.cancel().catch(() => {});
   }
 }
-export interface OpenAiCompatibleOptions {
-  endpoint: string;
-  apiKey: string;
-  model: string;
+export interface OpenAiCompatibleOptions extends ProviderConfiguration {
   timeoutMs?: number;
   fetch?: typeof fetch;
 }
 export class OpenAiCompatibleProvider implements Provider {
   private readonly endpoint: URL;
+  private readonly config: ResolvedProviderConfiguration;
   constructor(private readonly options: OpenAiCompatibleOptions) {
-    this.endpoint = new URL(options.endpoint);
+    this.config = resolveProviderConfiguration(options);
+    this.endpoint = new URL(this.config.endpoint);
     if (
       this.endpoint.protocol !== 'https:' ||
       this.endpoint.username ||
@@ -80,12 +88,7 @@ export class OpenAiCompatibleProvider implements Provider {
           Authorization: `Bearer ${this.options.apiKey}`,
           'Accept-Encoding': 'identity',
         },
-        body: encode({
-          model: this.options.model,
-          messages,
-          max_tokens: maxOutputTokens,
-          response_format: { type: 'json_object' },
-        }),
+        body: encode(completionRequest(this.config, messages, maxOutputTokens)),
       }),
       combined,
     );
@@ -100,14 +103,16 @@ export class OpenAiCompatibleProvider implements Provider {
         502,
       );
     }
-    const data = JSON.parse(await readBounded(response, 262144, combined));
-    const content: unknown = data?.choices?.[0]?.message?.content;
-    if (typeof content !== 'string' || Buffer.byteLength(content) > 65536)
+    try {
+      return decodeCompletion(
+        JSON.parse(await readBounded(response, 262144, combined)),
+      );
+    } catch {
       fail(
         'INVALID_PROVIDER_RESPONSE',
         'The provider returned an invalid assistant response.',
         502,
       );
-    return JSON.parse(content);
+    }
   }
 }

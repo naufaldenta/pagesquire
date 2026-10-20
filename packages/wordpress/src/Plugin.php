@@ -9,6 +9,7 @@ use PageSquireWPVendor\PageSquire\Server\ConversationEngine;
 use PageSquireWPVendor\PageSquire\Server\Http\ChatEndpoint;
 use PageSquireWPVendor\PageSquire\Server\Http\OpenAiCompatibleProvider;
 use PageSquireWPVendor\PageSquire\Server\ProtocolValidator;
+use PageSquireWPVendor\PageSquire\Server\ProviderConfiguration;
 
 final class Plugin
 {
@@ -163,7 +164,7 @@ final class Plugin
         $quota = new Quota($store);
         $quota->request($this->ipHash());
         $validator = new ProtocolValidator;
-        $provider = new SiteProvider(new OpenAiCompatibleProvider($validator, $settings['endpoint'], Settings::key(), $settings['model'], new WordPressHttpClient), $quota, $settings);
+        $provider = new SiteProvider(new OpenAiCompatibleProvider($validator, $settings['endpoint'], Settings::key(), $settings['model'], new WordPressHttpClient, options: Settings::providerOptions($settings)), $quota, $settings);
         $endpoint = new ChatEndpoint(new ConversationEngine($provider, $validator, Mapping::manifest($settings['mapping'])), $validator, $store, Settings::origin());
         $result = $endpoint->handle($request->get_method(), ['origin' => $request->get_header('origin'), 'content-type' => $request->get_header('content-type'), 'x-csrf-token' => $request->get_header('x-csrf-token')], $request->get_body(), $session);
 
@@ -189,7 +190,7 @@ final class Plugin
             }
         }
 
-        return ['settings' => Settings::publicSettings(), 'choices' => array_values($choices), 'gaps' => Context::gaps($settings), 'observations' => array_values(get_option('pagesquire_observations', []))];
+        return ['settings' => Settings::publicSettings(), 'providers' => ProviderConfiguration::presets(), 'choices' => array_values($choices), 'gaps' => Context::gaps($settings), 'observations' => array_values(get_option('pagesquire_observations', []))];
     }
 
     public function dashboard(): void

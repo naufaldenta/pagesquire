@@ -6,6 +6,9 @@ All canonical release notes are English. PageSquire uses SemVer for packages and
 
 ### Added
 
+- Sixteen server-side provider profiles (fifteen named service/gateway profiles plus Custom), shared Node/PHP configuration, canonical environment settings, Laravel wiring and an administrator-only WordPress provider selector. English support matrix and per-integration tutorials distinguish synthetic transport support from live-model certification.
+- Explicit JSON/prompt, output-token field, instruction-role and supported thinking switches; bounded whole-fence/text-part normalization and refusal/truncation rejection without automatic provider fallback or paid retries. Existing explicit-endpoint configuration remains compatible.
+
 - OFFBEAT now offers thirteen verified tools, including independent heading highlighting/body color, reading fonts/spacing, gallery search/sort, edge-aware scrolling and resets. Separate-message, confirmation, recovery and expired-auth browser regressions extend the original single-message smoke coverage.
 - Legacy Node/PHP history normalization and safe typed HTTP failure feedback, with conversation continuity after known provider-format failures and no automatic paid retries or quota resets.
 

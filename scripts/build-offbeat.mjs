@@ -28,6 +28,10 @@ run('node_modules/typescript/bin/tsc', [
   'packages/server',
 ]);
 const { validateManifest } = await import('../packages/protocol/dist/index.js');
+await copyFile(
+  path.join(root, 'packages/php/resources/providers.json'),
+  path.join(root, 'packages/server/dist/providers.json'),
+);
 const validation = validateManifest(manifest);
 if (!validation.valid) throw Error(validation.errors.join('; '));
 const schemas = {};
