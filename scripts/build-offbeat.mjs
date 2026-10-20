@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compileValidators } from './compile-validators.mjs';
 import { manifest } from '../examples/brutalist-demo/capabilities.mjs';
+import { buildProviderCatalog } from './build-provider-catalog.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 function run(script, args) {
@@ -28,10 +29,7 @@ run('node_modules/typescript/bin/tsc', [
   'packages/server',
 ]);
 const { validateManifest } = await import('../packages/protocol/dist/index.js');
-await copyFile(
-  path.join(root, 'packages/php/resources/providers.json'),
-  path.join(root, 'packages/server/dist/providers.json'),
-);
+await buildProviderCatalog();
 const validation = validateManifest(manifest);
 if (!validation.valid) throw Error(validation.errors.join('; '));
 const schemas = {};

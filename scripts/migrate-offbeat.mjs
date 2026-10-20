@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { parseEnv } from 'node:util';
-import { createPool } from '../examples/brutalist-demo/server/config.mjs';
+import { createPool } from '../examples/brutalist-demo/server/database.mjs';
 
 let local = {};
 try {

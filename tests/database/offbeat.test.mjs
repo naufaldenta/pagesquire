@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { createHash, randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import pg from 'pg';
-import { createPool } from '../../examples/brutalist-demo/server/config.mjs';
+import { createPool } from '../../examples/brutalist-demo/server/database.mjs';
 import { PostgresConversationStore } from '../../examples/brutalist-demo/server/store.mjs';
 
 test(
