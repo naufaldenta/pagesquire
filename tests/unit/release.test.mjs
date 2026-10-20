@@ -11,10 +11,17 @@ import {
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { gzipSync } from 'node:zlib';
 import { unzipSync } from 'fflate';
 import browserConfig from '../../playwright.config.mjs';
 import wordpressConfig from '../../playwright.wordpress.config.mjs';
 import { lockedComposerRepository } from '../fixtures/offline-composer.mjs';
+import {
+  lockedNpmHost,
+  packedNpmManifest,
+  writeLockedNpmConsumer,
+} from '../fixtures/offline-npm.mjs';
 import {
   collectDistributionSources,
   distributionPathAllowed,
@@ -71,6 +78,97 @@ test('CI isolates browser artifacts and enumerates every verification component'
   ])
     assert.ok(workflow.includes(`run: npm run ${script}\n`), script);
   assert.match(workflow, /timeout-minutes: 30/);
+});
+
+test('offline npm host locks third-party dependencies without substituting PageSquire packages', async () => {
+  const { manifest, lock } = await lockedNpmHost(projectRoot);
+  const original = JSON.parse(
+    await readFile(path.join(projectRoot, 'package-lock.json'), 'utf8'),
+  );
+  assert.equal(manifest.dependencies.react, '19.3.1');
+  assert.equal(manifest.dependencies['@types/react'], '19.3.0');
+  assert.equal(manifest.dependencies.esbuild, '0.28.2');
+  assert.ok(
+    !Object.keys(manifest.dependencies).some((name) =>
+      name.startsWith('@pagesquire/'),
+    ),
+  );
+  assert.equal(lock.lockfileVersion, 3);
+  for (const [location, entry] of Object.entries(lock.packages)) {
+    if (!location) continue;
+    assert.ok(location.startsWith('node_modules/'));
+    assert.ok(!location.includes('@pagesquire/'));
+    assert.ok(!entry.link);
+    assert.equal(entry.version, original.packages[location].version);
+    assert.equal(entry.resolved, original.packages[location].resolved);
+    assert.equal(entry.integrity, original.packages[location].integrity);
+  }
+  for (const name of [
+    '@babel/types',
+    'csstype',
+    '@esbuild/linux-x64',
+    '@esbuild/win32-x64',
+  ])
+    assert.ok(lock.packages[`node_modules/${name}`]);
+  assert.ok(!lock.packages['node_modules/next']);
+});
+
+function npmTarball(manifest, name = 'package/package.json') {
+  const data = Buffer.from(JSON.stringify(manifest));
+  const header = Buffer.alloc(512);
+  header.write(name);
+  header.write(data.length.toString(8).padStart(11, '0'), 124);
+  header[156] = 48;
+  return gzipSync(
+    Buffer.concat([
+      header,
+      data,
+      Buffer.alloc((512 - (data.length % 512)) % 512),
+      Buffer.alloc(1024),
+    ]),
+  );
+}
+
+test('npm consumer lock derives PageSquire metadata and integrity from archive bytes', async (t) => {
+  const directory = await temporary(t);
+  const manifest = {
+    name: '@pagesquire/fixture',
+    version: '0.1.0-alpha.0',
+    license: 'MIT',
+    peerDependencies: { react: '^19.0.0' },
+    bin: { pagesquire: 'dist/bin.js' },
+  };
+  const archive = npmTarball(manifest);
+  assert.deepEqual(packedNpmManifest(archive), manifest);
+  const file = path.join(directory, 'fixture.tgz');
+  await writeFile(file, archive);
+  await writeLockedNpmConsumer(projectRoot, directory, [file]);
+  const lock = JSON.parse(
+    await readFile(path.join(directory, 'package-lock.json'), 'utf8'),
+  );
+  assert.deepEqual(lock.packages['node_modules/@pagesquire/fixture'], {
+    version: manifest.version,
+    resolved: 'file:fixture.tgz',
+    integrity: `sha512-${createHash('sha512').update(archive).digest('base64')}`,
+    peerDependencies: manifest.peerDependencies,
+    bin: manifest.bin,
+    license: manifest.license,
+  });
+  assert.equal(
+    lock.packages[''].dependencies[manifest.name],
+    'file:fixture.tgz',
+  );
+  await assert.rejects(
+    writeLockedNpmConsumer(projectRoot, directory, [file, file]),
+  );
+  await writeFile(file, npmTarball({ ...manifest, name: 'unrelated-package' }));
+  await assert.rejects(writeLockedNpmConsumer(projectRoot, directory, [file]));
+  assert.throws(
+    () => packedNpmManifest(npmTarball(manifest, 'package/other.json')),
+    /missing/,
+  );
+  assert.throws(() => packedNpmManifest(Buffer.from('not gzip')));
+  assert.throws(() => packedNpmManifest(gzipSync(Buffer.alloc(512))));
 });
 
 test('offline Composer consumers resolve only locked third-party metadata, never workspace packages', async () => {

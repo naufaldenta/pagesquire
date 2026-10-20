@@ -15,6 +15,10 @@ import {
 } from '../../scripts/release.mjs';
 import { collectDistributionSources } from '../../scripts/distribution-sources.mjs';
 import { lockedComposerRepository } from '../fixtures/offline-composer.mjs';
+import {
+  offlineNpmEnvironment,
+  writeLockedNpmConsumer,
+} from '../fixtures/offline-npm.mjs';
 
 const execute = promisify(execFile);
 let candidate;
@@ -100,34 +104,29 @@ test(
     const directory = await consumer(t);
     const npmCli = process.env.npm_execpath;
     assert.ok(npmCli, 'Run npm run test:release.');
-    await writeFile(
-      path.join(directory, 'package.json'),
-      JSON.stringify({ private: true, type: 'module' }),
-    );
     const tarballs = npmPackages.map((name) =>
       path.join(
         candidate.output,
         `pagesquire-${name}-${candidate.version}.tgz`,
       ),
     );
+    await writeLockedNpmConsumer(projectRoot, directory, tarballs);
     await execute(
       process.execPath,
       [
         npmCli,
-        'install',
+        'ci',
         '--offline',
         '--ignore-scripts',
         '--no-audit',
         '--no-fund',
-        ...tarballs,
-        'react@19.3.1',
-        '@types/react@19.3.0',
       ],
       {
         cwd: directory,
         windowsHide: true,
         timeout: 200000,
         maxBuffer: 4 * 1024 * 1024,
+        env: offlineNpmEnvironment,
       },
     );
     const probe = `import { PROTOCOL_VERSION, validateManifest } from '@pagesquire/protocol';
