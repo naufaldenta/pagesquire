@@ -4,6 +4,7 @@ permissions:
   contents: read
 jobs:
   test:
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -24,8 +25,24 @@ jobs:
           tools: composer:v2
       - run: composer install --no-interaction --prefer-dist
       - run: npm exec -- playwright install --with-deps chromium
-      - run: npm test
+      - run: npm run build
+      - run: npm run typecheck
+      - run: npm run test:unit
+      - run: npm run test:php
+      - run: npm run test:browser
+      - run: npm run test:wordpress
+      - run: npm run test:package
+      - run: npm run release:check
+      - run: npm run test:release
       - run: npm run test:next-build
       - run: npm run format:check
       - run: npm run build
       - run: npm run release:prepare
+      - name: Preserve synthetic browser failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: browser-failure-${{ matrix.os }}
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7

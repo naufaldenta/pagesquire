@@ -45,12 +45,32 @@ async function temporary(t) {
   return directory;
 }
 
-test('framework and WordPress browser runs use disjoint artifact directories', () => {
+test('CI isolates browser artifacts and enumerates every verification component', async () => {
   const browser = path.resolve(projectRoot, browserConfig.outputDir);
   const wordpress = path.resolve(projectRoot, wordpressConfig.outputDir);
   assert.notEqual(browser, wordpress);
   assert.ok(path.relative(browser, wordpress).startsWith('..'));
   assert.ok(path.relative(wordpress, browser).startsWith('..'));
+  const workflow = await readFile(
+    path.join(projectRoot, '.github/workflows/ci.yml'),
+    'utf8',
+  );
+  for (const script of [
+    'build',
+    'typecheck',
+    'test:unit',
+    'test:php',
+    'test:browser',
+    'test:wordpress',
+    'test:package',
+    'release:check',
+    'test:release',
+    'test:next-build',
+    'format:check',
+    'release:prepare',
+  ])
+    assert.ok(workflow.includes(`run: npm run ${script}\n`), script);
+  assert.match(workflow, /timeout-minutes: 30/);
 });
 
 test('offline Composer consumers resolve only locked third-party metadata, never workspace packages', async () => {
