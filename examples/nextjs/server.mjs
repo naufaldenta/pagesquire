@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { mkdtemp } from 'node:fs/promises';
+import { mkdtemp, realpath } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
@@ -13,7 +13,9 @@ import { DemoProvider } from '../node-chat/provider.mjs';
 // Development-only session map and storage lifecycle; not a production authentication service.
 const shared = (globalThis.__pagesquireNextFixture ??= {
   sessions: new Map(),
-  directory: mkdtemp(join(tmpdir(), 'pagesquire-next-demo-')),
+  directory: realpath(tmpdir())
+    .then((parent) => mkdtemp(join(parent, 'pagesquire-next-demo-')))
+    .then((directory) => realpath(directory)),
 });
 const origin = 'http://127.0.0.1:4176';
 const lookup = (request) =>
