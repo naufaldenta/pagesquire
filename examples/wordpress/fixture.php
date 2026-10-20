@@ -61,7 +61,7 @@ add_action('rest_api_init', static function (): void {
         foreach (array_keys($budget['sessions'] ?? []) as $key) {
             delete_option(OptionsStore::name($key));
         }
-        foreach (['pagesquire_settings', 'pagesquire_observations', 'pagesquire_provider_key', 'pagesquire_fixture_calls', 'pagesquire_fixture_mode', OptionsStore::name('site-request-budget'), OptionsStore::name('site-provider-budget')] as $name) {
+        foreach (['pagesquire_settings', 'pagesquire_observations', 'pagesquire_provider_key', 'pagesquire_fixture_calls', 'pagesquire_fixture_mode', 'pagesquire_fixture_quota_time', OptionsStore::name('site-request-budget'), OptionsStore::name('site-provider-budget')] as $name) {
             delete_option($name);
         }
         switch_theme('pagesquire-fixture');
@@ -118,6 +118,13 @@ add_action('rest_api_init', static function (): void {
         }
         if ($body['resetRequestBudget'] ?? false) {
             delete_option(OptionsStore::name('site-request-budget'));
+        }
+        if ($body['freezeQuotaClock'] ?? false) {
+            update_option('pagesquire_fixture_quota_time', ['now' => time()], false);
+        }
+        if ($body['advanceQuotaClock'] ?? false) {
+            $clock = get_option('pagesquire_fixture_quota_time', ['now' => time()]);
+            update_option('pagesquire_fixture_quota_time', ['now' => $clock['now'] + 60], false);
         }
         if ($body['editPage'] ?? false) {
             $id = get_option('pagesquire_fixture_pages')['alpha'];

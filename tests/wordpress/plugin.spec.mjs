@@ -602,6 +602,16 @@ test('public bootstrap requests have an IP/site budget independent of cookies', 
   browser,
 }) => {
   await enable(page);
+  expect(
+    (
+      await call(
+        page,
+        'control',
+        { freezeQuotaClock: true, resetRequestBudget: true },
+        { fixture: true },
+      )
+    ).ok(),
+  ).toBe(true);
   const guest = await browser.newContext();
   let last;
   for (let index = 0; index < 31; index++) {
@@ -610,8 +620,27 @@ test('public bootstrap requests have an IP/site budget independent of cookies', 
       data: {},
       headers: { Origin: origin },
     });
+    if (index < 30) expect(last.status()).toBe(200);
   }
   expect(last.status()).toBe(429);
+  expect(
+    (
+      await call(
+        page,
+        'control',
+        { advanceQuotaClock: true },
+        { fixture: true },
+      )
+    ).ok(),
+  ).toBe(true);
+  expect(
+    (
+      await guest.request.post(endpoint('session'), {
+        data: {},
+        headers: { Origin: origin },
+      })
+    ).status(),
+  ).toBe(200);
   expect(
     (await (await call(page, 'state', undefined, { fixture: true })).json())
       .calls,
