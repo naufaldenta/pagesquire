@@ -10,7 +10,8 @@ let config;
 let ids;
 
 async function login(page, reader = false) {
-  await page.goto(`${origin}/wp-login.php`);
+  await page.goto(`${origin}/wp-login.php`, { timeout: 30000 });
+  await expect(page.locator('#user_login')).toBeVisible();
   await page
     .locator('#user_login')
     .fill(reader ? 'fixture-reader' : 'fixture-admin');
@@ -20,7 +21,7 @@ async function login(page, reader = false) {
       reader ? 'pagesquire-reader-password' : 'pagesquire-fixture-password',
     );
   await page.locator('#wp-submit').click();
-  await page.waitForURL(/wp-admin/);
+  await page.waitForURL(/wp-admin/, { timeout: 30000 });
 }
 
 async function call(page, suffix, body, options = {}) {

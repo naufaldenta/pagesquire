@@ -7,6 +7,7 @@ export default defineConfig({
   workers: 1,
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
+  maxFailures: process.env.CI ? 1 : undefined,
   timeout: 180000,
   expect: { timeout: 15000 },
   reporter: 'list',
