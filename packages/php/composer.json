@@ -1,0 +1,24 @@
+{
+  "name": "pagesquire/server",
+  "description": "Bounded, framework-independent conversation orchestration for PageSquire.",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": "^8.3",
+    "opis/json-schema": "^2.6"
+  },
+  "autoload": {
+    "psr-4": {
+      "PageSquire\\Server\\": "src/"
+    }
+  },
+  "suggest": {
+    "ext-curl": "Required by the native HTTPS provider transport."
+  },
+  "archive": {
+    "exclude": [
+      "/tests",
+      "/vendor"
+    ]
+  }
+}

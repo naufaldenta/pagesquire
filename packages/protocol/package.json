@@ -1,0 +1,22 @@
+{
+  "name": "@pagesquire/protocol",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Versioned PageSquire contracts and CSP-compatible validators.",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./schemas/*": "./dist/schemas/*.json"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

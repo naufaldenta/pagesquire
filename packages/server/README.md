@@ -1,0 +1,19 @@
+# @pagesquire/server
+
+Node.js 24 server-only PageSquire conversations, native HTTPS JSON provider transport, and Web Request/Response integration. Do not import this package into a browser/Client Component. The local alpha is private and unpublished.
+
+Use the same trusted manifest as the browser. `new ConversationEngine({ provider, manifest })` enforces server-owned history, authorization, pending action/result binding, expiry, replay and budgets. `handle(request, state, allowedIds, checkpoint, signal)` requires JSON data and a trusted server-owned state. Await each durable checkpoint, including attempts before provider work. Browser results are untrusted telemetry, not permission for business mutations.
+
+Use the CLI's portable self-contained synchronous parameter schemas. References and async schemas are rejected; unsupported formats fail strict compilation rather than being silently ignored. Prefer explicit patterns/enums/ranges for portable validation. Never load a model-provided schema.
+
+`OpenAiCompatibleProvider({ endpoint, apiKey, model, timeoutMs })` accepts a full server-owned HTTPS chat-completions URL. It sends structured JSON output requests, rejects redirects/compression/oversized responses, has bounded waiting and performs no retries. Secrets stay on the server. The optional injected fetch implementation is a trusted transport/testing boundary.
+
+`createChatHandler({ engine, store, origin, authorize })` supports Node Web Request hosts and Next.js **nodejs** Route Handlers. It requires POST JSON, the exact configured public Origin, a matching session-bound CSRF token, and explicit host authorization. It never derives the public origin from an internal/proxy Request URL. The host must establish a secure, HttpOnly, SameSite session; the library does not invent authentication. Default-deny `authorize` returns null or a trusted `{ key, principal, csrfToken, capabilityIds }`. Include an authorization revision in principal when appropriate. Never derive these fields from the submitted JSON.
+
+Defaults: 20 valid requests/session/minute, 30-second endpoint wait, 8 action steps, 12 provider attempts, 1,000 output tokens/attempt and fixed 15-minute conversation expiry. Add host-wide/principal/IP quotas and edge body/connection limits before public deployment. Requests rejected before authenticated storage do not consume the session bucket. These are not currency or cross-session spending limits.
+
+`ConversationStore.transaction(key, operation)` must serialize all operations for that trusted key and provide atomic, durable `load/save`. Every save must complete before resolving; never defer writes until a successful response. `FileConversationStore(existingPrivateDirectory)` is for one host with a persistent local filesystem, outside the web root and restricted to the service account (use Windows ACLs where Unix modes do not apply). It uses an exclusive lock directory and flushed temporary-file/rename checkpoints. Concurrent requests fail closed with 409. A killed process can leave a lock directory: verify the owner is stopped before manual recovery. Do not automatically break active/stale locks. Operators must expire/delete inactive state and locks under a reviewed retention policy. Power-loss durability and network-filesystem behavior are not certified.
+
+For multi-instance, serverless or ephemeral hosts, inject a shared durable transactional store with real distributed serialization; the file store is not suitable. A custom host adapter must bound its own I/O and retain its lock until pending writes have settled. One conversation slot per session; identity changes invalidate state but retain the rate bucket.
+
+See [Node/Next.js integration](../../docs/node-next.md), [standalone PHP](../../docs/standalone-php.md) and the [security scope](../../SECURITY.md). Shared fixtures verify PHP/Node semantics; deterministic tests are not live-model certification.

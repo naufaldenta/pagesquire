@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PageSquire browser foundation</title>
+    <link rel="stylesheet" href="/demo.css" />
+    <link rel="stylesheet" href="/dist/widget.css" />
+    <script type="module" src="/dist/demo.js"></script>
+  </head>
+  <body>
+    <main>
+      <h1>PageSquire browser foundation</h1>
+      <p id="body-copy">
+        A small, framework-independent example of registered and verified
+        website actions.
+      </p>
+      <p id="destination" hidden>The destination document has loaded.</p>
+      <h2>Example website controls</h2>
+      <p>
+        <a href="/next.html">Read the next page</a> ·
+        <a href="https://example.net">External reference</a>
+      </p>
+      <button id="allowed-button" type="button">Count an interaction</button>
+      <output id="click-count">0</output>
+      <label for="search">Search this example</label>
+      <input id="search" type="text" />
+      <output id="input-events">0</output>
+      <button id="unregistered-button" type="button">
+        Unregistered action
+      </button>
+      <button type="button" disabled>Disabled action</button>
+      <button type="button" class="ambiguous">Repeated label</button>
+      <button type="button" class="ambiguous">Repeated label</button>
+      <section id="accessibility-panel" hidden>
+        <h2>Accessibility controls</h2>
+        <label for="heading-color">Heading color</label>
+        <input type="color" id="heading-color" value="#1e293b" />
+        <label for="font-weight">Font weight</label>
+        <input
+          type="range"
+          id="font-weight"
+          min="100"
+          max="900"
+          step="100"
+          value="400"
+        />
+      </section>
+      <section data-pagesquire-private>
+        <p>private-section-secret</p>
+        <button type="button">Private control</button>
+      </section>
+      <div hidden>hidden-text-secret</div>
+      <label for="password">Password</label
+      ><input id="password" type="password" value="password-secret" />
+      <label for="notes">Notes</label
+      ><textarea id="notes">textarea-secret</textarea>
+      <div id="inertia-content"></div>
+    </main>
+    <section data-pagesquire-root aria-label="PageSquire demonstration">
+      <h2>Try the registered actions</h2>
+      <p>
+        This is an engine demonstration, not a live AI chat. No API key or
+        external service is used.
+      </p>
+      <button type="button" id="try-heading">Make headings red</button>
+      <button type="button" id="try-links">Highlight links</button>
+      <button type="button" id="try-font">Use bold text</button>
+      <button type="button" id="try-navigation">Navigate and resume</button>
+      <button type="button" id="cancel">Cancel current action</button>
+      <p id="activity" role="status">idle</p>
+      <pre id="result" aria-live="polite">Ready.</pre>
+    </section>
+    <section
+      data-pagesquire-root
+      aria-label="Server conversation demonstration"
+    >
+      <p>
+        The optional PHP chat demo uses a deterministic test provider, not live
+        AI. Run <code>npm run demo:chat</code> to try it.
+      </p>
+      <div id="chat-widget"></div>
+    </section>
+  </body>
+</html>

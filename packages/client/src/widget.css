@@ -1,0 +1,108 @@
+.pagesquire-widget {
+  --ps-ink: #163438;
+  --ps-accent: #006a70;
+  --ps-muted: #52666a;
+  --ps-paper: #ffffff;
+  --ps-line: #c5d9db;
+  box-sizing: border-box;
+  width: min(100%, 26rem);
+  color: var(--ps-ink);
+  background: var(--ps-paper);
+  border: 1px solid var(--ps-line);
+  border-top: 4px solid var(--ps-accent);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  font:
+    400 1rem/1.5 'Segoe UI',
+    sans-serif;
+}
+.pagesquire-widget h2 {
+  margin: 0;
+  font:
+    600 1.5rem/1.25 Georgia,
+    serif;
+}
+.pagesquire-widget p {
+  margin: 0.5rem 0;
+}
+.pagesquire-widget .pagesquire-status {
+  color: var(--ps-muted);
+  font-size: 0.875rem;
+}
+.pagesquire-widget .pagesquire-messages {
+  max-height: 18rem;
+  overflow: auto;
+  margin-block: 1rem;
+  overflow-wrap: anywhere;
+}
+.pagesquire-widget .pagesquire-message {
+  white-space: pre-wrap;
+  padding: 0.65rem 0.8rem;
+  border-radius: 0.5rem;
+  background: #f1f7f7;
+}
+.pagesquire-widget .pagesquire-user {
+  border-inline-start: 3px solid var(--ps-accent);
+  background: #e5f2f3;
+}
+.pagesquire-widget .pagesquire-action {
+  padding-block: 0.25rem;
+  font:
+    0.8rem/1.6 Consolas,
+    monospace;
+  background: transparent;
+  color: var(--ps-muted);
+}
+.pagesquire-widget label {
+  display: block;
+  font-weight: 600;
+}
+.pagesquire-widget textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0.5rem 0;
+  padding: 0.7rem;
+  border: 1px solid var(--ps-line);
+  border-radius: 0.4rem;
+  font: inherit;
+  color: inherit;
+  background: var(--ps-paper);
+  resize: vertical;
+}
+.pagesquire-widget .pagesquire-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.pagesquire-widget button {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  border: 1px solid var(--ps-line);
+  border-radius: 0.4rem;
+  cursor: pointer;
+  color: var(--ps-ink);
+  background: var(--ps-paper);
+}
+.pagesquire-widget button[type='submit'] {
+  background: var(--ps-accent);
+  border-color: var(--ps-accent);
+  color: #fff;
+}
+.pagesquire-widget :focus-visible {
+  outline: 3px solid var(--ps-accent);
+  outline-offset: 3px;
+}
+.pagesquire-widget :disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.pagesquire-widget[data-emotion='thinking'] {
+  border-top-style: dashed;
+}
+@media (max-width: 420px) {
+  .pagesquire-widget {
+    padding: 1rem;
+  }
+}

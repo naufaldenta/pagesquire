@@ -1,0 +1,4 @@
+interface:
+  display_name: 'PageSquire setup'
+  short_description: "Map and verify this site's PageSquire capabilities"
+  default_prompt: 'Use $assistant-setup to integrate and verify PageSquire for this website.'

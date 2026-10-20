@@ -1,0 +1,49 @@
+{
+  "name": "pagesquire-workspace",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc -b packages/protocol && node scripts/build-protocol.mjs && tsc -b packages/core packages/client packages/react packages/cli packages/server && node scripts/build-adapters.mjs && node scripts/build-cli.mjs && node scripts/build-demo.mjs && tsc -p examples/plain-html && npm run build:wordpress && node scripts/release.mjs stamp",
+    "typecheck": "tsc -b packages/protocol packages/core packages/client packages/react packages/cli packages/server --pretty false && tsc -p examples/plain-html && tsc -p tests/typecheck",
+    "pagesquire": "node packages/cli/dist/bin.js",
+    "test:unit": "node --test --test-reporter=spec tests/unit/*.test.mjs",
+    "test:browser": "playwright test",
+    "test:package": "node --test --test-reporter=spec tests/package/*.test.mjs",
+    "test:release": "node --test --test-reporter=spec tests/release/*.test.mjs",
+    "release:check": "node scripts/release.mjs check",
+    "release:prepare": "node scripts/release.mjs prepare",
+    "release:verify": "node scripts/release.mjs verify",
+    "test:php": "php vendor/phpunit/phpunit/phpunit",
+    "test:next-build": "npm --prefix examples/nextjs run build",
+    "build:wordpress": "node scripts/build-wordpress.mjs",
+    "test:wordpress": "playwright test --config playwright.wordpress.config.mjs",
+    "test": "npm run build && npm run typecheck && npm run test:unit && npm run test:php && npm run test:browser && npm run test:wordpress && npm run test:package && npm run release:check && npm run test:release",
+    "demo": "node scripts/serve-demo.mjs",
+    "demo:chat": "php -S 127.0.0.1:4174 examples/php-chat/router.php",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@inertiajs/react": "^3.9.1",
+    "@playwright/test": "1.64.1",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "ajv": "8.20.0",
+    "esbuild": "0.28.2",
+    "fflate": "0.8.3",
+    "next": "16.4.2",
+    "prettier": "3.9.10",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "typescript": "7.0.2"
+  }
+}

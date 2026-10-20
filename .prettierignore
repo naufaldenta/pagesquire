@@ -1,0 +1,12 @@
+node_modules/
+dist/
+package-lock.json
+playwright-report/
+test-results/
+*.tsbuildinfo
+vendor/
+.phpunit.cache/
+composer.lock
+packages/php/resources/schemas/
+.next/
+.cache/

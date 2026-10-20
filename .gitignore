@@ -1,0 +1,15 @@
+node_modules/
+vendor/
+.phpunit.cache/
+packages/php/resources/schemas/
+dist/
+*.tsbuildinfo
+*.tgz
+playwright-report/
+test-results/
+.env
+.env.*
+!.env.example
+.DS_Store
+.next/
+.cache/

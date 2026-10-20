@@ -1,0 +1,42 @@
+{
+  "name": "pagesquire/workspace",
+  "description": "Development workspace for PageSquire's PHP conversation engine and Laravel adapter.",
+  "type": "project",
+  "license": "MIT",
+  "repositories": [
+    {
+      "type": "path",
+      "url": "packages/php"
+    },
+    {
+      "type": "path",
+      "url": "packages/laravel"
+    }
+  ],
+  "require": {
+    "php": "^8.3",
+    "pagesquire/server": "@dev",
+    "pagesquire/laravel": "@dev"
+  },
+  "require-dev": {
+    "orchestra/testbench": "^11.3",
+    "phpunit/phpunit": "^12.5",
+    "laravel/pint": "^1.27"
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "PageSquire\\Tests\\": "tests/php/"
+    }
+  },
+  "scripts": {
+    "test": "phpunit",
+    "format": "pint --format agent"
+  },
+  "config": {
+    "sort-packages": true,
+    "allow-plugins": {},
+    "process-timeout": 600
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}

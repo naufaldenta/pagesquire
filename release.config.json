@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "channel": "github-alpha",
+  "repository": { "owner": "naufaldenta", "name": "pagesquire" },
+  "publication": {
+    "repositoryCreated": true,
+    "privateSecurityReportingEnabled": true,
+    "redistributionReviewed": false,
+    "remoteCiPassed": false,
+    "ownerApprovedRelease": false
+  },
+  "registries": {
+    "npm": "deferred",
+    "packagist": "deferred",
+    "wordpress": "deferred"
+  }
+}
