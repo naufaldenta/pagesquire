@@ -1,8 +1,6 @@
 import { copyFile } from 'node:fs/promises';
-await copyFile(
-  'packages/php/resources/providers.json',
-  'packages/server/dist/providers.json',
-);
+import { buildProviderCatalog } from './build-provider-catalog.mjs';
+await buildProviderCatalog();
 for (const name of ['client', 'react', 'server'])
   await copyFile('LICENSE', `packages/${name}/dist/LICENSE`);
 await copyFile(

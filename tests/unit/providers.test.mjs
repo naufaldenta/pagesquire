@@ -20,6 +20,25 @@ const final = {
 const wrap = (content) => ({
   choices: [{ finish_reason: 'stop', message: { content } }],
 });
+
+test('database checks and migrations do not require compiled AI packages on a clean CI checkout', async () => {
+  const database = await readFile(
+    'examples/brutalist-demo/server/database.mjs',
+    'utf8',
+  );
+  assert.doesNotMatch(database, /packages\/|\/dist\/|config\.mjs/);
+  for (const path of [
+    'tests/database/offbeat.test.mjs',
+    'scripts/migrate-offbeat.mjs',
+  ]) {
+    const source = await readFile(path, 'utf8');
+    assert.match(source, /server\/database\.mjs/);
+    assert.doesNotMatch(source, /server\/config\.mjs/);
+  }
+  const { createPool } =
+    await import('../../examples/brutalist-demo/server/database.mjs');
+  assert.equal(typeof createPool, 'function');
+});
 for (const preset of listProviderPresets())
   test(`provider preset ${preset.id} sends one bounded, owner-model request without hidden defaults or retries`, async () => {
     let calls = 0;
@@ -55,6 +74,10 @@ for (const preset of listProviderPresets())
   });
 
 test('provider catalog is canonical, immutable by callers and packaged with Node', async () => {
+  const source = await readFile('packages/server/src/providers.ts', 'utf8');
+  assert.doesNotMatch(source, /readFileSync|import\.meta\.url/);
+  const next = await readFile('examples/nextjs/next.config.mjs', 'utf8');
+  assert.match(next, /transpilePackages: \['@pagesquire\/server'\]/);
   const canonical = JSON.parse(
     await readFile('packages/php/resources/providers.json', 'utf8'),
   );

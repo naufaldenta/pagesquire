@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import catalog from './provider-presets.js';
 import { fail } from './engine.js';
 import type { ProviderMessage } from './engine.js';
 
@@ -33,9 +33,6 @@ export interface ResolvedProviderConfiguration {
   thinking: 'default' | 'disabled';
 }
 
-const catalog = JSON.parse(
-  readFileSync(new URL('./providers.json', import.meta.url), 'utf8'),
-) as { providers: ProviderPreset[] };
 export function listProviderPresets(): ProviderPreset[] {
   return structuredClone(catalog.providers);
 }
