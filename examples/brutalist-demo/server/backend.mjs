@@ -234,13 +234,28 @@ export function createBackend({ config, store, provider, now }) {
           capabilityIds: manifest.capabilities.map((entry) => entry.id),
         }),
       })(request);
-      return quotaError
+      const result = quotaError
         ? reply(
             { error: { code: quotaError.code, message: quotaError.message } },
             429,
             { 'Retry-After': String(quotaError.retryAfter) },
           )
         : response;
+      if (!result.ok) {
+        const failure = await result.clone().json();
+        const code = failure.error?.code;
+        console.warn(
+          JSON.stringify({
+            event: 'pagesquire.chat.rejected',
+            status: result.status,
+            code:
+              typeof code === 'string' && /^[A-Z_]{1,60}$/.test(code)
+                ? code
+                : 'UNKNOWN',
+          }),
+        );
+      }
+      return result;
     } catch (error) {
       if (error instanceof StoreError)
         return reply(

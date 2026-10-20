@@ -10,6 +10,73 @@ const fixture = JSON.parse(
     'utf8',
   ),
 );
+test('legacy assistant history is repaired before a separate follow-up without resetting IDs or attempts', async () => {
+  let calls = 0;
+  const engine = new ConversationEngine({
+    manifest: fixture.manifest,
+    provider: {
+      async complete(messages) {
+        calls++;
+        assert.match(messages[0].content, /resolve the latest assistant offer/);
+        assert.match(
+          messages[0].content,
+          /ask a clarifying question without tools/,
+        );
+        for (const item of messages.filter(
+          (entry) => entry.role === 'assistant',
+        )) {
+          assert.equal(
+            validateProviderResponse(JSON.parse(item.content)).valid,
+            true,
+          );
+          assert.doesNotMatch(
+            item.content,
+            /requestedAction|callId|snapshotId/,
+          );
+        }
+        return structuredClone(
+          calls === 1 ? fixture.drafts.action : fixture.drafts.final,
+        );
+      },
+    },
+  });
+  const first = await engine.handle(fixture.request, null, ['testing.set']);
+  const call = first.reply.response.toolCalls[0];
+  first.state.messages[1].content = JSON.stringify({ requestedAction: call });
+  const continuation = {
+    ...fixture.request,
+    message: undefined,
+    requestId: 'legacy-result',
+    conversationId: first.state.id,
+    result: {
+      protocolVersion: '0.1',
+      callId: call.callId,
+      capabilityId: call.capabilityId,
+      status: 'success',
+      code: 'VERIFIED',
+      message: 'Verified',
+      evidence: {},
+    },
+  };
+  const second = await engine.handle(continuation, first.state, [
+    'testing.set',
+  ]);
+  second.state.messages.at(-1).content = 'Verified.';
+  const third = await engine.handle(
+    {
+      ...fixture.request,
+      requestId: 'legacy-follow-up',
+      conversationId: second.state.id,
+      message: 'Another question',
+    },
+    second.state,
+    ['testing.set'],
+  );
+  assert.equal(third.reply.conversationId, first.state.id);
+  assert.equal(third.state.attempts, 3);
+  assert.equal(third.reply.response.finished, true);
+  assert.equal(calls, 3);
+});
 for (const scenario of fixture.cases)
   test(`Node protocol conformance: ${scenario.name}`, async () => {
     let calls = 0;

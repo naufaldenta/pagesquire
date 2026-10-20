@@ -47,3 +47,28 @@ export const styles = [
   ['illustration', 'Illustration'],
   ['graphic', 'Graphic play'],
 ];
+
+export const readingFonts = {
+  sans: 'Arial, Helvetica, sans-serif',
+  serif: 'Georgia, "Times New Roman", serif',
+  mono: '"Courier New", monospace',
+};
+
+export function galleryView(style, query, order) {
+  const needle = query.trim().toLowerCase();
+  const ordered = [...art];
+  if (order !== 'featured')
+    ordered.sort(
+      (a, b) =>
+        (a.title < b.title ? -1 : a.title > b.title ? 1 : 0) *
+        (order === 'title-desc' ? -1 : 1),
+    );
+  return ordered.map((item) => ({
+    ...item,
+    visible:
+      (style === 'all' || item.style === style) &&
+      `${item.title} ${item.label} ${item.description}`
+        .toLowerCase()
+        .includes(needle),
+  }));
+}

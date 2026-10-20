@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { AssistantClient, createHttpTransport } from '@pagesquire/client';
 import { createInertiaNavigation } from '@pagesquire/react/inertia';
 import { validateChatRequest } from '@pagesquire/protocol';
+import { PageSquireError } from '@pagesquire/core';
 
 const snapshot = {
   protocolVersion: '0.1',
@@ -65,6 +66,96 @@ test('client carries final emotion and bounded conversation ID into the next mes
   assert.equal(instance.state.messages.length, 4);
   instance.reset();
   assert.equal(instance.state.messages.length, 0);
+});
+
+test('a known provider failure preserves completed conversation context for the next user message without automatic retry', async () => {
+  const requests = [];
+  const instance = client(async (request) => {
+    requests.push(request);
+    if (requests.length === 2)
+      throw new PageSquireError(
+        'INVALID_PROVIDER_RESPONSE',
+        'The AI provider could not return a valid response.',
+      );
+    return final;
+  });
+  await instance.send('First question');
+  await instance.send('Offer another action');
+  assert.equal(requests.length, 2);
+  assert.equal(instance.state.busy, false);
+  await instance.send('Yes, do that');
+  assert.equal(requests.length, 3);
+  assert.equal(requests[2].conversationId, 'conversation-1');
+  assert.equal(instance.state.messages.at(-1).text, 'Hello');
+});
+
+test('HTTP errors distinguish limits, session expiry and provider failures without exposing response bodies', async () => {
+  for (const [status, message] of [
+    [403, /unlock/],
+    [409, /expired/],
+    [419, /session expired/],
+    [429, /usage limit/],
+    [502, /provider/],
+    [503, /temporarily unavailable/],
+  ]) {
+    const transport = createHttpTransport({
+      endpoint: '/chat',
+      baseUrl: snapshot.url,
+      csrfToken: () => 'token',
+      fetch: async () =>
+        new Response('private-secret <script>alert(1)</script>', {
+          status,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    });
+    await assert.rejects(
+      transport({}, new AbortController().signal),
+      (error) => {
+        assert.match(error.message, message);
+        assert.doesNotMatch(error.message, /private-secret|script/);
+        return error.code === `HTTP_${status}`;
+      },
+    );
+  }
+});
+
+test('only allowlisted bounded error codes distinguish denied capabilities from expired authentication', async () => {
+  for (const [code, expected] of [
+    ['ACCESS_DENIED', 'ACCESS_DENIED'],
+    ['CAPABILITY_DENIED', 'CAPABILITY_DENIED'],
+    ['secret-code<script>', 'HTTP_403'],
+  ]) {
+    const transport = createHttpTransport({
+      endpoint: '/chat',
+      baseUrl: snapshot.url,
+      csrfToken: () => 'token',
+      fetch: async () =>
+        Response.json(
+          { error: { code, message: 'private-secret' } },
+          { status: 403 },
+        ),
+    });
+    await assert.rejects(
+      transport({}, new AbortController().signal),
+      (error) =>
+        error.code === expected &&
+        !error.message.includes('private-secret') &&
+        !error.message.includes('script'),
+    );
+  }
+  const oversized = createHttpTransport({
+    endpoint: '/chat',
+    baseUrl: snapshot.url,
+    csrfToken: () => 'token',
+    fetch: async () =>
+      new Response('x'.repeat(5000), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+  });
+  await assert.rejects(oversized({}, new AbortController().signal), {
+    code: 'HTTP_403',
+  });
 });
 
 test('cancel and timeout settle even a transport that ignores its AbortSignal', async () => {

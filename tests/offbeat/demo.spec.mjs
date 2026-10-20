@@ -13,6 +13,207 @@ async function openAssistant(page) {
   return panel;
 }
 
+async function unlockChat(page) {
+  await page.goto('/');
+  const panel = await openAssistant(page);
+  await panel.getByLabel('Demo access code').fill('offbeat-test-access-code');
+  await panel.getByRole('button', { name: 'Unlock AI', exact: true }).click();
+  await expect(panel.getByLabel('Message PageSquire')).toBeEnabled();
+  return panel;
+}
+
+async function sendMessage(panel, text) {
+  const count = await panel.locator('.chat-message.assistant').count();
+  await panel.getByLabel('Message PageSquire').fill(text);
+  await panel.getByRole('button', { name: 'Send', exact: true }).click();
+  await expect(panel.locator('.chat-message.assistant')).toHaveCount(
+    count + 1,
+    { timeout: 12000 },
+  );
+  await expect(panel.getByLabel('Message PageSquire')).toBeEnabled();
+}
+
+test('five separate follow-ups keep one conversation and verify body versus headings, spacing and reset', async ({
+  page,
+}) => {
+  const ids = [];
+  page.on('response', (response) => {
+    if (new URL(response.url()).pathname === '/api/chat') {
+      const body = response.request().postDataJSON();
+      if (body.conversationId) ids.push(body.conversationId);
+    }
+  });
+  const panel = await unlockChat(page);
+  await sendMessage(panel, 'Make headings red');
+  await expect(page.locator('#hero-title')).toHaveCSS(
+    'color',
+    'rgb(197, 43, 40)',
+  );
+  await sendMessage(panel, 'Highlight links');
+  await expect(page.locator('.site-header nav a').first()).toHaveCSS(
+    'background-color',
+    'rgb(217, 255, 71)',
+  );
+  await sendMessage(panel, 'Make body text violet');
+  await expect(page.locator('.hero-copy > p')).toHaveCSS(
+    'color',
+    'rgb(100, 64, 213)',
+  );
+  await expect(page.locator('#hero-title')).toHaveCSS(
+    'color',
+    'rgb(197, 43, 40)',
+  );
+  await sendMessage(panel, 'Use double line spacing');
+  await expect(page.locator('.hero-copy > p')).toHaveCSS('line-height', '32px');
+  await sendMessage(panel, 'Reset all page changes');
+  await expect(page.locator('#hero-title')).toHaveCSS(
+    'color',
+    'rgb(23, 23, 23)',
+  );
+  await expect(page.locator('.hero-copy > p')).toHaveCSS(
+    'color',
+    'rgb(23, 23, 23)',
+  );
+  await expect(page.locator('.playground [data-reading-copy]')).toHaveCSS(
+    'color',
+    'rgb(247, 247, 242)',
+  );
+  await expect(panel.getByRole('log')).not.toContainText('could not verify');
+  await expect(panel.getByRole('log')).not.toContainText('limit was reached');
+  expect(new Set(ids).size).toBe(1);
+  expect(ids.length).toBe(9);
+  await expect(panel.locator('.chat-message.action')).toHaveCount(5);
+});
+
+test('AI reading font, gallery search/sort, zero results, footer scrolling and reset are verified', async ({
+  page,
+}) => {
+  const panel = await unlockChat(page);
+  await sendMessage(panel, 'Use a serif reading font');
+  await expect(page.locator('.hero-copy > p')).toHaveCSS(
+    'font-family',
+    'Georgia, "Times New Roman", serif',
+  );
+  await sendMessage(panel, 'Search art for not-a-real-world');
+  await expect(page.locator('[data-art-card]:visible')).toHaveCount(0);
+  await expect(
+    page.getByText('No worlds match yet.', { exact: false }),
+  ).toBeVisible();
+  await sendMessage(panel, 'Sort art Z to A');
+  expect(
+    await page
+      .locator('[data-art-card]')
+      .evaluateAll((cards) => cards.map((card) => card.dataset.artId)),
+  ).toEqual([
+    'stay-unrendered',
+    'odd-company',
+    'little-menace',
+    'brain-on-airplane-mode',
+  ]);
+  await sendMessage(panel, 'Go to footer');
+  expect(
+    await page.evaluate(() =>
+      Math.abs(scrollY - (document.documentElement.scrollHeight - innerHeight)),
+    ),
+  ).toBeLessThan(4);
+  await sendMessage(panel, 'Reset all page changes');
+  await expect(page.locator('[data-art-card]:visible')).toHaveCount(4);
+  await expect(page.locator('#art-order')).toHaveValue('featured');
+  await expect(page.locator('#art-query')).toHaveValue('');
+  await expect(panel.getByRole('log')).not.toContainText('could not verify');
+});
+
+test('a failed request can be followed by another message and expired auth returns to unlock without a stuck busy state', async ({
+  page,
+  context,
+}) => {
+  const panel = await unlockChat(page);
+  await page.route(
+    '**/api/chat',
+    (route) =>
+      route.fulfill({
+        status: 502,
+        contentType: 'application/json',
+        body: '{"error":{"message":"private-provider-detail"}}',
+      }),
+    { times: 1 },
+  );
+  await sendMessage(panel, 'Hello');
+  await expect(panel.getByRole('log')).toContainText(
+    'provider could not return a valid response',
+  );
+  await expect(panel.getByRole('log')).not.toContainText(
+    'private-provider-detail',
+  );
+  await sendMessage(panel, 'Make headings red');
+  await expect(page.locator('#hero-title')).toHaveCSS(
+    'color',
+    'rgb(197, 43, 40)',
+  );
+  await page.route(
+    '**/api/chat',
+    (route) =>
+      route.fulfill({
+        status: 403,
+        contentType: 'application/json',
+        body: '{"error":{"code":"CAPABILITY_DENIED","message":"private-detail"}}',
+      }),
+    { times: 1 },
+  );
+  await sendMessage(panel, 'Unsupported action');
+  await expect(panel.getByRole('log')).toContainText(
+    'action this page does not allow',
+  );
+  await expect(panel.getByLabel('Demo access code')).toHaveCount(0);
+  await context.clearCookies();
+  await panel.getByLabel('Message PageSquire').fill('Highlight links');
+  await panel.getByRole('button', { name: 'Send', exact: true }).click();
+  await expect(panel.getByLabel('Demo access code')).toBeEnabled();
+  await expect(panel.getByRole('alert')).toContainText('Unlock the demo again');
+  await expect(
+    panel.getByRole('button', { name: 'Highlight links', exact: true }),
+  ).toBeEnabled();
+  await panel.getByLabel('Demo access code').fill('offbeat-test-access-code');
+  await panel.getByRole('button', { name: 'Unlock AI', exact: true }).click();
+  await expect(panel.getByLabel('Message PageSquire')).toBeEnabled();
+  await sendMessage(panel, 'Highlight links');
+  await expect(page.locator('.site-header nav a').first()).toHaveCSS(
+    'background-color',
+    'rgb(217, 255, 71)',
+  );
+});
+
+test('headings highlight independently and a yes confirmation follows the previous assistant offer', async ({
+  page,
+}) => {
+  const panel = await unlockChat(page);
+  await sendMessage(panel, 'make headings red');
+  await sendMessage(panel, 'make highlight all heading');
+  await expect(page.locator('#hero-title')).toHaveCSS(
+    'background-color',
+    'rgb(217, 255, 71)',
+  );
+  await expect(page.locator('#hero-title')).toHaveCSS(
+    'color',
+    'rgb(197, 43, 40)',
+  );
+  await expect(page.locator('.site-header nav a').first()).not.toHaveCSS(
+    'background-color',
+    'rgb(217, 255, 71)',
+  );
+  await sendMessage(panel, 'Suggest a link action');
+  await expect(panel.getByRole('log')).toContainText(
+    'Would you like me to highlight page links?',
+  );
+  await sendMessage(panel, 'yes make all');
+  await expect(page.locator('.site-header nav a').first()).toHaveCSS(
+    'background-color',
+    'rgb(217, 255, 71)',
+  );
+  await expect(panel.getByRole('log')).not.toContainText('could not');
+  await expect(panel.locator('.chat-message.action')).toHaveCount(3);
+});
+
 test('original landing loads without hydration errors, provider calls or broken artwork', async ({
   page,
 }) => {
@@ -366,7 +567,9 @@ test('chat errors stay text-only and a mobile unlock form stays inside the viewp
   );
   await panel.getByLabel('Message PageSquire').fill('Hello');
   await panel.getByRole('button', { name: 'Send', exact: true }).click();
-  await expect(panel.getByRole('log')).toContainText('request was rejected');
+  await expect(panel.getByRole('log')).toContainText(
+    'demo usage limit was reached',
+  );
   await expect(panel.getByRole('log')).not.toContainText('onerror=');
   await expect(panel.getByRole('log').locator('img')).toHaveCount(0);
   await expect(panel.getByLabel('Message PageSquire')).toBeEnabled();

@@ -6,6 +6,9 @@ All canonical release notes are English. PageSquire uses SemVer for packages and
 
 ### Added
 
+- OFFBEAT now offers thirteen verified tools, including independent heading highlighting/body color, reading fonts/spacing, gallery search/sort, edge-aware scrolling and resets. Separate-message, confirmation, recovery and expired-auth browser regressions extend the original single-message smoke coverage.
+- Legacy Node/PHP history normalization and safe typed HTTP failure feedback, with conversation continuity after known provider-format failures and no automatic paid retries or quota resets.
+
 - OFFBEAT, an independent brutalist art/culture landing demo with original characters, a filterable gallery, accessible dialogs, verified guided actions and six expressions. Its optional private AI chat deploys alongside the frontend on Vercel, with environment-owned model/provider configuration, signed sessions, Supabase PostgreSQL checkpoints, fenced leases and shared usage limits. Guided actions need no credentials.
 
 - Independent capability registry, versioned schemas and CSP-safe compiled validators.

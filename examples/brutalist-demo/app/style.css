@@ -85,10 +85,53 @@ h3 {
 #offbeat-page h3 {
   color: var(--heading-color);
 }
-[data-reading-copy] {
+#offbeat-page.headings-highlighted :is(h1, h2, h3) {
+  background-color: var(--lime);
+}
+#offbeat-page [data-reading-copy] {
+  color: var(--copy-color, var(--copy-original, inherit));
+  font-family: var(--copy-font);
   font-weight: var(--copy-weight);
   font-size: var(--copy-size);
-  line-height: 1.6;
+  line-height: var(--copy-spacing);
+}
+.playground [data-reading-copy] {
+  --copy-original: #f7f7f2;
+}
+.gallery-tools {
+  display: flex;
+  gap: 20px;
+  margin: 18px 0 28px;
+  flex-wrap: wrap;
+}
+.gallery-tools label {
+  flex: 1 1 220px;
+  font:
+    bold 11px/1.5 'Courier New',
+    monospace;
+}
+.gallery-tools input,
+.gallery-tools select {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px;
+  border: var(--rule);
+  border-radius: 0;
+  background: white;
+  font:
+    14px/1.5 Arial,
+    sans-serif;
+}
+.gallery-tools input:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 4px;
+}
+.gallery-empty {
+  border: var(--rule);
+  padding: 24px;
+  background: var(--lime);
+  margin-bottom: 20px;
 }
 [hidden] {
   display: none !important;
@@ -1768,6 +1811,24 @@ dialog::backdrop {
   flex-wrap: wrap;
   gap: 13px;
   margin: 10px 0;
+}
+.chat-prompts {
+  margin-top: 12px;
+  font-size: 11px;
+}
+.chat-prompts summary {
+  cursor: pointer;
+  padding: 6px 0;
+}
+.chat-prompts button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px;
+  margin-top: 6px;
+  background: var(--pink);
+  border: 1px solid var(--ink);
+  font-size: 11px;
 }
 .chat-controls button {
   padding: 5px 0;
