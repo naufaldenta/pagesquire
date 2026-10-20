@@ -12,6 +12,7 @@ import {
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { lockedComposerRepository } from '../fixtures/offline-composer.mjs';
 
 test('standalone PHP archive installs without Laravel in a clean offline Composer consumer', async () => {
   const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -90,6 +91,8 @@ test('standalone PHP archive installs without Laravel in a clean offline Compose
         name: 'pagesquire/clean-consumer',
         repositories: [
           { type: 'path', url: extracted, options: { symlink: false } },
+          await lockedComposerRepository(root),
+          { 'packagist.org': false },
         ],
         require: { 'pagesquire/server': '@dev' },
         'minimum-stability': 'stable',

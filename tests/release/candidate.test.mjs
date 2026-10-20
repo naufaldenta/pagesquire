@@ -14,6 +14,7 @@ import {
   sourceDigest,
 } from '../../scripts/release.mjs';
 import { collectDistributionSources } from '../../scripts/distribution-sources.mjs';
+import { lockedComposerRepository } from '../fixtures/offline-composer.mjs';
 
 const execute = promisify(execFile);
 let candidate;
@@ -210,6 +211,11 @@ test(
       JSON.stringify({
         name: 'pagesquire/release-consumer',
         ...fragment,
+        repositories: [
+          ...fragment.repositories,
+          await lockedComposerRepository(projectRoot),
+          { 'packagist.org': false },
+        ],
         require: {
           ...fragment.require,
           'laravel/framework': compatibility.composer[

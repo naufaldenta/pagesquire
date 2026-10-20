@@ -1,4 +1,4 @@
-import { writeFile, copyFile } from 'node:fs/promises';
+import { writeFile, copyFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { build } from 'esbuild';
 import { validateManifest } from '../packages/protocol/dist/index.js';
@@ -29,6 +29,7 @@ await writeFile(
   path.join(generated, 'manifest.json'),
   JSON.stringify(manifest, null, 2),
 );
+await mkdir('examples/plain-html/dist', { recursive: true });
 await copyFile(
   'packages/client/src/widget.css',
   'examples/plain-html/dist/widget.css',
