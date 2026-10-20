@@ -38,7 +38,7 @@ test('OFFBEAT style filters are unique and each declared category has original a
   }
 });
 
-test('public READMEs link the live demo and distinguish planned Supabase storage from implemented features', async () => {
+test('public READMEs link the live demo and document private chat with Supabase storage', async () => {
   for (const file of ['README.md', 'examples/brutalist-demo/README.md']) {
     const contents = await readFile(
       new URL(`../../${file}`, import.meta.url),
@@ -48,9 +48,11 @@ test('public READMEs link the live demo and distinguish planned Supabase storage
       contents,
       /\]\(https:\/\/pagesquire-offbeat-demo\.vercel\.app\/\)/,
     );
-    assert.match(contents, /live AI chat (?:is|remains) locked/i);
+    assert.match(
+      contents,
+      /live AI chat (?:uses the same runtime and )?requires the owner's private demo access code/i,
+    );
     assert.match(contents, /Supabase PostgreSQL/);
-    assert.match(contents, /not implemented yet/);
   }
   const guide = await readFile(
     new URL('../../examples/brutalist-demo/README.md', import.meta.url),
@@ -66,14 +68,18 @@ test('public READMEs link the live demo and distinguish planned Supabase storage
   assert.match(template, /^PAGESQUIRE_STORAGE_DRIVER=$/m);
 });
 
-test('public deployment serves only a static export and has no API or environment activation switch', async () => {
+test('public deployment serves the frontend and exact API routes, without client secrets', async () => {
   const config = JSON.parse(
     await readFile(new URL('../../vercel.json', import.meta.url), 'utf8'),
   );
   assert.equal(config.framework, null);
   assert.equal(config.buildCommand, 'npm run demo:build');
   assert.equal(config.outputDirectory, 'examples/brutalist-demo/out');
-  assert.equal(config.rewrites, undefined);
+  assert.deepEqual(config.rewrites, [
+    { source: '/api/session', destination: '/api/assistant?route=session' },
+    { source: '/api/chat', destination: '/api/assistant?route=chat' },
+  ]);
+  assert.equal(config.functions['api/assistant.mjs'].maxDuration, 60);
   const uploadIgnore = await readFile(
     new URL('../../.vercelignore', import.meta.url),
     'utf8',
@@ -95,7 +101,18 @@ test('public deployment serves only a static export and has no API or environmen
     page,
     /\bfetch\(|process\.env|localStorage|sessionStorage/,
   );
-  assert.match(page, /LIVE AI LOCKED/);
+  assert.match(page, /<LiveChat/);
+  const chat = await readFile(
+    new URL('../../examples/brutalist-demo/app/live-chat.jsx', import.meta.url),
+    'utf8',
+  );
+  assert.match(chat, /AssistantClient/);
+  assert.doesNotMatch(chat, /process\.env|localStorage|sessionStorage/);
+  const entry = await readFile(
+    new URL('../../api/assistant.mjs', import.meta.url),
+    'utf8',
+  );
+  assert.doesNotMatch(entry, /tests\/|Synthetic|fixture/i);
   assert.match(
     page,
     /result\.status === 'success' && result\.code === 'VERIFIED'/,
@@ -121,6 +138,8 @@ test('static outputs, Vercel project links and real env files never enter source
   for (const file of [
     'vercel.json',
     'playwright.offbeat.config.mjs',
+    'api/assistant.mjs',
+    'examples/brutalist-demo/server/backend.mjs',
     'examples/brutalist-demo/env.example',
     'examples/brutalist-demo/public/art/offbeat-creatures.png',
   ])

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { ConversationEngine, AssistantError } from '@pagesquire/server';
+import { validateProviderResponse } from '@pagesquire/protocol';
 
 const fixture = JSON.parse(
   await readFile(
@@ -24,6 +25,16 @@ for (const scenario of fixture.cases)
           !capabilities.some((entry) => entry.risk === 'consequential'),
         );
         assert.match(messages[0].content, /UNTRUSTED DATA/);
+        for (const message of messages.filter(
+          (entry) => entry.role === 'assistant',
+        )) {
+          const history = JSON.parse(message.content);
+          assert.equal(validateProviderResponse(history).valid, true);
+          assert.doesNotMatch(
+            message.content,
+            /requestedAction|snapshotId|callId/,
+          );
+        }
         const name = queue.shift();
         if (name === 'error') throw new Error('secret provider detail');
         return structuredClone(fixture.drafts[name]);
@@ -69,6 +80,13 @@ for (const scenario of fixture.cases)
           },
         );
         state = result.state;
+        for (const message of state.messages.filter(
+          (entry) => entry.role === 'assistant',
+        ))
+          assert.equal(
+            validateProviderResponse(JSON.parse(message.content)).valid,
+            true,
+          );
         outcome = {
           code: 'OK',
           status: 200,

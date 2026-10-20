@@ -318,7 +318,12 @@ export class ConversationEngine {
     state.pending = call;
     state.messages.push({
       role: 'assistant',
-      content: encode({ requestedAction: call }),
+      content: encode({
+        text: 'Checking the requested action…',
+        emotion: 'thinking',
+        finished: false,
+        toolCalls: [proposal],
+      }),
     });
     return this.save(
       state,
@@ -338,7 +343,10 @@ export class ConversationEngine {
     emotion: Emotion,
     checkpoint?: Checkpoint,
   ) {
-    state.messages.push({ role: 'assistant', content: text });
+    state.messages.push({
+      role: 'assistant',
+      content: encode({ text, emotion, finished: true, toolCalls: [] }),
+    });
     return this.save(
       state,
       { protocolVersion: '0.1', text, emotion, finished: true, toolCalls: [] },

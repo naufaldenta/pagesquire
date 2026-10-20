@@ -35,9 +35,9 @@ test('original landing loads without hydration errors, provider calls or broken 
       .evaluate((image) => image.complete && image.naturalWidth === 1536),
   ).toBe(true);
   const panel = await openAssistant(page);
-  await expect(panel.getByLabel('AI chat is locked')).toBeDisabled();
+  await expect(panel.getByLabel('Demo access code')).toBeEnabled();
   await expect(
-    panel.getByText('LIVE AI LOCKED', { exact: true }),
+    panel.getByText('ACCESS CODE REQUIRED', { exact: true }),
   ).toBeVisible();
   await panel
     .getByRole('button', { name: 'Highlight links', exact: true })
@@ -52,9 +52,15 @@ test('original landing loads without hydration errors, provider calls or broken 
       (request) => new URL(request.url()).origin !== 'http://127.0.0.1:4180',
     ),
   ).toEqual([]);
-  expect(requests.filter((request) => /\/api\//.test(request.url()))).toEqual(
-    [],
-  );
+  expect(
+    requests
+      .filter((request) => /\/api\//.test(request.url()))
+      .every(
+        (request) =>
+          new URL(request.url()).pathname === '/api/session' &&
+          request.method() === 'GET',
+      ),
+  ).toBe(true);
   expect(errors).toEqual([]);
 });
 
@@ -253,18 +259,123 @@ for (const width of [375, 768, 1440]) {
   });
 }
 
-test('static server rejects API writes and does not expose repository/env files', async ({
+test('API denies unauthorized writes and static files do not expose repository/env files', async ({
   request,
 }) => {
-  for (const file of [
-    '/api/chat',
-    '/api/session',
-    '/.env.local',
-    '/package.json',
-    '/env.example',
-  ])
+  for (const file of ['/.env.local', '/package.json', '/env.example'])
     expect((await request.get(file)).status()).toBe(404);
-  expect((await request.post('/api/chat', { data: {} })).status()).toBe(405);
+  expect((await request.get('/api/session')).status()).toBe(200);
+  expect((await request.get('/api/chat')).status()).toBe(405);
+  expect((await request.post('/api/chat', { data: {} })).status()).toBe(403);
   expect((await request.get('/fonts/OFL.txt')).status()).toBe(200);
   expect((await request.get('/pagesquire-license.txt')).status()).toBe(200);
+});
+
+test('private chat unlocks, thinks, verifies multiple scoped actions, preserves the panel and signs out', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/');
+  const panel = await openAssistant(page);
+  await panel.getByLabel('Demo access code').fill('offbeat-test-access-code');
+  await panel.getByRole('button', { name: 'Unlock AI', exact: true }).click();
+  await expect(
+    panel.getByText('LIVE · PRIVATE DEMO', { exact: true }),
+  ).toBeVisible();
+  const originalBody = await page
+    .locator('.hero-copy > p')
+    .evaluate((element) => getComputedStyle(element).color);
+  await panel
+    .getByLabel('Message PageSquire')
+    .fill('Make headings red, highlight links and use bold text');
+  await panel.getByRole('button', { name: 'Send', exact: true }).click();
+  await expect(panel.locator('.assistant-top')).toBeInViewport();
+  await expect(panel.locator('.assistant-top .squire-face')).toHaveAttribute(
+    'data-emotion',
+    'thinking',
+  );
+  await expect(panel.getByRole('log')).toContainText(
+    'Requested changes verified on this page.',
+  );
+  await expect(panel.locator('.assistant-top .squire-face')).toHaveAttribute(
+    'data-emotion',
+    'happy',
+  );
+  await expect(panel.getByRole('log')).not.toContainText('Premature success');
+  await expect(page.locator('#hero-title')).toHaveCSS(
+    'color',
+    'rgb(197, 43, 40)',
+  );
+  await expect(page.locator('.hero-copy > p')).toHaveCSS('color', originalBody);
+  await expect(page.locator('.hero-copy > p')).toHaveCSS('font-weight', '700');
+  await expect(page.locator('.site-header nav a').first()).toHaveCSS(
+    'background-color',
+    'rgb(217, 255, 71)',
+  );
+  await expect(
+    panel.getByRole('log').locator('.chat-message.action'),
+  ).toHaveCount(3);
+  await page.screenshot({
+    path: testInfo.outputPath('offbeat-chat-desktop.png'),
+  });
+  await panel
+    .getByRole('button', { name: 'Close PageSquire', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: 'Open PageSquire', exact: true })
+    .click();
+  await expect(panel.getByRole('log')).toContainText(
+    'Requested changes verified',
+  );
+  expect(
+    await page.evaluate(() => ({
+      local: localStorage.length,
+      session: sessionStorage.length,
+    })),
+  ).toEqual({ local: 0, session: 0 });
+  await panel
+    .getByRole('button', { name: 'New conversation', exact: true })
+    .click();
+  await expect(panel.getByRole('log').locator('.chat-message')).toHaveCount(0);
+  await panel.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await expect(panel.getByLabel('Demo access code')).toBeVisible();
+});
+
+test('chat errors stay text-only and a mobile unlock form stays inside the viewport', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 375, height: 900 });
+  await page.goto('/');
+  const panel = await openAssistant(page);
+  await panel.getByLabel('Demo access code').fill('incorrect-code');
+  await panel.getByRole('button', { name: 'Unlock AI', exact: true }).click();
+  await expect(panel.getByRole('alert')).toContainText('incorrect');
+  await panel.getByLabel('Demo access code').fill('offbeat-test-access-code');
+  await panel.getByRole('button', { name: 'Unlock AI', exact: true }).click();
+  await expect(panel.getByLabel('Message PageSquire')).toBeEnabled();
+  await page.route('**/api/chat', (route) =>
+    route.fulfill({
+      status: 429,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        error: {
+          code: 'RATE_LIMITED',
+          message: '<img src=x onerror=alert(1)> quota',
+        },
+      }),
+    }),
+  );
+  await panel.getByLabel('Message PageSquire').fill('Hello');
+  await panel.getByRole('button', { name: 'Send', exact: true }).click();
+  await expect(panel.getByRole('log')).toContainText('request was rejected');
+  await expect(panel.getByRole('log')).not.toContainText('onerror=');
+  await expect(panel.getByRole('log').locator('img')).toHaveCount(0);
+  await expect(panel.getByLabel('Message PageSquire')).toBeEnabled();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: testInfo.outputPath('offbeat-chat-mobile.png'),
+  });
 });

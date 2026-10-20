@@ -1,10 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "installCommand": "npm ci --include=dev",
+  "installCommand": "npm ci --include=dev && node scripts/build-offbeat.mjs --prepare-only",
   "buildCommand": "npm run demo:build",
   "outputDirectory": "examples/brutalist-demo/out",
   "cleanUrls": true,
+  "functions": { "api/assistant.mjs": { "maxDuration": 60 } },
+  "rewrites": [
+    { "source": "/api/session", "destination": "/api/assistant?route=session" },
+    { "source": "/api/chat", "destination": "/api/assistant?route=chat" }
+  ],
   "headers": [
     {
       "source": "/(.*)",

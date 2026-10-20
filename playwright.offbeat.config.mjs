@@ -11,7 +11,7 @@ export default defineConfig({
   use: { baseURL: 'http://127.0.0.1:4180', trace: 'retain-on-failure' },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: 'node scripts/serve-offbeat.mjs',
+    command: 'node scripts/serve-offbeat.mjs --synthetic-backend',
     url: 'http://127.0.0.1:4180',
     reuseExistingServer: false,
     timeout: 15000,

@@ -2,6 +2,7 @@ import { lstat, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const directories = [
+  'api',
   '.github',
   'docs',
   'examples',

@@ -2,6 +2,11 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Readable } from 'node:stream';
+
+const backend = process.argv.includes('--synthetic-backend')
+  ? (await import('../tests/fixtures/offbeat-backend.mjs')).syntheticBackend()
+  : null;
 
 const root = fileURLToPath(
   new URL('../examples/brutalist-demo/out/', import.meta.url),
@@ -18,6 +23,26 @@ const mime = {
 };
 createServer(async (request, response) => {
   response.setHeader('X-Content-Type-Options', 'nosniff');
+  if (request.url.startsWith('/api/')) {
+    try {
+      const result = backend
+        ? await backend.handle(
+            new Request(new URL(request.url, 'http://127.0.0.1:4180'), {
+              method: request.method,
+              headers: request.headers,
+              ...(!['GET', 'HEAD'].includes(request.method)
+                ? { body: Readable.toWeb(request), duplex: 'half' }
+                : {}),
+            }),
+          )
+        : Response.json({ available: false }, { status: 503 });
+      response.writeHead(result.status, Object.fromEntries(result.headers));
+      response.end(Buffer.from(await result.arrayBuffer()));
+    } catch {
+      response.writeHead(503).end();
+    }
+    return;
+  }
   if (!['GET', 'HEAD'].includes(request.method)) {
     response.writeHead(405, { Allow: 'GET, HEAD' }).end();
     return;
@@ -46,5 +71,7 @@ createServer(async (request, response) => {
       .end('Not found');
   }
 }).listen(4180, '127.0.0.1', () =>
-  console.log('OFFBEAT static demo: http://127.0.0.1:4180 — live AI locked.'),
+  console.log(
+    `OFFBEAT: http://127.0.0.1:4180 — ${backend ? 'synthetic test backend' : 'static preview; API unavailable'}.`,
+  ),
 );

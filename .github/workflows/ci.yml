@@ -3,6 +3,33 @@ on: [push, pull_request]
 permissions:
   contents: read
 jobs:
+  demo-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: pagesquire_test
+          POSTGRES_PASSWORD: synthetic-test-password
+          POSTGRES_DB: pagesquire_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run test:demo-db
+        env:
+          PAGESQUIRE_TEST_DATABASE_URL: postgres://pagesquire_test:synthetic-test-password@127.0.0.1:5432/pagesquire_test
   test:
     timeout-minutes: 30
     strategy:

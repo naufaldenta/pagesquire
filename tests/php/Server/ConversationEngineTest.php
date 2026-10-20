@@ -90,6 +90,18 @@ final class ConversationEngineTest extends TestCase
         $this->assertSame(2, $provider->calls);
         $this->assertStringContainsString('UNTRUSTED DATA', $provider->received[0]['messages'][0]['content']);
         $this->assertSame('accessibility.set_heading_color', $provider->received[0]['capabilities'][0]['id']);
+        foreach ([$first['state'], $next['state']] as $state) {
+            foreach ($state['messages'] as $message) {
+                if ($message['role'] !== 'assistant') {
+                    continue;
+                }
+                $history = json_decode($message['content'], true, 64, JSON_THROW_ON_ERROR);
+                (new ProtocolValidator)->validate('providerResponse', $history);
+                $this->assertArrayNotHasKey('requestedAction', $history);
+                $this->assertStringNotContainsString('callId', $message['content']);
+                $this->assertStringNotContainsString('snapshotId', $message['content']);
+            }
+        }
     }
 
     public function test_unverified_result_stops_without_another_provider_call(): void

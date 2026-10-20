@@ -21,7 +21,12 @@ function run(script, args) {
 }
 run('node_modules/typescript/bin/tsc', ['-b', 'packages/protocol']);
 run('scripts/build-protocol.mjs', []);
-run('node_modules/typescript/bin/tsc', ['-b', 'packages/core']);
+run('node_modules/typescript/bin/tsc', [
+  '-b',
+  'packages/core',
+  'packages/client',
+  'packages/server',
+]);
 const { validateManifest } = await import('../packages/protocol/dist/index.js');
 const validation = validateManifest(manifest);
 if (!validation.valid) throw Error(validation.errors.join('; '));
@@ -49,7 +54,7 @@ await copyFile(
   path.join(publicDir, 'pagesquire-license.txt'),
 );
 if (process.argv.includes('--prepare-only')) {
-  console.log('OFFBEAT browser capabilities compiled. Live AI remains locked.');
+  console.log('OFFBEAT browser capabilities and server dependencies compiled.');
 } else {
   run('node_modules/next/dist/bin/next', [
     'build',
