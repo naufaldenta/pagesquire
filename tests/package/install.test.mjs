@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { execFileSync } from 'node:child_process';
-import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { manifest as fixtureManifest } from '../fixtures/capabilities.mjs';
+import {
+  offlineNpmEnvironment,
+  writeLockedNpmConsumer,
+} from '../fixtures/offline-npm.mjs';
 
 test('packed browser packages install into a clean offline ESM consumer', async () => {
   const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -20,6 +24,7 @@ test('packed browser packages install into a clean offline ESM consumer', async 
       cwd,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
+      env: offlineNpmEnvironment,
     });
   try {
     const tarballs = [];
@@ -63,21 +68,32 @@ test('packed browser packages install into a clean offline ESM consumer', async 
       );
       tarballs.push(path.join(temporary, packed.filename));
     }
-    await writeFile(
-      path.join(temporary, 'package.json'),
-      JSON.stringify({ private: true, type: 'module' }),
+    await writeLockedNpmConsumer(root, temporary, tarballs);
+    const lockFile = path.join(temporary, 'package-lock.json');
+    const validLock = await readFile(lockFile, 'utf8');
+    const invalidPeerLock = JSON.parse(validLock);
+    invalidPeerLock.packages[
+      'node_modules/@pagesquire/react'
+    ].peerDependencies.react = '^999.0.0';
+    await writeFile(lockFile, JSON.stringify(invalidPeerLock));
+    assert.throws(
+      () =>
+        npm(
+          [
+            'ci',
+            '--dry-run',
+            '--offline',
+            '--ignore-scripts',
+            '--no-audit',
+            '--no-fund',
+          ],
+          temporary,
+        ),
+      /ERESOLVE|ENOTCACHED|Invalid: lock file's react/,
     );
+    await writeFile(lockFile, validLock);
     npm(
-      [
-        'install',
-        '--offline',
-        '--ignore-scripts',
-        '--no-audit',
-        '--no-fund',
-        ...tarballs,
-        'react@19.3.1',
-        '@types/react@19.3.0',
-      ],
+      ['ci', '--offline', '--ignore-scripts', '--no-audit', '--no-fund'],
       temporary,
     );
     const probe = `import { PROTOCOL_VERSION, validateManifest } from '@pagesquire/protocol'; import { CapabilityRegistry } from '@pagesquire/core'; import { AssistantClient } from '@pagesquire/client'; import { PageSquireWidget } from '@pagesquire/react'; import { createInertiaNavigation } from '@pagesquire/react/inertia'; if (PROTOCOL_VERSION !== '0.1' || !validateManifest({schemaVersion:'0.1',capabilities:[]}).valid || typeof AssistantClient !== 'function' || typeof PageSquireWidget !== 'function' || typeof createInertiaNavigation !== 'function' || new CapabilityRegistry({schemaVersion:'0.1',capabilities:[]},{handlers:{},verifiers:{},parameters:{}}).list().length !== 0) throw new Error('Artifact import failed'); console.log('artifact-import-ok');`;
