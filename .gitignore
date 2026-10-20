@@ -13,3 +13,6 @@ test-results/
 .DS_Store
 .next/
 .cache/
+.vercel/
+out/
+examples/brutalist-demo/public/pagesquire-license.txt

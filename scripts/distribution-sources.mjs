@@ -14,6 +14,7 @@ const rootFiles = new Set([
   '.gitignore',
   '.prettierignore',
   '.prettierrc.json',
+  '.vercelignore',
   'CHANGELOG.md',
   'CODE_OF_CONDUCT.md',
   'CONTRIBUTING.md',
@@ -29,12 +30,16 @@ const rootFiles = new Set([
   'tsconfig.base.json',
   'playwright.config.mjs',
   'playwright.wordpress.config.mjs',
+  'playwright.offbeat.config.mjs',
+  'vercel.json',
 ]);
 const omitted = new Set([
   'node_modules',
   'vendor',
   'dist',
   '.next',
+  '.vercel',
+  'out',
   '.cache',
   '.git',
   'test-results',
@@ -59,6 +64,8 @@ export function safeArchivePath(relative) {
 export function distributionPathAllowed(relative) {
   return (
     safeArchivePath(relative) &&
+    relative.replaceAll('\\', '/') !==
+      'examples/brutalist-demo/public/pagesquire-license.txt' &&
     !relative
       .replaceAll('\\', '/')
       .split('/')
