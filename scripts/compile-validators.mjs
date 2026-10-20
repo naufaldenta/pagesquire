@@ -21,7 +21,11 @@ export async function compileValidators(schemas, outputFile) {
   const generated = standaloneCode(ajv, exports);
   await mkdir(path.dirname(outputFile), { recursive: true });
   await build({
-    stdin: { contents: generated, resolveDir: process.cwd(), loader: 'js' },
+    stdin: {
+      contents: generated,
+      resolveDir: path.resolve(import.meta.dirname, '..'),
+      loader: 'js',
+    },
     bundle: true,
     format: 'esm',
     platform: 'browser',

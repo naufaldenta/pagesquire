@@ -14,6 +14,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { unzipSync } from 'fflate';
 import browserConfig from '../../playwright.config.mjs';
 import wordpressConfig from '../../playwright.wordpress.config.mjs';
+import { lockedComposerRepository } from '../fixtures/offline-composer.mjs';
 import {
   collectDistributionSources,
   distributionPathAllowed,
@@ -50,6 +51,62 @@ test('framework and WordPress browser runs use disjoint artifact directories', (
   assert.notEqual(browser, wordpress);
   assert.ok(path.relative(browser, wordpress).startsWith('..'));
   assert.ok(path.relative(wordpress, browser).startsWith('..'));
+});
+
+test('offline Composer consumers resolve only locked third-party metadata, never workspace packages', async () => {
+  const repository = await lockedComposerRepository(projectRoot);
+  const lock = JSON.parse(
+    await readFile(path.join(projectRoot, 'composer.lock'), 'utf8'),
+  );
+  assert.equal(repository.type, 'package');
+  assert.deepEqual(
+    repository.package,
+    [...lock.packages, ...lock['packages-dev']].filter(
+      (item) => !item.name.startsWith('pagesquire/'),
+    ),
+  );
+  assert.ok(
+    repository.package.some((item) => item.name === 'laravel/framework'),
+  );
+  assert.ok(
+    repository.package.some((item) => item.name === 'opis/json-schema'),
+  );
+  assert.ok(repository.package.every((item) => item.dist || item.source));
+});
+
+test('demo build creates absent output directories on a clean checkout and remains repeatable', async (t) => {
+  const root = await temporary(t);
+  await mkdir(path.join(root, 'packages/core/dist'), { recursive: true });
+  await mkdir(path.join(root, 'packages/client/src'), { recursive: true });
+  await mkdir(path.join(root, 'examples/plain-html'), { recursive: true });
+  await writeFile(path.join(root, 'LICENSE'), 'synthetic license fixture');
+  await writeFile(
+    path.join(root, 'packages/client/src/widget.css'),
+    '.fixture { color: red; }',
+  );
+  for (const name of ['main.ts', 'react-demo.tsx'])
+    await writeFile(
+      path.join(root, 'examples/plain-html', name),
+      'export const fixture = true;',
+    );
+  for (let run = 0; run < 2; run++)
+    execFileSync(
+      process.execPath,
+      [path.join(projectRoot, 'scripts/build-demo.mjs')],
+      { cwd: root, stdio: 'pipe' },
+    );
+  for (const name of ['demo.js', 'react-demo.js', 'widget.css'])
+    assert.ok(
+      (await readFile(path.join(root, 'examples/plain-html/dist', name)))
+        .length > 0,
+    );
+  assert.equal(
+    await readFile(
+      path.join(root, 'examples/plain-html/dist/widget.css'),
+      'utf8',
+    ),
+    '.fixture { color: red; }',
+  );
 });
 async function fixture(t) {
   const root = await temporary(t);

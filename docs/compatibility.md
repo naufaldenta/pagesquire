@@ -17,7 +17,7 @@ Evidence was recorded on Windows, Node.js 24.14.1, PHP 8.3.30 and Chromium throu
 
 Package declarations currently require Node >=24 for Node tooling/runtime, PHP ^8.3, Laravel ^13.0, React ^19.0.0, and WordPress >=7.1. These are declared integration floors/ranges, not an expanded test matrix. The WordPress `Tested up to: 7.1` field identifies its tested major/minor, not every patch/environment.
 
-Windows and Ubuntu jobs exist in [CI](../.github/workflows/ci.yml), but remote runs have not been observed. There are no green CI badges or stable-support claims yet. Every newly claimed host/version needs a fixture and recorded passing checks.
+Windows and Ubuntu jobs run through [GitHub Actions](https://github.com/naufaldenta/pagesquire/actions/workflows/ci.yml). Check the result and logs for the exact commit: a configured target, past green run or badge is not proof that a different revision passed. This matrix records local fixture evidence, not stable-support certification. Every newly claimed host/version needs a fixture and recorded passing checks.
 
 ## Known limits and the 1.0 gate
 

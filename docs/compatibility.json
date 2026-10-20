@@ -56,7 +56,11 @@
       "scope": "WordPress 7.1.3/PHP 8.3; SQLite Integration 3.1.0; core block/classic fixtures; real ZIP installation."
     }
   ],
-  "remoteCi": "configured-not-run",
+  "remoteCi": {
+    "policy": "Consult results for the exact commit; configured targets are not support certification.",
+    "workflow": ".github/workflows/ci.yml",
+    "url": "https://github.com/naufaldenta/pagesquire/actions/workflows/ci.yml"
+  },
   "notCertified": [
     "Other framework/PHP/Node versions",
     "Firefox, Safari and screen readers",
