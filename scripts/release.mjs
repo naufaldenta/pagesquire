@@ -7,11 +7,12 @@ import {
   mkdir,
   mkdtemp,
   readdir,
+  realpath,
   readFile,
   writeFile,
 } from 'node:fs/promises';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { zipSync, unzipSync } from 'fflate';
 import {
   collectDistributionSources,
@@ -620,8 +621,10 @@ async function main(args) {
   );
 }
 if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+  import.meta.main ??
+  (process.argv[1] !== undefined &&
+    (await realpath(fileURLToPath(import.meta.url))) ===
+      (await realpath(process.argv[1])))
 )
   main(process.argv.slice(2)).catch((error) => {
     console.error(error.message);

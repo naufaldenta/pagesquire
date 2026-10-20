@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { parseArgs } from 'node:util';
 import { realpath } from 'node:fs/promises';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { ProjectFiles, OnboardingError, json } from './files.js';
 import { initialize, prepareAi, writeReport } from './workflow.js';
 import { scanProject, saveScan } from './scan.js';
@@ -88,8 +88,10 @@ export async function run(
   return validateProject(files, values.compile ?? false);
 }
 if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(await realpath(process.argv[1])).href
+  import.meta.main ??
+  (process.argv[1] !== undefined &&
+    (await realpath(fileURLToPath(import.meta.url))) ===
+      (await realpath(process.argv[1])))
 ) {
   try {
     const result = await run(process.argv.slice(2));
