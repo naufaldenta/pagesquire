@@ -335,6 +335,35 @@ test('URL and config boundaries deny foreign origins, queries, fragments and tra
   await assert.rejects(loadConfig(project.files), { code: 'UNSAFE_PATH' });
 });
 
+test('CLI executes path aliases and stays quiet when imported as a module', async (t) => {
+  const project = await temporaryProject(t);
+  const cli = path.resolve('packages/cli/dist/bin.js');
+  let alias;
+  if (process.platform === 'win32') {
+    alias = path.join(path.dirname(cli).toUpperCase(), path.basename(cli));
+  } else {
+    const directory = path.join(project.root, 'cli-alias');
+    await symlink(path.dirname(cli), directory, 'dir');
+    alias = path.join(directory, 'bin.js');
+  }
+  const help = execFileSync(
+    process.execPath,
+    ['--preserve-symlinks-main', alias, '--help'],
+    { encoding: 'utf8' },
+  );
+  assert.ok(JSON.parse(help).commands['prepare-ai']);
+  const imported = execFileSync(
+    process.execPath,
+    [
+      '--input-type=module',
+      '-e',
+      `await import(${JSON.stringify(pathToFileURL(cli).href)});`,
+    ],
+    { encoding: 'utf8' },
+  );
+  assert.equal(imported, '');
+});
+
 test('CLI entry point exposes commands and sanitizes malformed project errors', async (t) => {
   const project = await temporaryProject(t);
   const cli = path.resolve('packages/cli/dist/bin.js');
