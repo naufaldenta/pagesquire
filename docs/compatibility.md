@@ -6,6 +6,8 @@ PageSquire **0.1.0-alpha.0** is a development preview, not stable 1.0. A depende
 
 Evidence was recorded on Windows, Node.js 24.14.1, PHP 8.3.30 and Chromium through Playwright 1.64.1. Providers are deterministic test doubles; no paid AI service is required. The F5 baseline passed 209 component tests; this count is historical evidence, not a substitute for running the current checks.
 
+The separate [OFFBEAT demo](../examples/brutalist-demo/README.md) now includes a same-project Vercel Node API and a Supabase PostgreSQL store. Its opt-in database tests also passed against the owner's hosted database with verified TLS, covering committed checkpoints, concurrent budgets, lease fencing, expiry and RLS. A bounded owner-authorized Sumopod smoke request succeeded using the environment-selected model. This is narrow integration evidence, not a model-accuracy benchmark or a general serverless security certification. Default automated browser tests remain synthetic and spend no provider credits.
+
 | Target             | Tested version                              | Coverage and boundary                                                                                                            |
 | ------------------ | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | Plain HTML/browser | ES2022 bundle, Chromium                     | Registered capabilities, CSP without unsafe-eval, heading-only color, links, font weight, ambiguity, cancellation and navigation |

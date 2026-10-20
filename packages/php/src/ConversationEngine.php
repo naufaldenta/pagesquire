@@ -133,7 +133,7 @@ final class ConversationEngine
         $call = ['protocolVersion' => '0.1', 'callId' => bin2hex(random_bytes(16)), 'capabilityId' => $proposal['capabilityId'], 'snapshotId' => $request['snapshot']['id'], 'parameters' => (object) $proposal['parameters']];
         $state['steps']++;
         $state['pending'] = $call;
-        $state['messages'][] = ['role' => 'assistant', 'content' => self::encode(['requestedAction' => $call])];
+        $state['messages'][] = ['role' => 'assistant', 'content' => self::encode(['text' => 'Checking the requested action…', 'emotion' => 'thinking', 'finished' => false, 'toolCalls' => [['capabilityId' => $proposal['capabilityId'], 'parameters' => (object) $proposal['parameters']]]])];
 
         return $this->save($state, ['protocolVersion' => '0.1', 'text' => 'Checking the requested action…', 'emotion' => 'thinking', 'finished' => false, 'toolCalls' => [$call]], $checkpoint);
     }
@@ -147,7 +147,7 @@ final class ConversationEngine
     /** @param array<string, mixed> $state @return array{state: array<string, mixed>, reply: array<string, mixed>} */
     private function finish(array $state, string $text, string $emotion, ?callable $checkpoint): array
     {
-        $state['messages'][] = ['role' => 'assistant', 'content' => $text];
+        $state['messages'][] = ['role' => 'assistant', 'content' => self::encode(['text' => $text, 'emotion' => $emotion, 'finished' => true, 'toolCalls' => []])];
 
         return $this->save($state, ['protocolVersion' => '0.1', 'text' => $text, 'emotion' => $emotion, 'finished' => true, 'toolCalls' => []], $checkpoint);
     }

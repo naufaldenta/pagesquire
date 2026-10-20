@@ -941,6 +941,9 @@ h3 {
   overscroll-behavior: contain;
 }
 .assistant-top {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1657,4 +1660,129 @@ dialog::backdrop {
     animation: none !important;
     transition: none !important;
   }
+}
+
+.live-chat {
+  border-top: 1px solid #17171745;
+  padding-top: 16px;
+  margin-top: 16px;
+}
+.chat-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.chat-title strong {
+  font-size: 14px;
+}
+.chat-badge {
+  background: var(--lime);
+  border: 1px solid var(--ink);
+  padding: 4px 6px;
+  font:
+    bold 8px/1.4 'Courier New',
+    monospace;
+}
+.live-chat > p,
+.unlock-form p {
+  font-size: 11px;
+  line-height: 1.6;
+}
+.unlock-form label,
+.chat-send-form label {
+  display: block;
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 7px;
+}
+.chat-input-row {
+  display: flex;
+  gap: 7px;
+  align-items: stretch;
+}
+.chat-input-row input,
+.chat-input-row textarea {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: white;
+  padding: 10px;
+  font-size: 12px;
+  resize: vertical;
+}
+.chat-input-row button {
+  border: 1px solid var(--ink);
+  background: var(--lime);
+  padding: 9px;
+  font-size: 11px;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+.unlock-form p {
+  margin-top: 8px;
+}
+.chat-messages {
+  max-height: 270px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  margin-bottom: 14px;
+}
+.chat-empty {
+  padding: 12px;
+  background: var(--pink);
+  border: 1px solid var(--ink);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.chat-message {
+  border: 1px solid #17171760;
+  background: white;
+  padding: 10px;
+  margin-bottom: 8px;
+  overflow-wrap: anywhere;
+}
+.chat-message.user {
+  background: var(--lime);
+  margin-left: 18px;
+}
+.chat-message.action {
+  border-style: dashed;
+  background: transparent;
+}
+.chat-message p {
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  margin-top: 5px;
+}
+.chat-message-label {
+  font:
+    bold 8px/1.4 'Courier New',
+    monospace;
+}
+.chat-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 13px;
+  margin: 10px 0;
+}
+.chat-controls button {
+  padding: 5px 0;
+  border: 0;
+  background: transparent;
+  font-size: 10px;
+  text-decoration: underline;
+}
+.chat-notice {
+  border-left: 3px solid #c52b28;
+  padding-left: 8px;
+  margin-top: 10px;
+}
+.chat-input-row input:focus-visible,
+.chat-input-row textarea:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }

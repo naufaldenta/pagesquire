@@ -30,7 +30,9 @@
     "demo:build": "node scripts/build-offbeat.mjs",
     "demo:dev": "node scripts/build-offbeat.mjs --prepare-only && next dev examples/brutalist-demo --webpack --hostname 127.0.0.1 --port 4180",
     "demo:serve": "node scripts/serve-offbeat.mjs",
+    "demo:migrate": "node scripts/migrate-offbeat.mjs --apply",
     "test:demo": "playwright test --config playwright.offbeat.config.mjs",
+    "test:demo-db": "node --test tests/database/offbeat.test.mjs",
     "demo:chat": "php -S 127.0.0.1:4174 examples/php-chat/router.php",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
@@ -49,5 +51,8 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "typescript": "7.0.2"
+  },
+  "dependencies": {
+    "pg": "8.23.1"
   }
 }

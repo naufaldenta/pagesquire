@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import LiveChat from './live-chat.jsx';
 import { createOffbeatRuntime } from '../adapter.mjs';
 import { art, styles } from '../art.mjs';
 
@@ -234,6 +235,11 @@ export default function Page() {
   const busyRef = useRef(false);
   const detailDialog = useRef(null);
   const settingsDialog = useRef(null);
+  const handleChatState = useCallback((state) => {
+    busyRef.current = state.busy;
+    setBusy(state.busy);
+    setEmotion(state.emotion);
+  }, []);
 
   useEffect(() => {
     try {
@@ -585,7 +591,8 @@ export default function Page() {
                 Try PageSquire <Arrow />
               </button>
               <span className="demo-disclosure">
-                Guided browser actions are live. AI chat is locked.
+                Guided actions are open. Live AI chat uses a private access
+                code.
               </span>
             </div>
             <div className="playground-demo">
@@ -660,8 +667,9 @@ export default function Page() {
       </div>
 
       <div className="assistant-dock" data-pagesquire-root="offbeat">
-        {assistantOpen && (
+        {
           <aside
+            hidden={!assistantOpen}
             className="assistant-panel"
             id="pagesquire-panel"
             aria-label="PageSquire guided actions"
@@ -680,7 +688,7 @@ export default function Page() {
               </button>
             </div>
             <div className="assistant-content">
-              <span className="locked-label">LIVE AI LOCKED</span>
+              <span className="locked-label">GUIDED ACTIONS + LIVE AI</span>
               <h2>Small actions. Real changes.</h2>
               <p>
                 These buttons run registered, verified browser actions. They are
@@ -715,18 +723,11 @@ export default function Page() {
                   Reset page
                 </button>
               </div>
-              <label className="locked-chat">
-                <span>AI chat — not connected</span>
-                <input
-                  placeholder="Live AI is locked in this preview"
-                  disabled
-                  aria-label="AI chat is locked"
-                />
-              </label>
-              <p className="privacy-note">
-                No API keys, chat requests, or conversation storage. Changes
-                last only until you reload.
-              </p>
+              <LiveChat
+                runtime={ready ? runtime.current : null}
+                onState={handleChatState}
+                pageBusy={busy}
+              />
               <details className="emotion-preview">
                 <summary>Preview the six expressions</summary>
                 <div>
@@ -753,7 +754,7 @@ export default function Page() {
               </details>
             </div>
           </aside>
-        )}
+        }
         <button
           className={`assistant-launcher ${assistantOpen ? 'is-open' : ''}`}
           aria-label={assistantOpen ? 'Hide PageSquire' : 'Open PageSquire'}
@@ -770,7 +771,7 @@ export default function Page() {
           <Face emotion={emotion} small />
           <span>
             {assistantOpen ? 'Close sidekick' : 'Try PageSquire'}
-            <small>{busy ? 'Thinking…' : 'GUIDED DEMO · AI LOCKED'}</small>
+            <small>{busy ? 'Thinking…' : 'GUIDED ACTIONS + PRIVATE AI'}</small>
           </span>
           <span aria-hidden="true">{assistantOpen ? '×' : '↗'}</span>
         </button>

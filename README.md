@@ -8,9 +8,9 @@ PageSquire is an open-source foundation for assistants that help people navigate
 
 [Try OFFBEAT — the PageSquire playground](https://pagesquire-offbeat-demo.vercel.app/)
 
-Explore an independent art/culture website and try real, verified browser actions: change heading colors, highlight links, adjust reading text, filter art, and jump to a section. No API key is required. **Live AI chat is locked**; the guided buttons are not model-generated responses.
+Explore an independent art/culture website and try verified browser actions: change heading colors, highlight links, adjust reading text, filter art, and jump to a section. Guided buttons work without a key. **Live AI chat requires the owner's private demo access code** to protect the shared usage budget. Visitors never enter a provider API key.
 
-See the [demo setup guide](examples/brutalist-demo/README.md) for local development, Vercel deployment, and planned Supabase PostgreSQL storage. Supabase integration is not implemented yet; adding database credentials does not unlock chat.
+The frontend and Node API deploy together on Vercel, with private Supabase PostgreSQL session/budget storage. The provider endpoint and model are environment-configurable. See the [demo setup guide](examples/brutalist-demo/README.md) for setup, TLS, migrations, privacy and limits.
 
 ## Current status
 
@@ -41,7 +41,7 @@ The development repository is [naufaldenta/pagesquire](https://github.com/naufal
 
 ## Run the foundation demo
 
-For the independent, public-facing art playground, see [OFFBEAT](examples/brutalist-demo/README.md). Run `npm run demo:build` then `npm run demo:serve`. Its guided PageSquire actions work without keys; live AI chat stays locked. Root `vercel.json` deploys only this static demo, not the local conversation servers.
+For the independent art playground, see [OFFBEAT](examples/brutalist-demo/README.md). Run `npm run demo:build` then `npm run demo:serve` for a static local preview with guided actions. Root `vercel.json` deploys its static frontend **and** the dedicated `/api/session` and `/api/chat` Node function; other local example servers are not deployed.
 
 Requirements: Node.js 24 or later, npm, PHP 8.3, and Composer. PHP dependencies and browser binaries are required for the full test suite. The tested local host is Windows.
 

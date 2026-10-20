@@ -6,7 +6,7 @@ All canonical release notes are English. PageSquire uses SemVer for packages and
 
 ### Added
 
-- OFFBEAT, an independent brutalist art/culture landing demo with original characters, a filterable gallery, accessible dialogs, verified guided browser actions and six expression previews. Static Vercel deployment keeps live AI locked; no database or provider credentials are required.
+- OFFBEAT, an independent brutalist art/culture landing demo with original characters, a filterable gallery, accessible dialogs, verified guided actions and six expressions. Its optional private AI chat deploys alongside the frontend on Vercel, with environment-owned model/provider configuration, signed sessions, Supabase PostgreSQL checkpoints, fenced leases and shared usage limits. Guided actions need no credentials.
 
 - Independent capability registry, versioned schemas and CSP-safe compiled validators.
 - Browser observation, verified actions, ambiguity/staleness checks, cancellation and navigation continuation.
@@ -18,6 +18,8 @@ All canonical release notes are English. PageSquire uses SemVer for packages and
 - GitHub-first release checks, local source/npm/PHP/plugin artifacts, checksums, compatibility evidence and community templates.
 
 ### Security and distribution
+
+- Node/PHP assistant history now preserves the provider response schema for both action and final turns, without internal call/snapshot identifiers. This avoids teaching live models an incompatible internal action format; strict response and parameter validation remains unchanged.
 
 - Explicit host authorization, CSRF/origin controls, schema validation, durable checkpoints and bounded inference attempts.
 - WordPress lock ownership and quota controls; disabled-by-default activation.

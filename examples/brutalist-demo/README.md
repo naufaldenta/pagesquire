@@ -1,59 +1,100 @@
-# OFFBEAT — the PageSquire public demo
+# OFFBEAT / PageSquire demo
 
-An independent, English-language internet-culture playground with original character art, a filterable gallery, art-detail dialogs, accessibility controls, and real PageSquire browser actions. No host-application content or credentials are used.
+[Open the live demo](https://pagesquire-offbeat-demo.vercel.app/)
 
-**Live demo:** [Open OFFBEAT on Vercel](https://pagesquire-offbeat-demo.vercel.app/). Guided actions work now; live AI chat remains locked.
+An independent English art/culture playground, not a copy of any host application. Guided buttons invoke six real, registered and verified browser capabilities without a key. Live AI chat uses the same runtime and requires the owner's private demo access code. The buttons are not model-generated replies.
 
-## Run locally
+## Architecture
 
-From the repository root, using Node.js 24 or later:
+The static Next.js frontend and a native Vercel Node function deploy to **one Vercel project**. Exact rewrites route `/api/session` and `/api/chat` to `api/assistant.mjs`. Supabase PostgreSQL supplies external durable storage; Redis, PHP and Composer are not needed for this deployment.
+
+The API reuses PageSquire's Node conversation engine and OpenAI-compatible provider. It authorizes only this demo's six reversible capabilities. Heading color, link highlighting, reading-copy weight/size, gallery filters and scrolling have independent local postcondition checks. There is no generic click, arbitrary navigation, account or purchase tool. Assistant responses carry one of six emotions; loading uses `thinking`. The original SVG avatar is not a bundled Rive renderer or licensed third-party character.
+
+## Local preview and tests
+
+From the repository root, with Node.js 24+ and dependencies installed:
 
 ```sh
-npm ci
 npm run demo:build
 npm run demo:serve
 ```
 
-Open the local URL printed by the server. For development, use `npm run demo:dev`. Run `npm run test:demo` after a production build for Chromium interaction, accessibility-control, responsive-layout, and network-boundary tests.
-
-## What is live?
-
-The guided buttons invoke the real `BrowserRuntime` and capability registry, using build-time compiled schemas. Completion is reported only after rendered DOM/computed-style verification. Heading color, link highlighting, reading-copy weight/size, gallery filtering, and section scrolling are implemented independently.
-
-Live AI chat is **locked**. These are explicitly labeled guided actions, not model-generated replies. There are no provider calls, session endpoints, chat storage, paid services, or Redis requirements. Changes are local to the current page and reset on reload. The original SVG avatar demonstrates all six emotion states; it does not bundle a Rive renderer or third-party character asset.
-
-## Environment preparation
-
-No environment variables are needed to build or deploy the current demo. Copy [env.example](env.example) to `.env.local` inside this directory if you want to prepare future server-only configuration. The local file is ignored by Git, the source archive, and Vercel CLI uploads. Do not put real secrets in the template or any `NEXT_PUBLIC_` variable.
-
-The listed variables are reserved, not implemented switches. **Adding keys will not unlock AI.** A future live backend must first implement durable atomic conversation/budget storage, server-only provider access, authorization, CSRF/origin checks, quotas, and abuse protection. Use a PostgreSQL-backed store or another atomic shared backend if Redis is unsuitable; an in-memory/file store is not a safe serverless substitute. Keep production secrets in the deployment platform's environment settings, not in frontend code.
-
-### Planned storage: Supabase PostgreSQL
-
-Supabase PostgreSQL is the selected target for this demo's future shared conversation state and usage limits. **The adapter and database schema are not implemented yet.** The deployed static demo has no Redis dependency or existing database to migrate. PageSquire's shared packages remain storage-provider independent.
-
-To prepare:
-
-1. Create a separate, empty Supabase project for PageSquire. A [Free plan](https://supabase.com/pricing) is available with usage limits; review its current limits before choosing a plan.
-2. Keep the database password private. Do not create chat tables, public read policies, or seed data manually; the backend integration must provide reviewed migrations, private storage, atomic locking/updates, quotas, and expiry cleanup.
-3. For the planned server-side PostgreSQL connection on Vercel, copy the **Transaction pooler** connection string from the project's **Connect** dialog into `PAGESQUIRE_DATABASE_URL` in your ignored `.env.local`. Follow the [Supabase serverless connection guide](https://supabase.com/docs/guides/database/connecting-to-postgres); driver settings and migrations will be implemented with the adapter. Copy the actual host rather than guessing it, replace the password placeholder, and URL-encode special characters in credentials.
-4. Never paste the connection string or a secret/service-role API key into chat, GitHub, or a `NEXT_PUBLIC_` variable. Add production credentials through Vercel's environment settings only when the server backend is ready. A direct PostgreSQL connection does not require a Supabase API key; an alternative Data API integration would need its own server-only credentials and authorization.
-
-Until the backend and database tests pass, leave `PAGESQUIRE_STORAGE_DRIVER` unset and keep live AI locked. Creating a Supabase project or filling these placeholders does not activate inference or connect the static website to the database.
-
-## Vercel
-
-Deploy from the **repository root**, not this example directory. Root [vercel.json](../../vercel.json) selects a static build (`npm run demo:build`) and publishes only `examples/brutalist-demo/out`. It deliberately does not deploy the local PHP/Node/Next.js conversation servers. No PHP runtime or Composer installation is required for this build.
+The static preview prints its loopback URL; live chat is unavailable there. It does not load your private env file or spend provider credits. For automated browser coverage:
 
 ```sh
-vercel link --project pagesquire-offbeat-demo
+npm run test:demo
+```
+
+This starts a **synthetic test backend**, using the real engine/client/runtime but fake credentials, an in-memory fixture store and a deterministic provider. That store/provider is never imported by the production function. Synthetic success does not establish live-model accuracy. Do not expose the test server publicly.
+
+## Server environment
+
+Copy [env.example](env.example) to `.env.local` in this directory and fill it privately. The file is excluded from Git, source archives and Vercel uploads. Never use `NEXT_PUBLIC_` for any credential. Production values must be added separately to the Vercel project's **Production environment**, followed by a deployment.
+
+| Variable                            | Value                                                                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `PAGESQUIRE_PROVIDER_URL`           | Full HTTPS OpenAI-compatible chat-completions URL, including `/v1/chat/completions` when required by your provider.      |
+| `PAGESQUIRE_MODEL`                  | Your provider's exact model ID. No model is hardcoded; change this env and redeploy to switch.                           |
+| `PAGESQUIRE_API_KEY`                | Server-only provider API key.                                                                                            |
+| `PAGESQUIRE_SESSION_SECRET`         | Cryptographically random 32 bytes encoded as 64 hex characters.                                                          |
+| `PAGESQUIRE_DEMO_ACCESS_CODE`       | Private visitor unlock code, 12–256 characters. Not your provider key.                                                   |
+| `PAGESQUIRE_STORAGE_DRIVER`         | `supabase-postgres`.                                                                                                     |
+| `PAGESQUIRE_DATABASE_URL`           | Supabase PostgreSQL Transaction pooler connection URL with password.                                                     |
+| `PAGESQUIRE_PUBLIC_ORIGIN`          | Exact HTTPS production origin, without a trailing slash or path.                                                         |
+| `PAGESQUIRE_DATABASE_CA`            | Local path to the downloaded database CA, or its complete PEM content. On Vercel, use PEM content, **not a local path**. |
+| `PAGESQUIRE_DAILY_REQUEST_LIMIT`    | Optional global provider-attempt budget per rolling 24-hour bucket; default `100`.                                       |
+| `PAGESQUIRE_IP_DAILY_REQUEST_LIMIT` | Optional provider attempts per hashed client IP per 24-hour bucket; default `25`.                                        |
+
+Generate the session secret locally with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"` and save it privately. Rotating the secret or access code invalidates existing signed sessions. Keep API key, database URL, session secret and access code as Vercel Secret values; never paste them into chat, issues or GitHub.
+
+The demo currently uses an owner-selected Sumopod endpoint/model through this generic configuration. See [Sumopod's OpenAI-compatible API guide](https://docs.sumopod.com/guides/ai/openai-compatible-api). Compatibility and tool-following quality must be rechecked when changing providers/models; no automatic fallback or paid retry is performed.
+
+A bounded live check on the production alias verified heading-only red color, highlighted links and bold reading copy in one conversation, followed by a final `happy` reply. Assistant history retains the provider-response JSON shape on every turn instead of exposing internal action envelopes. This smoke check does not establish general model accuracy or production security certification.
+
+## Supabase PostgreSQL setup
+
+1. Use a separate Supabase project for the demo. Copy the **Transaction pooler** connection string from **Connect**; use the actual host and URL-encode special characters in the password. See [Supabase's connection guide](https://supabase.com/docs/guides/database/connecting-to-postgres).
+2. Never paste the connection string into chat, GitHub or a `NEXT_PUBLIC_` variable. Direct PostgreSQL does not need a Supabase API/service-role key.
+3. Download the root CA from **Database Settings → SSL Configuration** and save it, for example, as `.cache/supabase-ca.crt` at the repository root. Set `PAGESQUIRE_DATABASE_CA` to that local path. The driver always verifies TLS and strips connection-string options that could disable verification. Do not use `NODE_TLS_REJECT_UNAUTHORIZED=0` or `rejectUnauthorized: false`.
+4. Review [the additive SQL migration](server/migrations/001_private_assistant.sql), then run from the repository root:
+
+```sh
+npm run demo:migrate
+```
+
+The migration command loads only this example's ignored `.env.local` (shell environment takes precedence). It creates the dedicated `pagesquire_private` schema, version marker, sessions and budgets tables. It refuses an existing schema without the ownership marker. All tables enable RLS, with public/`anon`/`authenticated` access revoked. Do not add public read policies or expose this schema through a Data API. The configured database role must own/have access to these private tables; this demo does not provision a separate least-privilege database role.
+
+Each checkpoint commits before inference proceeds. Fenced 90-second leases serialize requests without holding an open SQL transaction during provider networking, including with a transaction pooler. Atomic SQL counters are shared across serverless instances. Expired session payloads are discarded on next access. Rows expire after two hours; authenticated traffic triggers bounded expiry cleanup at most once per minute. Physical removal is traffic-driven, **not guaranteed exactly at expiry**.
+
+Optional database tests use `PAGESQUIRE_TEST_DATABASE_URL` and `PAGESQUIRE_TEST_DATABASE_CA`:
+
+```sh
+npm run test:demo-db
+```
+
+Without that explicit test URL, the suite skips and never reads the owner's env file. CI uses a disposable loopback PostgreSQL service; hosted databases require verified TLS. Tests delete only their randomly identified rows. They cover committed failure checkpoints, concurrent counters, lease fencing, expiry, payload limits and RLS.
+
+## Vercel deployment
+
+Deploy from the **repository root**, not this example directory. [vercel.json](../../vercel.json) builds shared packages during install so function tracing can include them, exports the frontend and deploys the Node API with a 60-second platform limit. No repository catch-all rewrite is used. Set all required production env values above, migrate the database, then:
+
+```sh
+vercel link --project your-own-demo-project
 vercel deploy --prod
 ```
 
-Select your own Vercel account/team when linking. Do not reuse another application's Vercel project. Linking and deployment require your own authenticated account; no credentials are included. `.vercelignore` excludes credentials, dependencies, private working notes, and generated local artifacts. Only the static export is served; there is no catch-all rewrite exposing repository files.
+Use your own authenticated account/project. `.vercelignore` excludes credentials, dependencies, private notes, database files and local certificates. Upload the certificate's PEM **value** through Vercel environment settings; never upload your private env file. The frontend contains no provider/database credentials. Verify `/api/session`, access-code login, a real chat reply and a verified page action after deployment; a successful static build alone does not prove a working AI backend.
+
+## Security, budgets and privacy
+
+- Signed one-hour, HttpOnly, Secure, SameSite=Strict cookies; exact-origin and session-bound CSRF checks for writes. The access code is checked server-side. Signing out clears the browser cookie; there is no server-side cookie revocation list. Rotate the access code/secret to invalidate copied cookies.
+- Login limits: five attempts per hashed IP and 100 globally per ten minutes. Chat requests: 40/IP/minute, 300 global/minute, 20/session/minute. Provider calls: 20/session/hour, plus the configurable IP/global daily budgets. Each action round and final reply counts as another provider attempt. Failed calls remain charged; no automatic paid retry.
+- Vercel's platform client-IP header is trusted only on Vercel. Elsewhere all clients share an unknown-IP bucket. No raw client IP is stored; a keyed hash is used. These controls are demo safeguards, not comprehensive bot protection or a production security certification.
+- Chat messages, bounded page observations and browser results are stored privately in Supabase and sent to the configured model provider. Do not share personal/sensitive information. Assistant UI/private areas are excluded from page observation; chat is not saved in browser storage. Closing/reloading does not restore the browser transcript. Start a new conversation to discard the current client conversation ID.
+- Missing configuration, storage failures or limits fail closed. Guided actions remain available when AI is unavailable. This remains an alpha with six scoped tools, not unrestricted autonomous browsing.
 
 ## Art and font credits
 
-The character collage is AI-generated original demo art; the other visuals and expressions are original code-native SVG/CSS. No third-party franchise characters or host-application assets are included. These assets are part of the MIT-licensed PageSquire demo; no exclusivity is claimed for generated imagery.
+The character collage is AI-generated original demo art; the other visuals and expressions are original SVG/CSS. No third-party franchise characters or host-application assets are included. The assets are part of the MIT-licensed demo; no exclusivity is claimed for generated imagery.
 
-Anton is self-hosted from [Google Fonts](https://github.com/google/fonts/tree/main/ofl/anton) under the [SIL Open Font License](public/fonts/OFL.txt). Its license is included alongside the font. The PageSquire MIT notice is copied into the static export by the build.
+Anton is self-hosted from [Google Fonts](https://github.com/google/fonts/tree/main/ofl/anton) under the [SIL Open Font License](public/fonts/OFL.txt). The license is included beside the font; the build also copies PageSquire's MIT notice.
