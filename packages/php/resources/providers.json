@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "providers": [
+    {
+      "id": "custom",
+      "label": "Custom OpenAI-compatible",
+      "endpoint": null,
+      "responseMode": "json_object",
+      "tokenParameter": "max_tokens",
+      "documentation": "https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create"
+    },
+    {
+      "id": "sumopod",
+      "label": "Sumopod",
+      "endpoint": "https://ai.sumopod.com/v1/chat/completions",
+      "responseMode": "json_object",
+      "tokenParameter": "max_tokens",
+      "documentation": "https://docs.sumopod.com/guides/ai/openai-compatible-api"
+    },
+    {
+      "id": "openai",
+      "label": "OpenAI",
+      "endpoint": "https://api.openai.com/v1/chat/completions",
+      "responseMode": "json_object",
+      "tokenParameter": "max_completion_tokens",
+      "documentation": "https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create"
+    },
+    {
+      "id": "openrouter",
+      "label": "OpenRouter",
+      "endpoint": "https://openrouter.ai/api/v1/chat/completions",
+      "responseMode": "json_object",
+      "tokenParameter": "max_tokens",
+      "documentation": "https://openrouter.ai/docs/api_reference/overview"
+    },
+    {
+      "id": "groq",
+      "label": "Groq",
+      "endpoint": "https://api.groq.com/openai/v1/chat/completions",
+      "responseMode": "json_object",
+      "tokenParameter": "max_completion_tokens",
+      "documentation": "https://console.groq.com/docs/openai"
+    },
+    {
+      "id": "deepseek",
+      "label": "DeepSeek",
+      "endpoint": "https://api.deepseek.com/chat/completions",
+      "responseMode": "json_object",
+      "tokenParameter": "max_tokens",
+      "documentation": "https://api-docs.deepseek.com/"
+    },
+    {
+      "id": "qwen",
+      "label": "Qwen / Alibaba Cloud Model Studio",
+      "endpoint": null,
+      "responseMode": "prompt",
+      "tokenParameter": "max_tokens",
+      "documentation": "https://www.alibabacloud.com/help/en/model-studio/compatibility-of-openai-with-dashscope"
+    },
+    {
+      "id": "zai",
+      "label": "GLM / Z.AI",
+      "endpoint": "https://api.z.ai/api/paas/v4/chat/completions",
+      "responseMode": "prompt",
+      "tokenParameter": "max_tokens",
+      "documentation": "https://docs.z.ai/guides/overview/quick-start"
+    },
+    {
+      "id": "glm",
+      "label": "GLM / Zhipu China",
+      "endpoint": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+      "responseMode": "prompt",
+      "tokenParameter": "max_tokens",
+      "documentation": "https://docs.bigmodel.cn/cn/guide/develop/openai/introduction"
+    },
+    {
+      "id": "9router",
+      "label": "9Router (your HTTPS gateway)",
+      "endpoint": null,
+      "responseMode": "prompt",
+      "tokenParameter": "max_tokens",
+      "documentation": "https://github.com/decolua/9router"
+    },
+    {
+      "id": "gemini",
+      "label": "Google Gemini (OpenAI compatibility)",
+      "endpoint": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+      "responseMode": "json_object",
+      "tokenParameter": "max_tokens",
+      "documentation": "https://ai.google.dev/gemini-api/docs/openai"
+    },
+    {
+      "id": "mistral",
+      "label": "Mistral",
+      "endpoint": "https://api.mistral.ai/v1/chat/completions",
+      "responseMode": "json_object",
+      "tokenParameter": "max_tokens",
+      "documentation": "https://docs.mistral.ai/api/endpoint/chat"
+    },
+    {
+      "id": "together",
+      "label": "Together AI",
+      "endpoint": "https://api.together.ai/v1/chat/completions",
+      "responseMode": "json_object",
+      "tokenParameter": "max_tokens",
+      "documentation": "https://docs.together.ai/docs/inference/openai-compatibility"
+    },
+    {
+      "id": "fireworks",
+      "label": "Fireworks AI",
+      "endpoint": "https://api.fireworks.ai/inference/v1/chat/completions",
+      "responseMode": "json_object",
+      "tokenParameter": "max_tokens",
+      "documentation": "https://docs.fireworks.ai/tools-sdks/openai-compatibility"
+    },
+    {
+      "id": "cerebras",
+      "label": "Cerebras",
+      "endpoint": "https://api.cerebras.ai/v1/chat/completions",
+      "responseMode": "json_object",
+      "tokenParameter": "max_completion_tokens",
+      "documentation": "https://inference-docs.cerebras.ai/resources/openai"
+    },
+    {
+      "id": "xai",
+      "label": "xAI / Grok (legacy Chat Completions)",
+      "endpoint": "https://api.x.ai/v1/chat/completions",
+      "responseMode": "json_object",
+      "tokenParameter": "max_tokens",
+      "documentation": "https://docs.x.ai/developers/rest-api-reference/inference/chat-completions"
+    }
+  ]
+}

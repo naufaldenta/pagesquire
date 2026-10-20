@@ -12,6 +12,12 @@ Explore an independent art/culture website with thirteen verified actions: color
 
 The frontend and Node API deploy together on Vercel, with private Supabase PostgreSQL session/budget storage. The provider endpoint and model are environment-configurable. See the [demo setup guide](examples/brutalist-demo/README.md) for setup, TLS, migrations, privacy and limits.
 
+## AI providers
+
+Choose a server-side preset: **Sumopod, OpenAI, OpenRouter, Groq, DeepSeek, Qwen/Alibaba Cloud, GLM via Z.AI or Zhipu China, 9Router, Google Gemini, Mistral, Together AI, Fireworks AI, Cerebras, xAI**, or a custom OpenAI-compatible endpoint. Hosted presets need `PAGESQUIRE_PROVIDER`, `PAGESQUIRE_API_KEY`, and `PAGESQUIRE_MODEL`; custom/regional gateways also need `PAGESQUIRE_PROVIDER_URL`. Model IDs are always owner-configured, never hardcoded. WordPress includes a provider dropdown.
+
+See the [support matrix and per-integration setup tutorials](docs/providers.md) for endpoints, compatibility options, required fields, and honest support limits. These are tested transport presets, not a claim that every model is live-certified. Validation, verified actions and usage budgets remain enforced.
+
 ## Current status
 
 This repository implements the F0/F1 foundation, F2 Laravel/React alpha, F3 hybrid onboarding, F4 standalone PHP/Node/Next.js integration, and F5 WordPress plugin. It is an early development preview, not a production-ready autonomous assistant.

@@ -5,6 +5,16 @@ if (element) {
   const config = JSON.parse(element.textContent);
   const form = document.querySelector('#pagesquire-settings-form');
   const status = document.querySelector('#pagesquire-admin-status');
+  form.elements.provider.addEventListener('change', () => {
+    const preset = config.state.providers.find(
+      (item) => item.id === form.elements.provider.value,
+    );
+    form.elements.endpoint.value = preset?.endpoint || '';
+    form.elements.responseMode.value = 'preset';
+    form.elements.tokenParameter.value = 'preset';
+    form.elements.thinking.value = 'default';
+    form.elements.systemRole.value = 'system';
+  });
   const notice = (text, failed = false) => {
     status.textContent = text;
     status.className = `notice inline ${failed ? 'notice-error' : 'notice-success'}`;
@@ -76,6 +86,11 @@ if (element) {
           access: data.get('access'),
           assistantName: data.get('assistantName'),
           language: data.get('language'),
+          provider: data.get('provider'),
+          responseMode: data.get('responseMode'),
+          tokenParameter: data.get('tokenParameter'),
+          systemRole: data.get('systemRole'),
+          thinking: data.get('thinking'),
           endpoint: data.get('endpoint'),
           model: data.get('model'),
           pageIds: data.getAll('pageIds').map(Number),

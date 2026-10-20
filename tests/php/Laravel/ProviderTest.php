@@ -8,8 +8,10 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Orchestra\Testbench\TestCase;
 use PageSquire\Laravel\OpenAiCompatibleProvider;
+use PageSquire\Laravel\PageSquireServiceProvider;
 use PageSquire\Server\AssistantException;
 use PageSquire\Server\ProtocolValidator;
+use PageSquire\Server\Provider;
 
 final class ProviderTest extends TestCase
 {
@@ -139,6 +141,17 @@ final class ProviderTest extends TestCase
         $this->expectException(AssistantException::class);
         $this->expectExceptionMessage('The assistant provider is unavailable.');
         $this->provider()->complete([], [], 100);
+    }
+
+    public function test_service_binding_resolves_a_preset_without_a_manual_endpoint_and_preserves_explicit_dialect_controls(): void
+    {
+        $this->app->register(PageSquireServiceProvider::class);
+        config()->set('pagesquire.provider', ['name' => 'groq', 'endpoint' => null, 'key' => 'synthetic-key', 'model' => 'owner-model', 'timeout_seconds' => 20, 'connect_timeout_seconds' => 5, 'response_mode' => 'prompt', 'token_parameter' => 'max_completion_tokens', 'system_role' => 'developer']);
+        Http::fake(['api.groq.com/*' => Http::response(['choices' => [['finish_reason' => 'stop', 'message' => ['content' => "```json\n{\"text\":\"Hello\",\"emotion\":\"happy\",\"finished\":true,\"toolCalls\":[]}\n```"]]]])]);
+        $reply = $this->app->make(Provider::class)->complete([['role' => 'system', 'content' => 'JSON only']], [], 500);
+        $this->assertSame('Hello', $reply['text']);
+        Http::assertSent(fn (Request $request): bool => $request->url() === 'https://api.groq.com/openai/v1/chat/completions' && $request['model'] === 'owner-model' && $request['max_completion_tokens'] === 500 && ! isset($request['max_tokens']) && ! isset($request['response_format']) && $request['messages'][0]['role'] === 'developer');
+        Http::assertSentCount(1);
     }
 
     private function provider(string $endpoint = 'https://provider.test/v1/chat/completions'): OpenAiCompatibleProvider

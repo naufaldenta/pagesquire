@@ -144,6 +144,59 @@ test('unique database locks reject stale-cache collisions and protect the origin
   });
 });
 
+test('provider presets fill endpoints, persist explicit compatibility controls and never make draft model calls', async ({
+  page,
+}) => {
+  const selector = page.getByLabel('AI provider', { exact: true });
+  await expect(selector.locator('option')).toHaveCount(16);
+  expect(
+    config.state.providers.find((preset) => preset.id === 'xai').tokenParameter,
+  ).toBe('max_tokens');
+  await selector.selectOption('groq');
+  await expect(page.getByLabel('HTTPS JSON provider endpoint')).toHaveValue(
+    'https://api.groq.com/openai/v1/chat/completions',
+  );
+  await page.getByLabel('Model identifier').fill('owner-selected-model');
+  await page
+    .getByLabel('Response mode', { exact: true })
+    .selectOption('prompt');
+  await page
+    .getByLabel('Output-token field')
+    .selectOption('max_completion_tokens');
+  await page.getByRole('button', { name: 'Save draft and disable' }).click();
+  await expect(page.locator('#pagesquire-admin-status')).toContainText(
+    'Draft saved',
+  );
+  await dashboard(page);
+  expect(config.state.settings.provider).toBe('groq');
+  expect(config.state.settings.model).toBe('owner-selected-model');
+  expect(config.state.settings.responseMode).toBe('prompt');
+  expect(config.state.settings.tokenParameter).toBe('max_completion_tokens');
+  expect(config.state.settings.enabled).toBe(false);
+  expect(config.state.settings.apiKey).toBeUndefined();
+  const invalid = await call(
+    page,
+    'settings',
+    { provider: 'invented-provider' },
+    { method: 'PUT' },
+  );
+  expect(invalid.status()).toBe(422);
+  const unsafe = await call(
+    page,
+    'settings',
+    { endpoint: 'http://localhost:20128/v1/chat/completions' },
+    { method: 'PUT' },
+  );
+  expect(unsafe.status()).toBe(422);
+  await selector.selectOption('qwen');
+  await expect(page.getByLabel('HTTPS JSON provider endpoint')).toHaveValue('');
+  await expect(page.getByLabel('Response mode', { exact: true })).toHaveValue(
+    'preset',
+  );
+  const statistics = await call(page, 'state', undefined, { fixture: true });
+  expect((await statistics.json()).calls).toBe(0);
+});
+
 test('installed ZIP completes five-step setup and verified full-document assistance', async ({
   page,
   browser,

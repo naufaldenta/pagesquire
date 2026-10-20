@@ -1,5 +1,7 @@
 # pagesquire/server
 
+Provider presets use the same server-only `PAGESQUIRE_PROVIDER`, `PAGESQUIRE_API_KEY`, and `PAGESQUIRE_MODEL` settings as Node/Laravel. Custom/regional gateways additionally require `PAGESQUIRE_PROVIDER_URL`. Use `Http\OpenAiCompatibleProvider::fromEnvironment(new ProtocolValidator, getenv())`; PHP does not load dotenv files automatically. See the [provider matrix and PHP tutorial](https://github.com/naufaldenta/pagesquire/blob/main/docs/providers.md#standalone-php). Existing explicit-endpoint construction remains compatible; no model ID is hardcoded or universally certified.
+
 PHP 8.3 conversation engine independent of Laravel. F4 includes a native HTTPS provider, bounded standalone endpoint and injectable atomic file storage. See [standalone PHP integration](../../docs/standalone-php.md).
 
 `Provider::complete(messages, capabilities, maxOutputTokens)` returns a structured draft with `text`, `emotion`, `finished`, and at most one proposed `{capabilityId, parameters}` action. The engine owns transcript, call IDs, snapshot binding, pending results, expiry, and response envelopes. It independently validates all drafts and action parameters against the trusted catalog. It never accepts a client history or client capability schema.

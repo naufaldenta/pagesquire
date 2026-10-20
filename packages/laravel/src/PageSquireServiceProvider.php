@@ -29,6 +29,13 @@ final class PageSquireServiceProvider extends ServiceProvider
                 $config['model'],
                 $config['timeout_seconds'],
                 $config['connect_timeout_seconds'],
+                array_filter([
+                    'provider' => $config['name'] ?? 'custom',
+                    'responseMode' => $config['response_mode'] ?? null,
+                    'tokenParameter' => $config['token_parameter'] ?? null,
+                    'systemRole' => $config['system_role'] ?? null,
+                    'thinking' => $config['thinking'] ?? null,
+                ], static fn (mixed $value): bool => $value !== null && $value !== ''),
             );
         });
         $this->app->bind(ConversationEngine::class, function ($app): ConversationEngine {

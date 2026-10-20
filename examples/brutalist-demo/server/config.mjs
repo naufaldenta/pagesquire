@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { X509Certificate } from 'node:crypto';
 import pg from 'pg';
+import { providerConfigurationFromEnv } from '../../../packages/server/dist/index.js';
 
 export function readConfig(env = process.env) {
   const required = [
-    'PROVIDER_URL',
     'MODEL',
     'API_KEY',
     'SESSION_SECRET',
@@ -28,14 +28,9 @@ export function readConfig(env = process.env) {
     (origin.protocol !== 'https:' && !(loopback && origin.protocol === 'http:'))
   )
     throw Error('Configure an exact secure public origin.');
-  const provider = new URL(value.PROVIDER_URL);
+  const providerConfig = providerConfigurationFromEnv(env);
   const database = new URL(value.DATABASE_URL);
   if (
-    provider.protocol !== 'https:' ||
-    provider.username ||
-    provider.password ||
-    provider.hash ||
-    provider.search ||
     !['postgres:', 'postgresql:'].includes(database.protocol) ||
     !database.password
   )
@@ -59,7 +54,8 @@ export function readConfig(env = process.env) {
   return {
     origin: origin.origin,
     secure: origin.protocol === 'https:',
-    providerUrl: provider.href,
+    providerUrl: providerConfig.endpoint,
+    providerConfig,
     model: value.MODEL,
     apiKey: value.API_KEY,
     sessionSecret: value.SESSION_SECRET,

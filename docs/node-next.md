@@ -4,6 +4,8 @@ F4 supplies a Node.js 24 backend and a Next.js 16.4.2 App Router fixture. No per
 
 ## Node backend
 
+Choose `PAGESQUIRE_PROVIDER`, `PAGESQUIRE_API_KEY` and `PAGESQUIRE_MODEL` on the server; custom/regional gateways also require `PAGESQUIRE_PROVIDER_URL`. See [provider presets and compatibility tutorials](providers.md). Presets do not hardcode a model or certify every model. React/browser-only apps still need a backend to keep keys private.
+
 Build PageSquire, install the local packages into your approved host workspace, and keep the server import out of client bundles. The host integration must provide a real session/auth service and a private persistent storage directory. The following `hostAuth` and `manifest` imports are site-owned examples, not bundled services:
 
 ```ts
@@ -11,17 +13,16 @@ import {
   ConversationEngine,
   FileConversationStore,
   OpenAiCompatibleProvider,
+  providerConfigurationFromEnv,
   createChatHandler,
 } from '@pagesquire/server';
 import { hostAuth, manifest } from './site-owned-assistant-config.js';
 
 const engine = new ConversationEngine({
   manifest,
-  provider: new OpenAiCompatibleProvider({
-    endpoint: process.env.ASSISTANT_PROVIDER_URL!,
-    apiKey: process.env.ASSISTANT_PROVIDER_KEY!,
-    model: process.env.ASSISTANT_MODEL!,
-  }),
+  provider: new OpenAiCompatibleProvider(
+    providerConfigurationFromEnv(process.env),
+  ),
 });
 export const POST = createChatHandler({
   engine,
