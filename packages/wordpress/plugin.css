@@ -1,0 +1,100 @@
+.pagesquire-admin {
+  max-width: 1080px;
+}
+.pagesquire-step {
+  margin: 24px 0;
+  padding: 20px 24px;
+  border: 1px solid #dcdcde;
+  background: #fff;
+}
+.pagesquire-step h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 16px;
+  color: #1d2327;
+}
+.pagesquire-step-number {
+  display: inline-block;
+  padding: 4px 10px;
+  background: #2271b1;
+  color: #fff;
+  font-size: 14px;
+}
+.pagesquire-admin .form-table th {
+  width: 210px;
+}
+.pagesquire-page-list {
+  max-height: 300px;
+  overflow: auto;
+  border: 1px solid #dcdcde;
+  padding: 12px;
+}
+.pagesquire-page-list label,
+.pagesquire-adapter {
+  display: block;
+  padding: 6px 0;
+}
+#pagesquire-widget {
+  --pagesquire-panel-height: calc(100dvh - 80px);
+  position: fixed;
+  z-index: 99990;
+  right: 20px;
+  bottom: 20px;
+  width: min(380px, calc(100vw - 40px));
+  max-height: var(--pagesquire-panel-height);
+  overflow: auto;
+}
+#pagesquire-widget > .pagesquire-widget {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: var(--pagesquire-panel-height);
+}
+#pagesquire-widget .pagesquire-messages {
+  flex: 1 1 auto;
+  min-height: 0;
+  overscroll-behavior: contain;
+}
+#pagesquire-widget .pagesquire-widget > h2,
+#pagesquire-widget .pagesquire-status,
+#pagesquire-widget .pagesquire-widget > form {
+  flex: none;
+}
+.pagesquire-inspector {
+  background: #fff;
+  color: #1d2327;
+  padding: 20px;
+  border: 2px solid #2271b1;
+  font:
+    14px/1.5 system-ui,
+    sans-serif;
+}
+.pagesquire-inspector button {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  cursor: pointer;
+}
+.pagesquire-inspector button:focus-visible,
+#pagesquire-widget button:focus-visible {
+  outline: 3px solid #2271b1;
+  outline-offset: 3px;
+}
+.pagesquire-link-highlight {
+  outline: 2px solid #2271b1 !important;
+  text-decoration: underline !important;
+  text-decoration-thickness: 2px !important;
+}
+@media (max-width: 600px) {
+  .pagesquire-step {
+    padding: 16px;
+  }
+  #pagesquire-widget {
+    --pagesquire-panel-height: 65dvh;
+    right: 12px;
+    bottom: 12px;
+    width: calc(100vw - 24px);
+  }
+}

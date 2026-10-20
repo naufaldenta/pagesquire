@@ -1,0 +1,23 @@
+{
+  "name": "@pagesquire/client",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "description": "PageSquire conversation client and accessible chat widget.",
+  "type": "module",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./widget.css": "./dist/widget.css"
+  },
+  "dependencies": {
+    "@pagesquire/core": "0.1.0-alpha.0",
+    "@pagesquire/protocol": "0.1.0-alpha.0"
+  }
+}

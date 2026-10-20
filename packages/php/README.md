@@ -1,0 +1,15 @@
+# pagesquire/server
+
+PHP 8.3 conversation engine independent of Laravel. F4 includes a native HTTPS provider, bounded standalone endpoint and injectable atomic file storage. See [standalone PHP integration](../../docs/standalone-php.md).
+
+`Provider::complete(messages, capabilities, maxOutputTokens)` returns a structured draft with `text`, `emotion`, `finished`, and at most one proposed `{capabilityId, parameters}` action. The engine owns transcript, call IDs, snapshot binding, pending results, expiry, and response envelopes. It independently validates all drafts and action parameters against the trusted catalog. It never accepts a client history or client capability schema.
+
+`ConversationEngine::handle(request, state, allowedIds, checkpoint)` returns `state` and `reply`. The storage adapter MUST bind state to its initiating session/principal, serialize concurrent operations, and durably checkpoint the state before provider work. Failed attempts are charged. Unknown/expired conversations and mismatched results fail closed; identical last-request retries reuse cached replies after current permission/schema checks. Defaults: 8 action steps, 12 provider attempts, at most 1,000 output tokens per attempt, 15-minute fixed expiry. Attempts/output caps bound inference requests; they are not a currency limit and input tokens still cost money. Configure host-wide quotas before public deployment.
+
+Server-approved IDs are intersected with the browser's installed IDs; consequential capabilities are excluded. Result failures produce a deterministic safe stop. Browser results remain untrusted telemetry and must never authorize server business changes. Proposal narration is replaced until verification. Natural-language model replies still require evaluation for factual accuracy and prompt injection.
+
+`ProtocolValidator` uses Opis JSON Schema and the same generated protocol schemas as JavaScript. Run `npm run build` at workspace root before PHP tests/packaging. Validate raw decoded JSON objects at HTTP ingress to preserve `{}` versus `[]`; associative PHP arrays lose that distinction. Do not accept arbitrary remote schemas or use raw model selectors. Trusted local parameter schemas require closed object inputs.
+
+`AssistantException` exposes a sanitized `errorCode`, message, and HTTP status. Providers must not attach raw bodies, credentials, or prompt data to those errors/logs. `Provider` implementations must bound HTTP time, response size, and output length themselves. The native Http/OpenAiCompatibleProvider and Laravel package supply such transports. Native HTTP validates raw JSON before conversion and preserves parameter objects in stored checkpoints. Custom providers must preserve object/array distinctions at their own ingress boundary.
+
+Release packaging must include `resources/schemas/*.json`, this guide, the MIT license, and Composer runtime dependencies. These packages are local-only and unpublished; no `composer require` from Packagist is available yet.

@@ -1,0 +1,24 @@
+{
+  "name": "@pagesquire/core",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Framework-independent PageSquire browser observation and verified execution.",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@pagesquire/protocol": "0.1.0-alpha.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

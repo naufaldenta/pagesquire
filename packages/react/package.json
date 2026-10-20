@@ -1,0 +1,33 @@
+{
+  "name": "@pagesquire/react",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "description": "React lifecycle and Inertia navigation adapters for PageSquire.",
+  "type": "module",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./inertia": {
+      "types": "./dist/inertia.d.ts",
+      "import": "./dist/inertia.js"
+    },
+    "./next": {
+      "types": "./dist/next.d.ts",
+      "import": "./dist/next.js"
+    }
+  },
+  "dependencies": {
+    "@pagesquire/client": "0.1.0-alpha.0",
+    "@pagesquire/core": "0.1.0-alpha.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  }
+}
