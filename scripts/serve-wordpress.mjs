@@ -1,23 +1,26 @@
 import { spawn } from 'node:child_process';
 import path from 'node:path';
-import { root, run } from './wordpress-tools.mjs';
+import { root, run, wordpressPhpFlags } from './wordpress-tools.mjs';
 import { site } from './prepare-wordpress.mjs';
 
 const loaded =
-  process.platform !== 'win32' &&
   (
     await run('php', [
       '-r',
       'echo extension_loaded("Zend OPcache") ? "yes" : "no";',
     ])
   ).trim() === 'yes';
-const flags = [
-  ...(loaded || process.platform === 'win32'
-    ? []
-    : ['-d', 'zend_extension=opcache']),
-  '-d',
-  `opcache.enable_cli=${process.platform === 'win32' ? '0' : '1'}`,
-];
+const flags = wordpressPhpFlags(process.platform, loaded);
+console.error(
+  'WordPress PHP fixture: ' +
+    (
+      await run('php', [
+        ...flags,
+        '-r',
+        'echo json_encode(["php"=>PHP_VERSION,"os"=>PHP_OS_FAMILY,"bits"=>PHP_INT_SIZE*8,"pcre"=>PCRE_VERSION,"pcreJit"=>ini_get("pcre.jit"),"cliOpcache"=>ini_get("opcache.enable_cli")]);',
+      ])
+    ).trim(),
+);
 const server = spawn(
   'php',
   [

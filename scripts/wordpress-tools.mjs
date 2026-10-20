@@ -5,6 +5,14 @@ import path from 'node:path';
 
 export const root = path.resolve(import.meta.dirname, '..');
 export const cache = path.join(root, '.cache/pagesquire-wordpress');
+export function wordpressPhpFlags(platform, opcacheLoaded) {
+  return [
+    ...(opcacheLoaded ? [] : ['-d', 'zend_extension=opcache']),
+    '-d',
+    'opcache.enable_cli=1',
+    ...(platform === 'win32' ? ['-d', 'pcre.jit=0'] : []),
+  ];
+}
 export function sourcePathAllowed(source) {
   const parts = source.replaceAll('\\', '/').split('/');
   const omitted = new Set([

@@ -1,7 +1,68 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { route, readText, api } from '../../packages/wordpress/js/api.mjs';
-import { sourcePathAllowed } from '../../scripts/wordpress-tools.mjs';
+import {
+  sourcePathAllowed,
+  wordpressPhpFlags,
+} from '../../scripts/wordpress-tools.mjs';
+
+test('fixture quota clock is opt-in, falls back to real time and preserves serialized integers', () => {
+  const clock = fileURLToPath(
+    new URL('../../examples/wordpress/clock.php', import.meta.url),
+  );
+  const disabled = execFileSync(
+    'php',
+    [
+      '-r',
+      'require $argv[1]; echo function_exists("PageSquire\\\\WordPress\\\\time") ? "enabled" : "disabled";',
+      clock,
+    ],
+    { encoding: 'utf8' },
+  );
+  assert.equal(disabled, 'disabled');
+  const enabled = execFileSync(
+    'php',
+    [
+      '-r',
+      String.raw`
+define('PAGESQUIRE_FIXTURE', true);
+function get_option(string $name, mixed $default = false): mixed { return $GLOBALS['fixtureClock'] ?? $default; }
+require $argv[1];
+if (abs(\PageSquire\WordPress\time() - time()) > 1) { throw new RuntimeException('Clock fallback failed'); }
+$GLOBALS['fixtureClock'] = unserialize(serialize(['now' => 1234]));
+$first = \PageSquire\WordPress\time();
+$GLOBALS['fixtureClock']['now'] += 60;
+echo json_encode([$first, \PageSquire\WordPress\time()]);
+`,
+      clock,
+    ],
+    { encoding: 'utf8' },
+  );
+  assert.deepEqual(JSON.parse(enabled), [1234, 1294]);
+});
+
+test('WordPress development PHP flags isolate Windows regex JIT and preserve opcode caching', () => {
+  assert.deepEqual(wordpressPhpFlags('win32', true), [
+    '-d',
+    'opcache.enable_cli=1',
+    '-d',
+    'pcre.jit=0',
+  ]);
+  assert.deepEqual(wordpressPhpFlags('linux', true), [
+    '-d',
+    'opcache.enable_cli=1',
+  ]);
+  assert.deepEqual(wordpressPhpFlags('win32', false), [
+    '-d',
+    'zend_extension=opcache',
+    '-d',
+    'opcache.enable_cli=1',
+    '-d',
+    'pcre.jit=0',
+  ]);
+});
 
 test('WordPress corresponding-source packaging excludes secrets, databases and generated/dependency trees', () => {
   for (const name of [

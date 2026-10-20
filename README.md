@@ -81,7 +81,11 @@ npm run format:check
 
 On Linux CI, install Chromium's operating-system dependencies with `npm exec -- playwright install --with-deps chromium`.
 
-`npm test` builds the project and installable WordPress ZIP, runs Node/PHP conformance and adapter tests, executes Chromium/PHP/Node/React/Inertia/Next.js and isolated real WordPress workflows, and installs packed npm/Composer artifacts into clean consumers. npm consumer locks combine exact locked third-party entries with manifests and integrity hashes read from the actual PageSquire tarballs; no workspace links or registry PageSquire packages are used. Offline consumers require the third-party content cached by the contributor installation; release downloads are not an offline dependency mirror. `npm run test:php` includes native PHP, Laravel and scoped WordPress mapping tests with synthetic credentials. WordPress tooling downloads are cached under ignored `.cache/`. The development-only WordPress server leaves CLI OPcache disabled on Windows; optimized PHP hosting is not certified by that fixture. A successful synthetic test does not establish live-model accuracy.
+`npm test` builds the project and installable WordPress ZIP, runs Node/PHP conformance and adapter tests, executes Chromium/PHP/Node/React/Inertia/Next.js and isolated real WordPress workflows, and installs packed npm/Composer artifacts into clean consumers. `npm run test:php` includes native PHP, Laravel and scoped WordPress mapping tests with synthetic credentials. A successful synthetic test does not establish live-model accuracy.
+
+npm consumer locks combine exact locked third-party entries with manifests and integrity hashes read from the actual PageSquire tarballs; no workspace links or registry PageSquire packages are used. Offline consumers require the third-party content cached by the contributor installation; release downloads are not an offline dependency mirror.
+
+WordPress tooling downloads are cached under ignored `.cache/`. Its development server disables regex JIT on Windows, not opcode caching; native optimized PHP hosting is not certified by that fixture. A fixture-only quota clock tests the real budget and minute rollover without depending on request throughput. Neither the clock nor fixture controls are installed in the distributed plugin.
 
 ## Workspace
 

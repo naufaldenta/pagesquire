@@ -92,6 +92,10 @@ try {
 }
 await mkdir(path.join(site, 'wp-content/mu-plugins'), { recursive: true });
 await copyFile(
+  path.join(root, 'examples/wordpress/clock.php'),
+  path.join(site, 'wp-content/mu-plugins/pagesquire-fixture-clock.php'),
+);
+await copyFile(
   path.join(root, 'examples/wordpress/fixture.php'),
   path.join(site, 'wp-content/mu-plugins/pagesquire-fixture.php'),
 );
