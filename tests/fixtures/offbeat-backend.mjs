@@ -53,8 +53,19 @@ export class SyntheticProvider {
     this.calls++;
     await delay(120);
     let message = '';
+    let offeredLinks = false;
     const results = [];
     for (const entry of messages) {
+      if (entry.role === 'assistant') {
+        try {
+          if (
+            JSON.parse(entry.content).text ===
+            'Would you like me to highlight page links?'
+          )
+            offeredLinks = true;
+        } catch {}
+        continue;
+      }
       if (entry.role !== 'user') continue;
       let data;
       try {
@@ -66,7 +77,68 @@ export class SyntheticProvider {
       } else if (data.browserResult) results.push(data.browserResult);
     }
     const queue = [];
-    if (message.includes('heading'))
+    if (message === 'suggest a link action')
+      return {
+        text: 'Would you like me to highlight page links?',
+        emotion: 'idle',
+        finished: true,
+        toolCalls: [],
+      };
+    if (message === 'yes make all' && offeredLinks)
+      queue.push({
+        capabilityId: 'accessibility.set_link_highlight',
+        parameters: { enabled: true },
+      });
+    if (/highlight(?:\s+all)?\s+heading/.test(message))
+      queue.push({
+        capabilityId: 'accessibility.set_heading_highlight',
+        parameters: { enabled: !message.includes('disable') },
+      });
+    if (message.includes('reset'))
+      queue.push({
+        capabilityId: 'page.reset',
+        parameters: { scope: message.includes('reading') ? 'reading' : 'all' },
+      });
+    if (
+      message.includes('body') &&
+      (message.includes('violet') || message.includes('red'))
+    )
+      queue.push({
+        capabilityId: 'accessibility.set_text_color',
+        parameters: {
+          color: message.includes('violet') ? '#6440d5' : '#c52b28',
+        },
+      });
+    if (message.includes('line spacing'))
+      queue.push({
+        capabilityId: 'accessibility.set_line_spacing',
+        parameters: { spacing: message.includes('double') ? 2 : 1.8 },
+      });
+    if (message.includes('serif'))
+      queue.push({
+        capabilityId: 'accessibility.set_reading_font',
+        parameters: { font: 'serif' },
+      });
+    if (message.includes('search art for '))
+      queue.push({
+        capabilityId: 'gallery.search',
+        parameters: { query: message.split('search art for ')[1].slice(0, 80) },
+      });
+    if (message.includes('clear search'))
+      queue.push({ capabilityId: 'gallery.search', parameters: { query: '' } });
+    if (message.includes('sort art'))
+      queue.push({
+        capabilityId: 'gallery.sort',
+        parameters: {
+          order: message.includes('z to a') ? 'title-desc' : 'title-asc',
+        },
+      });
+    if (message.includes('footer'))
+      queue.push({
+        capabilityId: 'page.scroll_to',
+        parameters: { section: 'footer' },
+      });
+    if (message.includes('heading') && /red|violet|color/.test(message))
       queue.push({
         capabilityId: 'accessibility.set_heading_color',
         parameters: { color: '#c52b28' },
@@ -100,9 +172,13 @@ export class SyntheticProvider {
 }
 
 export function syntheticBackend() {
+  const store = new SyntheticStore();
+  const consume = store.consume.bind(store);
+  // Parallel browser scenarios share one synthetic loopback IP. Never used in production or unit quota tests.
+  store.consume = (id, maximum, seconds) => consume(id, maximum * 100, seconds);
   return createBackend({
     config: testConfig,
-    store: new SyntheticStore(),
+    store,
     provider: new SyntheticProvider(),
   });
 }

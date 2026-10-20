@@ -2,13 +2,29 @@
 
 [Open the live demo](https://pagesquire-offbeat-demo.vercel.app/)
 
-An independent English art/culture playground, not a copy of any host application. Guided buttons invoke six real, registered and verified browser capabilities without a key. Live AI chat uses the same runtime and requires the owner's private demo access code. The buttons are not model-generated replies.
+An independent English art/culture playground, not a copy of any host application. Guided buttons invoke real, registered and verified browser capabilities without a key. Live AI chat uses the same runtime and requires the owner's private demo access code. The buttons are not model-generated replies.
 
 ## Architecture
 
 The static Next.js frontend and a native Vercel Node function deploy to **one Vercel project**. Exact rewrites route `/api/session` and `/api/chat` to `api/assistant.mjs`. Supabase PostgreSQL supplies external durable storage; Redis, PHP and Composer are not needed for this deployment.
 
-The API reuses PageSquire's Node conversation engine and OpenAI-compatible provider. It authorizes only this demo's six reversible capabilities. Heading color, link highlighting, reading-copy weight/size, gallery filters and scrolling have independent local postcondition checks. There is no generic click, arbitrary navigation, account or purchase tool. Assistant responses carry one of six emotions; loading uses `thinking`. The original SVG avatar is not a bundled Rive renderer or licensed third-party character.
+The API reuses PageSquire's Node conversation engine and OpenAI-compatible provider. It authorizes only this demo's thirteen reversible capabilities, each with local postcondition checks:
+
+- Heading color and heading highlighting, separate from body text and links.
+- Body-text color, link highlighting, reading font (sans/serif/mono), weight, size (16/18/20/24 px) and line spacing (1.6/1.8/2).
+- Combined gallery style filters, text search (including zero results), and featured/A–Z/Z–A ordering.
+- Scrolling to the hero, gallery, culture, playground or footer, including viewport-edge verification.
+- Resetting reading adjustments or all page adjustments, without clearing chat, login or usage limits.
+
+There is no generic click, arbitrary navigation, account or purchase tool. Assistant responses carry one of six emotions; loading uses `thinking`. The original SVG avatar is not a bundled Rive renderer or licensed third-party character.
+
+## Follow-up messages and recovery
+
+Keep sending messages in the same conversation; there is no need to choose **New conversation** between normal requests. The current conversation ID and server-owned history carry follow-ups such as “yes, do that.” Older internal action envelopes/plain-text assistant history are normalized before inference, not accepted as new provider outputs. Provider responses and tool parameters still require strict validation.
+
+Known provider-format failures keep the established conversation ID so the next explicit message can use prior context; there is no automatic paid retry. Unknown/network failures still abandon the uncertain ID. Access expiry returns the UI to unlock, whereas an unsupported model-selected action does not sign the visitor out. Fixed, allowlisted error explanations distinguish quotas, expired sessions and provider failures without exposing raw response bodies. Production rejection logs contain only event name, status and bounded error code, never chat text or credentials.
+
+Try separate messages: `make headings red`, `make highlight all heading`, `make body text violet`, `use double line spacing`, `reset all page changes`. The first two operations are now distinct supported tools. “Explore more page actions” inserts examples into the message box; it does not submit them automatically.
 
 ## Local preview and tests
 
@@ -91,7 +107,7 @@ Use your own authenticated account/project. `.vercelignore` excludes credentials
 - Login limits: five attempts per hashed IP and 100 globally per ten minutes. Chat requests: 40/IP/minute, 300 global/minute, 20/session/minute. Provider calls: 20/session/hour, plus the configurable IP/global daily budgets. Each action round and final reply counts as another provider attempt. Failed calls remain charged; no automatic paid retry.
 - Vercel's platform client-IP header is trusted only on Vercel. Elsewhere all clients share an unknown-IP bucket. No raw client IP is stored; a keyed hash is used. These controls are demo safeguards, not comprehensive bot protection or a production security certification.
 - Chat messages, bounded page observations and browser results are stored privately in Supabase and sent to the configured model provider. Do not share personal/sensitive information. Assistant UI/private areas are excluded from page observation; chat is not saved in browser storage. Closing/reloading does not restore the browser transcript. Start a new conversation to discard the current client conversation ID.
-- Missing configuration, storage failures or limits fail closed. Guided actions remain available when AI is unavailable. This remains an alpha with six scoped tools, not unrestricted autonomous browsing.
+- Missing configuration, storage failures or limits fail closed. Guided actions remain available when AI is unavailable. This remains an alpha with thirteen scoped tools, not unrestricted autonomous browsing.
 
 ## Art and font credits
 

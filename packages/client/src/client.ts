@@ -305,7 +305,15 @@ export class AssistantClient {
         text,
         emotion: cancelled ? 'idle' : 'confused',
       });
-      this.conversationId = undefined;
+      const recoverable =
+        !cancelled &&
+        reason instanceof PageSquireError &&
+        [
+          'PROVIDER_UNAVAILABLE',
+          'INVALID_PROVIDER_RESPONSE',
+          'INVALID_PARAMETERS',
+        ].includes(reason.code);
+      if (!recoverable) this.conversationId = undefined;
       this.update({ emotion: cancelled ? 'idle' : 'confused' });
     } finally {
       clearTimeout(timer);

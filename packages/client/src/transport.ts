@@ -65,11 +65,22 @@ export function createHttpTransport(
       !response.ok ||
       !response.headers.get('content-type')?.includes('application/json')
     ) {
+      const failure = await readFailureCode(response);
+      const explanations: Record<number, string> = {
+        403: 'Your assistant access is unavailable. Reload the page and unlock the demo again.',
+        409: 'This conversation expired or another request is running. Wait, then start a new conversation.',
+        413: 'This conversation is too large. Start a new conversation with a shorter request.',
+        419: 'Your session expired. Reload the page and try again.',
+        429: 'The demo usage limit was reached. Wait before trying again; starting a new conversation does not reset the shared quota.',
+        502: 'The AI provider could not return a valid response. Try a new message or start a new conversation.',
+        503: 'The assistant service is temporarily unavailable. Please try again later.',
+      };
       throw new PageSquireError(
-        `HTTP_${response.status}`,
-        response.status === 419
-          ? 'Your session expired. Reload the page and try again.'
-          : 'The assistant request was rejected. Start a new conversation or try again later.',
+        failure ?? `HTTP_${response.status}`,
+        failure === 'CAPABILITY_DENIED'
+          ? 'The AI requested an action this page does not allow. Please describe a supported page action.'
+          : (explanations[response.status] ??
+              'The assistant request was rejected. Start a new conversation or try again later.'),
       );
     }
     if (!response.body)
@@ -111,4 +122,62 @@ export function createHttpTransport(
       );
     }
   };
+}
+
+async function readFailureCode(
+  response: Response,
+): Promise<string | undefined> {
+  const codes: Record<number, string[]> = {
+    403: ['ACCESS_DENIED', 'CAPABILITY_DENIED'],
+    409: [
+      'CONVERSATION_EXPIRED',
+      'ACTION_PENDING',
+      'REPLAY_REJECTED',
+      'RESULT_MISMATCH',
+      'BUSY',
+    ],
+    502: [
+      'INVALID_PARAMETERS',
+      'INVALID_PROVIDER_RESPONSE',
+      'PROVIDER_UNAVAILABLE',
+    ],
+  };
+  if (
+    !codes[response.status] ||
+    !response.body ||
+    !response.headers.get('content-type')?.includes('application/json')
+  ) {
+    void response.body?.cancel().catch(() => {});
+    return;
+  }
+  const reader = response.body.getReader();
+  try {
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > 4096) return;
+      chunks.push(value);
+    }
+    const bytes = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.length;
+    }
+    const data = JSON.parse(new TextDecoder().decode(bytes)) as {
+      error?: { code?: unknown };
+    } | null;
+    const code = data?.error?.code;
+    return typeof code === 'string' && codes[response.status]!.includes(code)
+      ? code
+      : undefined;
+  } catch {
+    return;
+  } finally {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
 }

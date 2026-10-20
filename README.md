@@ -8,7 +8,7 @@ PageSquire is an open-source foundation for assistants that help people navigate
 
 [Try OFFBEAT — the PageSquire playground](https://pagesquire-offbeat-demo.vercel.app/)
 
-Explore an independent art/culture website and try verified browser actions: change heading colors, highlight links, adjust reading text, filter art, and jump to a section. Guided buttons work without a key. **Live AI chat requires the owner's private demo access code** to protect the shared usage budget. Visitors never enter a provider API key.
+Explore an independent art/culture website with thirteen verified actions: color headings or body text separately, highlight headings or links, change reading typography, filter/search/sort art, jump to sections, and reset page changes. Guided buttons work without a key. **Live AI chat requires the owner's private demo access code** to protect the shared usage budget. Visitors never enter a provider API key.
 
 The frontend and Node API deploy together on Vercel, with private Supabase PostgreSQL session/budget storage. The provider endpoint and model are environment-configurable. See the [demo setup guide](examples/brutalist-demo/README.md) for setup, TLS, migrations, privacy and limits.
 

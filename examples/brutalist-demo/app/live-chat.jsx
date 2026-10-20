@@ -23,6 +23,8 @@ export default function LiveChat({ runtime, onState, pageBusy }) {
   });
   const client = useRef(null);
   const log = useRef(null);
+  const expired = useRef(false);
+  const sending = useRef(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -56,13 +58,22 @@ export default function LiveChat({ runtime, onState, pageBusy }) {
 
   useEffect(() => {
     if (!runtime || !session.authenticated || !session.csrfToken) return;
+    const transport = createHttpTransport({
+      endpoint: '/api/chat',
+      baseUrl: window.location.href,
+      csrfToken: () => session.csrfToken,
+    });
     const instance = new AssistantClient({
       runtime,
-      transport: createHttpTransport({
-        endpoint: '/api/chat',
-        baseUrl: window.location.href,
-        csrfToken: () => session.csrfToken,
-      }),
+      transport: async (...args) => {
+        try {
+          return await transport(...args);
+        } catch (error) {
+          if (['ACCESS_DENIED', 'HTTP_419'].includes(error.code))
+            expired.current = true;
+          throw error;
+        }
+      },
       maxRounds: 10,
       timeoutMs: 120000,
     });
@@ -70,6 +81,17 @@ export default function LiveChat({ runtime, onState, pageBusy }) {
     const unsubscribe = instance.subscribe((state) => {
       setChat(state);
       onState(state);
+      if (!state.busy && expired.current) {
+        expired.current = false;
+        setSession({
+          status: 'available',
+          authenticated: false,
+          csrfToken: '',
+        });
+        setNotice(
+          'Your session expired or access changed. Unlock the demo again to continue.',
+        );
+      }
     });
     return () => {
       unsubscribe();
@@ -125,7 +147,8 @@ export default function LiveChat({ runtime, onState, pageBusy }) {
 
   async function send(event) {
     event.preventDefault();
-    if (!client.current || pageBusy || !input.trim()) return;
+    if (!client.current || pageBusy || sending.current || !input.trim()) return;
+    sending.current = true;
     const message = input;
     setInput('');
     setNotice('');
@@ -135,6 +158,8 @@ export default function LiveChat({ runtime, onState, pageBusy }) {
       setNotice(
         'The message could not start. Try again when the page is ready.',
       );
+    } finally {
+      sending.current = false;
     }
   }
 
@@ -267,6 +292,25 @@ export default function LiveChat({ runtime, onState, pageBusy }) {
               Sign out
             </button>
           </div>
+          <details className="chat-prompts">
+            <summary>Explore more page actions</summary>
+            {[
+              'Make body text violet.',
+              'Use double line spacing.',
+              'Use a serif reading font.',
+              'Search art for brain',
+              'Sort art Z to A.',
+              'Reset all page changes.',
+            ].map((prompt) => (
+              <button
+                key={prompt}
+                disabled={pageBusy}
+                onClick={() => setInput(prompt)}
+              >
+                {prompt}
+              </button>
+            ))}
+          </details>
           <p className="privacy-note">
             Chat is stored privately for a short time to process actions and
             enforce usage limits. Page actions are verified locally. Don’t share

@@ -2,13 +2,17 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { manifest } from '../../examples/brutalist-demo/capabilities.mjs';
-import { art, styles } from '../../examples/brutalist-demo/art.mjs';
+import {
+  art,
+  styles,
+  galleryView,
+} from '../../examples/brutalist-demo/art.mjs';
 import { validateManifest } from '../../packages/protocol/dist/index.js';
 import { distributionPathAllowed } from '../../scripts/distribution-sources.mjs';
 
-test('OFFBEAT registers six bounded reversible capabilities, without fixture or generic click handlers', () => {
+test('OFFBEAT registers thirteen bounded reversible capabilities, without fixture or generic click handlers', () => {
   assert.equal(validateManifest(manifest).valid, true);
-  assert.equal(manifest.capabilities.length, 6);
+  assert.equal(manifest.capabilities.length, 13);
   for (const capability of manifest.capabilities) {
     assert.equal(capability.risk, 'reversible');
     assert.equal(capability.execution, 'browser');
@@ -36,6 +40,38 @@ test('OFFBEAT style filters are unique and each declared category has original a
   for (const [style] of styles) {
     assert.ok(style === 'all' || art.some((item) => item.style === style));
   }
+});
+
+test('gallery search/sort combine with style filters, allow zero results and never mutate source art', () => {
+  const original = art.map((item) => item.id);
+  assert.deepEqual(
+    galleryView('all', 'BRAIN', 'featured')
+      .filter((item) => item.visible)
+      .map((item) => item.id),
+    ['brain-on-airplane-mode'],
+  );
+  assert.deepEqual(
+    galleryView('3d', 'brain', 'featured').filter((item) => item.visible),
+    [],
+  );
+  assert.deepEqual(
+    galleryView('all', '<img src=x>', 'featured').filter(
+      (item) => item.visible,
+    ),
+    [],
+  );
+  const ascending = galleryView('all', '', 'title-asc').map(
+    (item) => item.title,
+  );
+  assert.deepEqual(ascending, [...ascending].sort());
+  assert.deepEqual(
+    galleryView('all', '', 'title-desc').map((item) => item.title),
+    [...ascending].reverse(),
+  );
+  assert.deepEqual(
+    art.map((item) => item.id),
+    original,
+  );
 });
 
 test('public READMEs link the live demo and document private chat with Supabase storage', async () => {

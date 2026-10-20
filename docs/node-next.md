@@ -51,7 +51,7 @@ An App Router `app/api/assistant/route.ts` can export the handler above with `ex
 
 File storage requires **one persistent host**. Vercel/serverless/multi-instance deployments need an injected shared `ConversationStore` with durable transactions and serialization. A module-level Map is not production persistence or global rate limiting. The real fixture uses a Map only for synthetic local session setup; it is not a reusable auth implementation.
 
-For a concrete same-project Vercel frontend/API example, see [OFFBEAT](../examples/brutalist-demo/README.md). It supplies a private Supabase PostgreSQL store with committed checkpoints, fenced leases and atomic usage limits, plus its own access-code sessions and CSRF/origin checks. These example policies and six capabilities are scoped to OFFBEAT; review and adapt authorization, privacy, quotas and database privileges for your own host.
+For a concrete same-project Vercel frontend/API example, see [OFFBEAT](../examples/brutalist-demo/README.md). It supplies a private Supabase PostgreSQL store with committed checkpoints, fenced leases and atomic usage limits, plus its own access-code sessions and CSRF/origin checks. These example policies and thirteen capabilities are scoped to OFFBEAT; review and adapt authorization, privacy, quotas and database privileges for your own host.
 
 ## Next.js browser
 

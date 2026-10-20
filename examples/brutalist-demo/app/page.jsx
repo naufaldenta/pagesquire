@@ -3,9 +3,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import LiveChat from './live-chat.jsx';
 import { createOffbeatRuntime } from '../adapter.mjs';
-import { art, styles } from '../art.mjs';
+import { art, styles, readingFonts, galleryView } from '../art.mjs';
 
-const defaults = { color: '#171717', highlight: false, weight: 400, size: 16 };
+const defaults = {
+  color: '#171717',
+  textColor: 'original',
+  headingHighlight: false,
+  highlight: false,
+  weight: 400,
+  size: 16,
+  spacing: 1.6,
+  font: 'sans',
+};
 const actions = [
   {
     label: 'Make headings red',
@@ -224,6 +233,8 @@ function ArtVisual({ item }) {
 export default function Page() {
   const [settings, setSettings] = useState(defaults);
   const [filter, setFilter] = useState('all');
+  const [query, setQuery] = useState('');
+  const [order, setOrder] = useState('featured');
   const [selected, setSelected] = useState(null);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [ready, setReady] = useState(false);
@@ -235,6 +246,14 @@ export default function Page() {
   const busyRef = useRef(false);
   const detailDialog = useRef(null);
   const settingsDialog = useRef(null);
+  const resetPage = useCallback((scope) => {
+    setSettings(defaults);
+    if (scope === 'all') {
+      setFilter('all');
+      setQuery('');
+      setOrder('featured');
+    }
+  }, []);
   const handleChatState = useCallback((state) => {
     busyRef.current = state.busy;
     setBusy(state.busy);
@@ -243,15 +262,19 @@ export default function Page() {
 
   useEffect(() => {
     try {
-      runtime.current = createOffbeatRuntime(document, (activity) => {
-        if (activity === 'thinking') setEmotion('thinking');
-      });
+      runtime.current = createOffbeatRuntime(
+        document,
+        (activity) => {
+          if (activity === 'thinking') setEmotion('thinking');
+        },
+        resetPage,
+      );
       setReady(true);
     } catch {
       setRuntimeFailed(true);
     }
     return () => runtime.current?.cancel();
-  }, []);
+  }, [resetPage]);
 
   async function runAction(action) {
     if (!runtime.current || busyRef.current) return;
@@ -294,8 +317,7 @@ export default function Page() {
 
   function reset() {
     if (busyRef.current) return;
-    setSettings(defaults);
-    setFilter('all');
+    resetPage('all');
     setFeedback(null);
     setEmotion('idle');
   }
@@ -305,9 +327,8 @@ export default function Page() {
     detailDialog.current.showModal();
   }
 
-  const visibleCount = art.filter(
-    (item) => filter === 'all' || item.style === filter,
-  ).length;
+  const galleryItems = galleryView(filter, query, order);
+  const visibleCount = galleryItems.filter((item) => item.visible).length;
   const update = (key, value) =>
     setSettings((previous) => ({ ...previous, [key]: value }));
 
@@ -318,11 +339,15 @@ export default function Page() {
       </a>
       <div
         id="offbeat-page"
-        className={settings.highlight ? 'links-highlighted' : ''}
+        className={`${settings.highlight ? 'links-highlighted' : ''} ${settings.headingHighlight ? 'headings-highlighted' : ''}`}
         style={{
           '--heading-color': settings.color,
           '--copy-weight': settings.weight,
           '--copy-size': `${settings.size}px`,
+          '--copy-color':
+            settings.textColor === 'original' ? undefined : settings.textColor,
+          '--copy-spacing': settings.spacing,
+          '--copy-font': readingFonts[settings.font],
         }}
       >
         <div className="issue-bar">
@@ -351,7 +376,7 @@ export default function Page() {
           </button>
         </header>
         <main id="main">
-          <section className="hero" aria-labelledby="hero-title">
+          <section id="hero" className="hero" aria-labelledby="hero-title">
             <div className="hero-copy">
               <span className="eyebrow">
                 <span className="live-dot" /> FOR THE CHRONICALLY CREATIVE
@@ -475,13 +500,44 @@ export default function Page() {
                 </option>
               ))}
             </select>
+            <div className="gallery-tools">
+              <label htmlFor="art-query">
+                Find your kind of weird
+                <input
+                  id="art-query"
+                  type="search"
+                  maxLength={80}
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search titles, styles, ideas…"
+                />
+              </label>
+              <label htmlFor="art-order">
+                Arrange the feed
+                <select
+                  id="art-order"
+                  value={order}
+                  onChange={(event) => setOrder(event.target.value)}
+                >
+                  <option value="featured">Featured order</option>
+                  <option value="title-asc">Title A–Z</option>
+                  <option value="title-desc">Title Z–A</option>
+                </select>
+              </label>
+            </div>
+            {visibleCount === 0 && (
+              <p className="gallery-empty" role="status">
+                No worlds match yet. Try another search or choose Everything.
+              </p>
+            )}
             <div className="art-grid">
-              {art.map((item) => (
+              {galleryItems.map((item) => (
                 <article
                   key={item.id}
                   data-art-card
                   data-art-style={item.style}
-                  hidden={filter !== 'all' && item.style !== filter}
+                  data-art-id={item.id}
+                  hidden={!item.visible}
                   className={`art-card ${item.color}`}
                 >
                   <button
@@ -648,7 +704,7 @@ export default function Page() {
             </a>
           </section>
         </main>
-        <footer className="site-footer">
+        <footer id="footer" className="site-footer">
           <a className="wordmark" href="#">
             OFFBEAT<span aria-hidden="true">✳</span>
           </a>
@@ -814,6 +870,60 @@ export default function Page() {
           </select>
         </label>
         <label>
+          Reading text color
+          <select
+            id="text-color"
+            aria-label="Reading text color"
+            value={settings.textColor}
+            onChange={(event) => update('textColor', event.target.value)}
+          >
+            <option value="original">Original section colors</option>
+            <option value="#171717">Ink</option>
+            <option value="#c52b28">Red</option>
+            <option value="#6440d5">Violet</option>
+          </select>
+        </label>
+        <label>
+          Line spacing
+          <select
+            id="line-spacing"
+            aria-label="Line spacing"
+            value={settings.spacing}
+            onChange={(event) => update('spacing', Number(event.target.value))}
+          >
+            <option value="1.6">Original (1.6)</option>
+            <option value="1.8">Relaxed (1.8)</option>
+            <option value="2">Double (2)</option>
+          </select>
+        </label>
+        <label>
+          Reading font
+          <select
+            id="reading-font"
+            aria-label="Reading font"
+            value={settings.font}
+            onChange={(event) => update('font', event.target.value)}
+          >
+            <option value="sans">Sans — Arial</option>
+            <option value="serif">Serif — Georgia</option>
+            <option value="mono">Mono — Courier New</option>
+          </select>
+        </label>
+        <label>
+          Highlight headings
+          <select
+            id="heading-highlight"
+            aria-label="Highlight headings"
+            value={String(settings.headingHighlight)}
+            onChange={(event) =>
+              update('headingHighlight', event.target.value === 'true')
+            }
+          >
+            <option value="false">Off</option>
+            <option value="true">On — lime background</option>
+          </select>
+        </label>
+        <label>
           Highlight links
           <select
             id="link-highlight"
@@ -848,7 +958,9 @@ export default function Page() {
             onChange={(event) => update('size', Number(event.target.value))}
           >
             <option value="16">16 px (original)</option>
+            <option value="18">18 px</option>
             <option value="20">20 px (larger)</option>
+            <option value="24">24 px (largest)</option>
           </select>
         </label>
         <button className="button button-ink" onClick={reset} disabled={busy}>

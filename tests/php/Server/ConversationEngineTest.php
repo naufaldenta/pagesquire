@@ -104,6 +104,31 @@ final class ConversationEngineTest extends TestCase
         }
     }
 
+    public function test_legacy_history_is_normalized_before_follow_up_without_resetting_budgets(): void
+    {
+        $provider = $this->provider([$this->proposal(), $this->finalReply(), $this->finalReply()]);
+        $engine = new ConversationEngine($provider, new ProtocolValidator, $this->manifest());
+        $first = $engine->handle($this->request(), null, ['accessibility.set_heading_color']);
+        $first['state']['messages'][1]['content'] = json_encode(['requestedAction' => $first['reply']['response']['toolCalls'][0]], JSON_THROW_ON_ERROR);
+        $second = $engine->handle($this->continuation($first), $first['state'], ['accessibility.set_heading_color']);
+        $second['state']['messages'][array_key_last($second['state']['messages'])]['content'] = 'Verified.';
+        $third = $engine->handle([...$this->request('request-3'), 'conversationId' => $second['state']['id']], $second['state'], ['accessibility.set_heading_color']);
+        foreach ($provider->received as $received) {
+            $this->assertStringContainsString('resolve the latest assistant offer', $received['messages'][0]['content']);
+            $this->assertStringContainsString('ask a clarifying question without tools', $received['messages'][0]['content']);
+            foreach ($received['messages'] as $message) {
+                if ($message['role'] === 'assistant') {
+                    (new ProtocolValidator)->validate('providerResponse', json_decode($message['content'], true, 64, JSON_THROW_ON_ERROR));
+                    $this->assertStringNotContainsString('requestedAction', $message['content']);
+                    $this->assertStringNotContainsString('callId', $message['content']);
+                }
+            }
+        }
+        $this->assertSame($first['state']['id'], $third['state']['id']);
+        $this->assertSame(3, $third['state']['attempts']);
+        $this->assertTrue($third['reply']['response']['finished']);
+    }
+
     public function test_unverified_result_stops_without_another_provider_call(): void
     {
         $provider = $this->provider([$this->proposal(), $this->finalReply()]);
