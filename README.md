@@ -4,6 +4,14 @@
 
 PageSquire is an open-source foundation for assistants that help people navigate and use websites through registered, verified capabilities.
 
+## Live demo
+
+[Try OFFBEAT — the PageSquire playground](https://pagesquire-offbeat-demo.vercel.app/)
+
+Explore an independent art/culture website and try real, verified browser actions: change heading colors, highlight links, adjust reading text, filter art, and jump to a section. No API key is required. **Live AI chat is locked**; the guided buttons are not model-generated responses.
+
+See the [demo setup guide](examples/brutalist-demo/README.md) for local development, Vercel deployment, and planned Supabase PostgreSQL storage. Supabase integration is not implemented yet; adding database credentials does not unlock chat.
+
 ## Current status
 
 This repository implements the F0/F1 foundation, F2 Laravel/React alpha, F3 hybrid onboarding, F4 standalone PHP/Node/Next.js integration, and F5 WordPress plugin. It is an early development preview, not a production-ready autonomous assistant.
