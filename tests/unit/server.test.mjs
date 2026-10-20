@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mkdtemp, rm, readFile } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
@@ -37,9 +37,12 @@ function request(body = fixture.request, headers = {}) {
   });
 }
 async function temporary(t) {
-  const directory = await mkdtemp(join(tmpdir(), 'pagesquire-server-test-'));
+  const parent = await realpath(tmpdir());
+  const directory = await realpath(
+    await mkdtemp(join(parent, 'pagesquire-server-test-')),
+  );
   t.after(async () => {
-    assert.equal(resolve(directory, '..'), resolve(tmpdir()));
+    assert.equal(resolve(directory, '..'), parent);
     assert.ok(
       directory.split(/[\\/]/).at(-1).startsWith('pagesquire-server-test-'),
     );
