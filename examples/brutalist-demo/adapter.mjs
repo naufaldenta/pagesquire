@@ -1,5 +1,6 @@
 import {
   BrowserRuntime,
+  BrowserDriver,
   CapabilityRegistry,
   PageObserver,
   setControlValue,
@@ -12,6 +13,12 @@ import { galleryView, readingFonts } from './art.mjs';
 export function createOffbeatRuntime(document, onActivityChange, resetPage) {
   const view = document.defaultView;
   const page = document.getElementById('offbeat-page');
+  const observer = new PageObserver({
+    document,
+    allowUrl: (url) => url.pathname === '/',
+    canInteract: () => false,
+  });
+  const driver = new BrowserDriver({ observer });
   const controls = {
     'accessibility.set_heading_color': ['heading-color', 'color'],
     'accessibility.set_link_highlight': ['link-highlight', 'enabled'],
@@ -180,14 +187,32 @@ export function createOffbeatRuntime(document, onActivityChange, resetPage) {
   for (const definition of manifest.capabilities) {
     handlers[definition.handler] = async (args, context) => {
       context.signal.throwIfAborted();
+      if (definition.id !== 'page.scroll_to') {
+        const candidates =
+          definition.id.startsWith('gallery.') ||
+          (definition.id === 'page.reset' && args.scope === 'gallery')
+            ? [...document.querySelectorAll('#gallery h2')]
+            : definition.id.includes('heading')
+              ? headings()
+              : definition.id.includes('link')
+                ? links()
+                : copy();
+        const target = candidates.find(
+          (element) =>
+            observer.isVisible(element) && !observer.isExcluded(element),
+        );
+        if (target) await context.present(target, 'highlight');
+        context.signal.throwIfAborted();
+      }
       if (definition.id === 'page.reset') {
         if (typeof resetPage !== 'function')
           throw Error('Reset binding is unavailable.');
         resetPage(args.scope);
       } else if (definition.id === 'page.scroll_to') {
-        document
-          .getElementById(args.section)
-          .scrollIntoView({ behavior: 'instant', block: 'start' });
+        await driver.scrollTo(
+          document.getElementById(args.section),
+          context.signal,
+        );
       } else {
         const [id, parameter] = controls[definition.id];
         setControlValue(
@@ -204,11 +229,8 @@ export function createOffbeatRuntime(document, onActivityChange, resetPage) {
     });
   }
   return new BrowserRuntime({
-    observer: new PageObserver({
-      document,
-      allowUrl: (url) => url.pathname === '/',
-      canInteract: () => false,
-    }),
+    observer,
+    presentation: driver,
     registry: new CapabilityRegistry(manifest, {
       handlers,
       verifiers,

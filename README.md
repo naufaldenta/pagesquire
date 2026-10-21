@@ -53,6 +53,8 @@ R1 local foundations add an [API inventory and drift baseline](docs/api-contract
 
 ## Run the foundation demo
 
+Optional assistant driving now includes an animated cursor/target outline, nested scrolling, private-aware scoped reading, desired-state control bindings, guided tours and opt-in local-first speech. See [assistant driving and feature parity](docs/assistant-driving.md) and the `/driving.html` offline example. No reference-site content, third-party accessibility UI or licensed Rive/TTS assets are bundled.
+
 For the independent art playground, see [OFFBEAT](examples/brutalist-demo/README.md). Run `npm run demo:build` then `npm run demo:serve` for a static local preview with guided actions. Root `vercel.json` deploys its static frontend **and** the dedicated `/api/session` and `/api/chat` Node function; other local example servers are not deployed.
 
 Requirements: Node.js 24 or later, npm, PHP 8.3, and Composer. PHP dependencies and browser binaries are required for the full test suite. The tested local host is Windows.

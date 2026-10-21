@@ -6,6 +6,8 @@ All canonical release notes are English. PageSquire uses SemVer for packages and
 
 ### Added
 
+- D1 framework-neutral `BrowserDriver`, runtime presentation context, desired-state control bindings, public reading/scroll/highlight capabilities with bounded truncation/offset evidence, guided tours and opt-in local-first speech. English parity/onboarding guidance and a neutral offline fixture preserve host permissions and licensed-asset boundaries. Node/PHP instructions retain compound goals after verified navigation; synthetic checks do not certify live-model accuracy. WordPress offers optional inspected public-content reading/scroll/highlight without changing default permissions.
+
 - R1 local API inventory and conservative normalized declaration/schema/manifest/PHP-source baseline, a read-only `api:check` enforced in CI and candidate preparation, and synthetic serialized Node checkpoint recovery regressions. English compatibility/deprecation, upgrade/recovery and maintenance guidance explicitly excludes API freeze, historical-release upgrade certification and RC/stable promotion.
 
 - B5 alpha/beta prerelease policy, explicit independent-onboarding/support/security review records, a read-only `release:check -- --beta` readiness gate, channel-bound candidate manifests and beta inventory regressions. English beta testing/feedback/promotion guidance preserves clean-checkout, CI, approval and deferred-registry boundaries; no version promotion or public beta is implied.

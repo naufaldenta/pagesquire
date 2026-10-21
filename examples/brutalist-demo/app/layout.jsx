@@ -1,4 +1,5 @@
 import './style.css';
+import '../../../packages/client/src/widget.css';
 
 export const metadata = {
   title: 'OFFBEAT — Weird looks good on you',

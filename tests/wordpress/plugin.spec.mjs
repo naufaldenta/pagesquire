@@ -191,6 +191,75 @@ test('unique database locks reject stale-cache collisions and protect the origin
   });
 });
 
+test('optional content reading/scroll/highlight require selection and fresh inspection without uploading text', async ({
+  page,
+}) => {
+  await draft(page);
+  for (const id of ['page.read', 'page.scroll_to', 'page.highlight'])
+    await page.locator(`[name=capabilityIds][value="${id}"]`).check();
+  await page.getByRole('button', { name: 'Save draft and disable' }).click();
+  await expect(page.locator('#pagesquire-admin-status')).toContainText(
+    'Draft saved',
+  );
+  const inspector = await page.context().newPage();
+  const uploads = [];
+  inspector.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().includes('observations'))
+      uploads.push(request.postDataJSON());
+  });
+  for (const id of [ids.alpha, ids.beta]) {
+    await inspector.goto(`${origin}/?page_id=${id}&pagesquire_inspect=1`);
+    await runChecks(inspector, 6);
+    const result = await inspector.evaluate(async () => {
+      const runtime = window.pagesquireWordPress.runtime;
+      return runtime.execute({
+        protocolVersion: '0.1',
+        callId: crypto.randomUUID(),
+        snapshotId: runtime.observe().id,
+        capabilityId: 'page.read',
+        parameters: { scope: 'content', mode: 'summary', offset: 0 },
+      });
+    });
+    expect(result.status).toBe('success');
+    expect(result.evidence.text.length).toBeGreaterThan(0);
+    expect(result.evidence.scope).toBe('content');
+    const denied = await inspector.evaluate(async () => {
+      const runtime = window.pagesquireWordPress.runtime;
+      return runtime.execute({
+        protocolVersion: '0.1',
+        callId: crypto.randomUUID(),
+        snapshotId: runtime.observe().id,
+        capabilityId: 'page.read',
+        parameters: { scope: 'private', mode: 'summary', offset: 0 },
+      });
+    });
+    expect(denied.code).toBe('INVALID_PARAMETERS');
+  }
+  expect(uploads.length).toBeGreaterThan(0);
+  for (const upload of uploads) {
+    expect(upload).not.toHaveProperty('text');
+    expect(upload).not.toHaveProperty('evidence');
+    expect(Object.keys(upload).sort()).toEqual(
+      [
+        'schemaVersion',
+        'pageId',
+        'fingerprint',
+        'rootCount',
+        'headingCount',
+        'linkCount',
+        'controlCount',
+        'truncated',
+        'verifiedCapabilityIds',
+      ].sort(),
+    );
+  }
+  await inspector.close();
+  await page.getByRole('button', { name: 'Refresh readiness' }).click();
+  await expect(page.locator('#pagesquire-gaps')).toContainText(
+    'current inspection results',
+  );
+});
+
 test('provider presets fill endpoints, persist explicit compatibility controls and never make draft model calls', async ({
   page,
 }) => {

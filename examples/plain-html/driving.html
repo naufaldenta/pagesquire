@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PageSquire driving lab</title>
+    <link rel="stylesheet" href="/demo.css" />
+    <link rel="stylesheet" href="/dist/widget.css" />
+    <link rel="stylesheet" href="/driving.css" />
+    <script type="module" src="/dist/driving.js"></script>
+  </head>
+  <body>
+    <header data-pagesquire-ignore>
+      <p>PageSquire · Action / Read / Verify</p>
+      <h1>See the work. Check the result.</h1>
+      <p>
+        A framework-neutral, offline driving example. No live model or provider
+        keys.
+      </p>
+      <nav aria-label="Driving examples">
+        <button type="button" id="open-summary">
+          Open article, read, then summarize
+        </button>
+        <button type="button" id="change-headings">Make headings red</button>
+        <button type="button" id="start-tour">Start guided tour</button>
+        <button type="button" id="cancel-driving">Stop</button>
+        <button type="button" id="speak-answer">
+          Enable local voice and read answer
+        </button>
+      </nav>
+      <p id="driving-status" role="status">Ready</p>
+      <pre id="driving-result"></pre>
+    </header>
+    <main>
+      <section id="guide">
+        <h2>Public reading guide</h2>
+        <p>
+          Only configured public scopes can be read. Animation never authorizes
+          a click.
+        </p>
+      </section>
+      <button type="button" id="open-article">Read the public article</button>
+      <details id="settings">
+        <summary>Heading settings</summary>
+        <label
+          >Heading color
+          <input id="driver-heading-color" type="color" value="#163438"
+        /></label>
+      </details>
+      <article id="driving-article" hidden>
+        <h2>A community garden, one season later</h2>
+        <p>
+          Residents transformed an unused public courtyard into a shared garden.
+          They planted vegetables and opened a weekly reading corner.
+        </p>
+        <div class="driving-long-copy">
+          <p>
+            Volunteers maintain the garden together. This is synthetic
+            demonstration content, not a report of a real event.
+          </p>
+        </div>
+        <p id="article-end">
+          The next step is an accessible path and more shaded seating.
+        </p>
+        <aside data-pagesquire-private>
+          private-article-secret <button>Private button</button>
+        </aside>
+        <form>
+          <input value="private-form-value" /><textarea>
+private-textarea-secret</textarea>
+        </form>
+      </article>
+    </main>
+    <div id="driver-chat" data-pagesquire-ignore></div>
+  </body>
+</html>

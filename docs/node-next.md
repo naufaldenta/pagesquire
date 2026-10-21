@@ -1,5 +1,7 @@
 # Node and Next.js integration
 
+Add [assistant driving](assistant-driving.md) inside the existing client runtime: optional animated cursor, host control preparation, scoped reading, tours and local-first speech. Preserve committed-destination readiness before reading or summarizing; a path change alone is insufficient. Keep server catalog/permission checks identical to the browser definitions.
+
 F4 supplies a Node.js 24 backend and a Next.js 16.4.2 App Router fixture. No per-website model training is needed: use the hybrid CLI to map real controls, author verified capabilities and connect a server-owned catalog. All package identifiers remain unpublished local preview identifiers.
 
 ## Node backend

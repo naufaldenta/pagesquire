@@ -1,5 +1,7 @@
 # PageSquire for WordPress
 
+The built-in adapter now presents registered actions using an optional-motion cursor/outline. Three additional opt-in capabilities (`page.read`, `page.scroll_to`, `page.highlight`) target only the approved content root with scope `content`. Defaults still enable only the original three accessibility controls. Select new capabilities, rerun inspection on every selected public page, review consent and explicitly enable. Inspection uploads counts and verified IDs, not article text. See [assistant driving and custom-control boundaries](../../docs/assistant-driving.md); third-party accessibility UI, Rive assets and cloud TTS are not bundled.
+
 An opt-in assistant for a small, owner-approved set of public pages. This alpha plugin ships prebuilt JavaScript, compiled validators and isolated PHP dependencies. Hosting users do not need Node.js or Composer. It does not train a model or understand every theme/plugin automatically.
 
 ## Requirements and installation

@@ -1,5 +1,7 @@
 # Standalone PHP integration
 
+The same frontend can add [assistant driving](assistant-driving.md): `BrowserDriver`, host control bindings, scoped reading, tours and optional local speech. Keep the matching PHP catalog explicit; presentation does not authorize a control or make unverified navigation successful.
+
 `pagesquire/server` supports PHP 8.3 without Laravel. It includes Opis validation, a conversation engine, native cURL provider, bounded endpoint and single-host file store. No framework-specific model training is required. Use the CLI/manual capability workflow and the same trusted manifest on browser/server.
 
 ## Local package installation

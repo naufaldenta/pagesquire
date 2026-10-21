@@ -1,4 +1,4 @@
-import { navigationCapability } from '@pagesquire/core';
+import { navigationCapability, createPageCapabilities } from '@pagesquire/core';
 const capability = (id, description, properties) => ({
   id,
   description,
@@ -39,5 +39,6 @@ export const manifest = {
       },
     ),
     navigationCapability,
+    ...createPageCapabilities(['content']),
   ],
 };

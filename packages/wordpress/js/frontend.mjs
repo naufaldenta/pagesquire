@@ -98,6 +98,9 @@ async function boot() {
           ['accessibility.set_heading_color', { color: '#ff0000' }],
           ['accessibility.set_link_highlight', { enabled: true }],
           ['accessibility.set_font_weight', { weight: 700 }],
+          ['page.read', { scope: 'content', mode: 'summary', offset: 0 }],
+          ['page.scroll_to', { scope: 'content', position: 'start' }],
+          ['page.highlight', { scope: 'content' }],
         ]) {
           if (!config.mapping.capabilityIds.includes(id)) continue;
           const result = await runtime.execute({
@@ -180,6 +183,15 @@ async function boot() {
   });
   mountWidget(container, client, { title: config.assistantName });
   window.pagesquireWordPress.client = client;
+  window.addEventListener(
+    'pagehide',
+    () => {
+      client.cancel();
+      runtime.cancel();
+      adapter.driver.dispose();
+    },
+    { once: true },
+  );
   await client.resumeNavigation();
 }
 void boot().catch(() => {

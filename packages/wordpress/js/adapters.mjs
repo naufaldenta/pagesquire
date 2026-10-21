@@ -3,6 +3,8 @@ import {
   CapabilityRegistry,
   NavigationStore,
   PageObserver,
+  BrowserDriver,
+  createPageBindings,
 } from '@pagesquire/core';
 import { manifest } from './capabilities.mjs';
 import { parameters } from '../dist/generated/bindings.mjs';
@@ -26,35 +28,55 @@ export function createRuntime(config, document) {
     return config.pages.some((page) => new URL(page.url).href === url.href);
   };
   const observer = new PageObserver({ document, allowUrl: allowed });
+  const driver = new BrowserDriver({ observer });
+  const pageBindings = createPageBindings({
+    scopes: { content: root },
+    driver,
+  });
   const normalizedColor = (color) => {
     const element = document.createElement('span');
     element.style.color = color;
     return element.style.color;
   };
   const handlers = {
-    'accessibility.set_heading_color': (args, context) => {
+    'accessibility.set_heading_color': async (args, context) => {
       context.signal.throwIfAborted();
       const targets = headings();
       if (!targets.length) throw Error('No public headings');
+      await context.present(targets[0], 'highlight');
+      context.signal.throwIfAborted();
       targets.forEach((element) => {
         element.style.color = args.color;
       });
     },
-    'accessibility.set_link_highlight': (args, context) => {
+    'accessibility.set_link_highlight': async (args, context) => {
       context.signal.throwIfAborted();
       const targets = links();
       if (!targets.length) throw Error('No public links');
+      await context.present(targets[0], 'highlight');
+      context.signal.throwIfAborted();
       targets.forEach((element) =>
         element.classList.toggle('pagesquire-link-highlight', args.enabled),
       );
     },
-    'accessibility.set_font_weight': (args, context) => {
+    'accessibility.set_font_weight': async (args, context) => {
+      context.signal.throwIfAborted();
+      await context.present(root(), 'highlight');
       context.signal.throwIfAborted();
       root().style.fontWeight = String(args.weight);
     },
-    'browser.navigate': (args, context) => context.navigate(args.url),
+    'browser.navigate': async (args, context) => {
+      const destination = observer.allowedUrl(args.url);
+      const targets = [...document.querySelectorAll('a[href]')].filter(
+        (element) => visible(element) && element.href === destination.href,
+      );
+      if (targets.length === 1) await context.present(targets[0], 'highlight');
+      await context.navigate(destination.href);
+    },
+    ...pageBindings.handlers,
   };
   const verifiers = {
+    ...pageBindings.verifiers,
     'accessibility.set_heading_color.verify': (args) => ({
       verified:
         headings().length > 0 &&
@@ -108,9 +130,11 @@ export function createRuntime(config, document) {
   } catch {}
   return {
     observer,
+    driver,
     runtime: new BrowserRuntime({
       observer,
       registry,
+      presentation: driver,
       timeoutMs: 5000,
       ...(navigationStore ? { navigationStore } : {}),
     }),

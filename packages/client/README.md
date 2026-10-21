@@ -1,5 +1,7 @@
 # @pagesquire/client
 
+Optional `GuidedTour` and `SpeechOutput` reuse the external widget stylesheet. Tours use host-authored targets and keyboard cancellation; speech starts disabled/local-only. See [assistant driving](../../docs/assistant-driving.md) for lifecycle, speech-queue/privacy limits and six-state Rive mapping. No mascot, microphone or paid speech endpoint is included.
+
 Framework-independent conversation client and accessible DOM widget. Requires the PageSquire protocol/core packages. No API key, framework import, Markdown renderer, or dynamic evaluation is included.
 
 ```ts
