@@ -293,6 +293,7 @@ test('Node endpoint times out an uncooperative provider while retaining its char
   const directory = await temporary(t);
   const store = new FileConversationStore(directory);
   let providerCalls = 0;
+  let resolveLate;
   const handler = createChatHandler({
     origin,
     store,
@@ -303,7 +304,9 @@ test('Node endpoint times out an uncooperative provider while retaining its char
       provider: {
         complete: () => {
           providerCalls++;
-          return new Promise(() => {});
+          return providerCalls === 1
+            ? new Promise((resolve) => (resolveLate = resolve))
+            : Promise.resolve(fixture.drafts.final);
         },
       },
     }),
@@ -311,7 +314,29 @@ test('Node endpoint times out an uncooperative provider while retaining its char
   const response = await handler(request());
   assert.equal(providerCalls, 1);
   assert.equal(response.status, 502);
-  await store.transaction(session.key, async (tx) =>
-    assert.equal((await tx.load()).state.attempts, 1),
+  let conversationId;
+  await store.transaction(session.key, async (tx) => {
+    const stored = await tx.load();
+    assert.equal(stored.state.attempts, 1);
+    conversationId = stored.state.id;
+  });
+  const recovered = await handler(
+    request({
+      ...fixture.request,
+      requestId: 'explicit-follow-up',
+      conversationId,
+    }),
   );
+  assert.equal(recovered.status, 200);
+  resolveLate(fixture.drafts.action);
+  await new Promise((resolve) => setImmediate(resolve));
+  await store.transaction(session.key, async (tx) => {
+    const stored = await tx.load();
+    assert.equal(stored.state.attempts, 2);
+    assert.equal(stored.state.pending, null);
+    assert.equal(stored.state.steps, 0);
+    assert.equal(stored.state.lastRequest, 'explicit-follow-up');
+    assert.equal(stored.state.lastReply.response.finished, true);
+  });
+  assert.equal(providerCalls, 2);
 });

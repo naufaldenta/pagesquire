@@ -92,6 +92,10 @@ test('Escape cancels a running browser action and restores the input', async ({
   await expect(widget).toHaveAttribute('aria-busy', 'false');
   await expect(widget).toHaveAttribute('data-emotion', 'idle');
   await expect(widget.getByRole('log')).toContainText('cancelled');
+  await send(page, 'Make headings red');
+  await expect(page.locator('main h1')).toHaveCSS('color', 'rgb(255, 0, 0)');
+  await expect(widget).toHaveAttribute('data-emotion', 'happy');
+  await expect(widget.getByRole('log')).toContainText('changes were verified');
 });
 
 test('provider text is rendered as text and never interpreted as HTML', async ({

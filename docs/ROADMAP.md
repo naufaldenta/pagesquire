@@ -14,6 +14,12 @@ PageSquire is the selected project name. This repository begins the roadmap desi
 
 ## Next implementation milestone
 
+### B1: Stabilization before beta
+
+The owner selected B1 as the next implementation step. Version and release channel remain alpha. B1 addresses the Windows WordPress login autofocus race, cancellation before queued browser handlers/verifiers start, and regression coverage for independent chat turns, timeout/cancellation recovery, late replies and navigation continuation. It does not expand the provider/platform support matrix or certify live-model accuracy.
+
+Promotion requires all required remote jobs on the exact candidate commit, passing clean-consumer artifacts and no unresolved critical defects in the declared support scope. A local fix or passing component test is not remote CI evidence. Live-model evaluation and outside-user installation trials remain subsequent beta-readiness work; registry publication and version promotion need separate review and owner approval.
+
 F2 now connects the chat widget to a bounded server-owned PHP loop, supplies a Laravel 13 endpoint/provider adapter, and includes React 19/Inertia v3 adapters. Neutral heading-color, link-highlight, and font-weight conversations are verified. The JDIH application is not modified; its routes, identity, and licensed assets belong in a separate site adapter. Live-model evaluation and deployment are not part of the completed local alpha.
 
 F3 now provides local init/scan/report/prepare-ai/validate onboarding. Source scans export bounded metadata; opt-in DOM scans stay within an explicit page scope. The coding-agent step installs an English `assistant-setup` skill for Codex and/or Claude Code without contacting either host. Manual and handoff-artifact workflows are tested with compiled browser capabilities. Separate coding-agent adherence and production-site coverage are not certified. See [hybrid onboarding](onboarding.md).

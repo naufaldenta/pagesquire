@@ -11,15 +11,17 @@ let ids;
 
 async function login(page, reader = false) {
   await page.goto(`${origin}/wp-login.php`, { timeout: 30000 });
-  await expect(page.locator('#user_login')).toBeVisible();
-  await page
-    .locator('#user_login')
-    .fill(reader ? 'fixture-reader' : 'fixture-admin');
-  await page
-    .locator('#user_pass')
-    .fill(
-      reader ? 'pagesquire-reader-password' : 'pagesquire-fixture-password',
-    );
+  const username = page.locator('#user_login');
+  const password = page.locator('#user_pass');
+  const usernameValue = reader ? 'fixture-reader' : 'fixture-admin';
+  const passwordValue = reader
+    ? 'pagesquire-reader-password'
+    : 'pagesquire-fixture-password';
+  await expect(username).toBeFocused();
+  await username.fill(usernameValue);
+  await password.fill(passwordValue);
+  await expect(username).toHaveValue(usernameValue);
+  await expect(password).toHaveValue(passwordValue);
   await page.locator('#wp-submit').click();
   await page.waitForURL(/wp-admin/, { timeout: 30000 });
 }
@@ -129,6 +131,51 @@ test.beforeEach(async ({ page }) => {
   expect(response.ok()).toBe(true);
   ids = (await response.json()).pages;
   await dashboard(page);
+});
+
+test('login waits for deferred WordPress autofocus before entering either credential', async ({
+  browser,
+}) => {
+  const context = await browser.newContext();
+  try {
+    await context.route('**/*', (route) =>
+      new URL(route.request().url()).origin === origin
+        ? route.continue()
+        : route.abort(),
+    );
+    const page = await context.newPage();
+    const readinessAtInput = [];
+    await page.exposeFunction('recordFixtureLoginInput', (ready) =>
+      readinessAtInput.push(ready),
+    );
+    await page.addInitScript(() => {
+      document.addEventListener('input', (event) => {
+        if (['user_login', 'user_pass'].includes(event.target.id))
+          void window.recordFixtureLoginInput(
+            window.pagesquireFixtureAutofocusComplete === true,
+          );
+      });
+    });
+    await page.route('**/wp-login.php', async (route) => {
+      if (route.request().method() !== 'GET') return route.continue();
+      const response = await route.fetch();
+      const body = await response.text();
+      expect(body.match(/d\.focus\(\); d\.select\(\);/g)).toHaveLength(1);
+      await route.fulfill({
+        response,
+        body: body
+          .replace(
+            'd.focus(); d.select();',
+            'window.pagesquireFixtureAutofocusComplete = true; d.focus(); d.select();',
+          )
+          .replace('}, 200);', '}, 800);'),
+      });
+    });
+    await login(page);
+    expect(readinessAtInput).toEqual([true, true]);
+  } finally {
+    await context.close();
+  }
 });
 
 test('unique database locks reject stale-cache collisions and protect the original owner', async ({

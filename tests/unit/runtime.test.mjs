@@ -17,7 +17,7 @@ const call = {
   parameters: { url },
 };
 
-function fixture(verify, options = {}) {
+function fixture(verify, options = {}, execute = () => {}) {
   const memory = new Map();
   const storage = {
     getItem: (key) => memory.get(key) ?? null,
@@ -28,7 +28,7 @@ function fixture(verify, options = {}) {
   const registry = new CapabilityRegistry(
     { schemaVersion: '0.1', capabilities: [navigationCapability] },
     {
-      handlers: { 'browser.navigate': () => {} },
+      handlers: { 'browser.navigate': execute },
       verifiers: { 'browser.verifyNavigation': verify },
       parameters: {
         'browser.navigate': {
@@ -107,4 +107,62 @@ test('resumed verification preserves timeout and cancellation outcomes', async (
   assert.equal(result.status, 'cancelled');
   assert.equal(result.code, 'CANCELLED');
   assert.equal(cancelled.runtime.activity, 'idle');
+});
+
+test('cancelling before a queued handler starts prevents execution and permits a fresh action', async () => {
+  let executions = 0;
+  let verifications = 0;
+  const { runtime } = fixture(
+    () => {
+      verifications++;
+      return { verified: true };
+    },
+    {},
+    () => executions++,
+  );
+  const pending = runtime.execute(call);
+  runtime.cancel();
+  assert.equal((await pending).status, 'cancelled');
+  assert.equal(executions, 0);
+  assert.equal(verifications, 0);
+  assert.equal(runtime.activity, 'idle');
+  assert.equal((await runtime.execute(call)).status, 'cancelled');
+  const next = await runtime.execute({ ...call, callId: 'fresh-action' });
+  assert.equal(next.status, 'success');
+  assert.equal(executions, 1);
+  assert.equal(verifications, 1);
+});
+
+test('cancelling resumed navigation before its queued verifier prevents the verifier from starting', async () => {
+  let verifications = 0;
+  const { runtime, navigationStore } = fixture(() => {
+    verifications++;
+    return { verified: true };
+  });
+  navigationStore.save(call, new URL(url));
+  const pending = runtime.resumeNavigation();
+  runtime.cancel();
+  assert.equal((await pending).status, 'cancelled');
+  assert.equal(verifications, 0);
+  assert.equal(runtime.activity, 'idle');
+  assert.equal(await runtime.resumeNavigation(), undefined);
+});
+
+test('cancellation between handler completion and queued verification prevents verification', async () => {
+  let verifications = 0;
+  const { runtime } = fixture(
+    () => {
+      verifications++;
+      return { verified: true };
+    },
+    {},
+    () =>
+      queueMicrotask(() =>
+        queueMicrotask(() => queueMicrotask(() => runtime.cancel())),
+      ),
+  );
+  const result = await runtime.execute(call);
+  assert.equal(result.status, 'cancelled');
+  assert.equal(verifications, 0);
+  assert.equal(runtime.activity, 'idle');
 });
