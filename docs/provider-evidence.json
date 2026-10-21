@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "reviewedOn": "2026-10-21",
+  "scope": "Official documentation review of text-only, non-streaming OpenAI-compatible Chat Completions. Preset and synthetic coverage do not certify a live provider or every model. No price, account entitlement, regional availability or upstream model identity is asserted.",
+  "profiles": [
+    {
+      "id": "custom",
+      "status": "host-review-required",
+      "sources": [
+        "https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create"
+      ],
+      "note": "An arbitrary endpoint needs its own operator review and tests; the OpenAI contract alone cannot certify it."
+    },
+    {
+      "id": "sumopod",
+      "status": "documentation-reviewed",
+      "sources": ["https://docs.sumopod.com/guides/ai/openai-compatible-api"],
+      "note": "Official base URL and model selection confirmed. JSON-mode behavior remains model-dependent. Separate bounded live evidence is recorded in model-evaluation-result.json."
+    },
+    {
+      "id": "openai",
+      "status": "documentation-reviewed",
+      "sources": [
+        "https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create"
+      ],
+      "note": "max_completion_tokens includes reasoning tokens. JSON object mode is not schema conformance; strict local validation remains mandatory. Native Responses is outside this transport."
+    },
+    {
+      "id": "openrouter",
+      "status": "documentation-reviewed",
+      "sources": ["https://openrouter.ai/docs/api_reference/overview"],
+      "note": "response_format depends on the selected model/upstream. PageSquire does not send model fallback lists, repair plugins or native hosted tools; inspect gateway routing separately."
+    },
+    {
+      "id": "groq",
+      "status": "documentation-reviewed",
+      "sources": [
+        "https://console.groq.com/docs/openai",
+        "https://console.groq.com/docs/api-reference"
+      ],
+      "note": "OpenAI base URL confirmed; parameter and JSON support remain model-dependent. Responses is not this adapter."
+    },
+    {
+      "id": "deepseek",
+      "status": "documentation-reviewed",
+      "sources": [
+        "https://api-docs.deepseek.com/",
+        "https://api-docs.deepseek.com/guides/json_mode/"
+      ],
+      "note": "JSON mode requires JSON instructions and an adequate output limit. Direct-service model aliases can change; do not infer that a gateway uses identical aliases or weights."
+    },
+    {
+      "id": "qwen",
+      "status": "documentation-reviewed",
+      "sources": [
+        "https://www.alibabacloud.com/help/en/model-studio/compatibility-of-openai-with-dashscope"
+      ],
+      "note": "Use the workspace/region endpoint and a key issued for that region. Copy the account endpoint; no global URL or default model is assumed. Prompt mode avoids assuming universal JSON mode."
+    },
+    {
+      "id": "zai",
+      "status": "documentation-reviewed",
+      "sources": ["https://docs.z.ai/guides/overview/quick-start"],
+      "note": "Standard Z.AI API key and endpoint confirmed. Coding Plan credentials/terms are not interchangeable with a public assistant API service."
+    },
+    {
+      "id": "glm",
+      "status": "documentation-reviewed",
+      "sources": [
+        "https://docs.bigmodel.cn/cn/guide/develop/openai/introduction"
+      ],
+      "note": "Zhipu China base URL confirmed; select the service that issued the key. OpenAI compatibility has documented differences; no live account was tested."
+    },
+    {
+      "id": "9router",
+      "status": "documentation-reviewed",
+      "sources": ["https://github.com/decolua/9router"],
+      "note": "Self-hosted /v1/chat/completions gateway, not a fixed public service. Its documented local HTTP defaults do not relax PageSquire HTTPS checks. Upstream fallback/routing must be reviewed by the gateway owner."
+    },
+    {
+      "id": "gemini",
+      "status": "documentation-reviewed",
+      "sources": ["https://ai.google.dev/gemini-api/docs/openai"],
+      "note": "Google's OpenAI compatibility endpoint and structured parsing are documented. This is not the native Gemini/Interactions API. Check JSON-object support for the chosen model, or deliberately select prompt mode; it is not live-certified."
+    },
+    {
+      "id": "mistral",
+      "status": "documentation-reviewed",
+      "sources": ["https://docs.mistral.ai/api/endpoint/chat"],
+      "note": "Chat Completions, max_tokens and response_format are documented; actual model/account support still needs live validation."
+    },
+    {
+      "id": "together",
+      "status": "documentation-reviewed",
+      "sources": [
+        "https://docs.together.ai/docs/inference/openai-compatibility"
+      ],
+      "note": "Base URL and chat/response_format mapping confirmed. Supported model IDs and structured-output availability are account/model choices, not a bundled fixed list."
+    },
+    {
+      "id": "fireworks",
+      "status": "documentation-reviewed",
+      "sources": ["https://docs.fireworks.ai/tools-sdks/openai-compatibility"],
+      "note": "OpenAI compatibility base URL confirmed. Model/deployment and JSON behavior need independent validation; no Fireworks account was exercised."
+    },
+    {
+      "id": "cerebras",
+      "status": "documentation-reviewed",
+      "sources": [
+        "https://inference-docs.cerebras.ai/resources/openai",
+        "https://inference-docs.cerebras.ai/api-reference/chat-completions"
+      ],
+      "note": "max_tokens is an alias of max_completion_tokens; never send both. JSON/model limits remain subject to the selected account/model."
+    },
+    {
+      "id": "xai",
+      "status": "documentation-reviewed",
+      "sources": [
+        "https://docs.x.ai/developers/model-capabilities/legacy/chat-completions",
+        "https://docs.x.ai/developers/rest-api-reference/inference/chat-completions"
+      ],
+      "note": "Chat Completions is explicitly legacy. The existing legacy token profile is synthetic-tested, not evidence of universal reasoning-model compatibility. Responses-only/multi-agent variants are excluded."
+    }
+  ]
+}

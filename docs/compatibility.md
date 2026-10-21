@@ -23,7 +23,7 @@ Windows and Ubuntu jobs run through [GitHub Actions](https://github.com/naufalde
 
 ## Known limits and the 1.0 gate
 
-- No live-provider evaluation baseline, tool-selection accuracy target or production-host audit yet. Mocked tool calls do not prove model understanding.
+- A [bounded Sumopod live smoke](model-evaluation.md) passed five scenarios with twelve attempts on one requested model. There is no broad multi-provider accuracy baseline, repeated statistical evaluation or production-host audit. Synthetic matrix cases do not prove model understanding.
 - Firefox, Safari, screen readers, keyboard/assistive-technology certification and a licensed Rive renderer remain unverified or unimplemented. Six emotion callbacks include `thinking` while loading.
 - One conversation slot per session; no general transcript restoration or cross-tab coordination. Full-document continuation is an opt-in one-shot checkpoint, not transcript persistence.
 - File storage is single-host. Multi-instance/serverless use requires genuinely shared atomic durable storage, authentication, quotas, cleanup, retention and failure recovery supplied by the host.

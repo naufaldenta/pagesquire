@@ -26,6 +26,8 @@ API credentials, model and provider settings never belong in browser JavaScript,
 
 ## Built-in presets
 
+The [dated documentation review](provider-evidence.json) was refreshed on **2026-10-21** for every named profile. It records source URLs and unresolved model-specific boundaries, not live certification. See [model evaluation](model-evaluation.md) for the separate Sumopod-only live smoke and reproducible synthetic checks.
+
 “Supported” means an implemented preset with synthetic request/response, parity and packaging coverage. It does **not** mean live certification of every provider/model, account, region, price or native tool API. Verify availability and terms in the linked official documentation. Preset defaults are starting profiles; explicit overrides handle model differences.
 
 | Provider ID  | Service                              | Endpoint                      | Default response / token field          | Documentation                                                                                                            |
@@ -48,6 +50,8 @@ API credentials, model and provider settings never belong in browser JavaScript,
 | `xai`        | xAI / Grok (legacy Chat Completions) | Automatic                     | `json_object` / `max_tokens`            | [Official reference](https://docs.x.ai/developers/rest-api-reference/inference/chat-completions)                         |
 
 GLM model families can be hosted by Z.AI (`zai`), Zhipu China (`glm`) or a gateway. Choose the service that issued your key, not just the model family. Z.AI Coding Plan subscriptions are not assumed to authorize a public website assistant; use the standard API service or an independently reviewed permitted endpoint. Qwen regional/workspace URLs must be copied from the correct account.
+
+Gateways can route requests or resolve model aliases independently of PageSquire. PageSquire does not configure fallback lists or repair plugins, but that does not disable a gateway's own routing. A requested model ID is not proof of the upstream model weights. Do not copy direct-provider model aliases into a gateway configuration without checking that gateway's account documentation.
 
 The `xai` profile targets its legacy Chat Completions endpoint and uses `max_tokens`. It does not cover Responses-only or multi-agent variants. See [xAI's API comparison](https://docs.x.ai/developers/model-capabilities/text/comparison) before choosing a model.
 
