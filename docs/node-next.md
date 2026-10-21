@@ -74,6 +74,8 @@ Reuse the host's established authenticated session and make bootstrap effects sa
 
 ## Local verification
 
+For trusted server-only transcript erasure without resetting request/provider budgets, use `forgetConversation(store, sessionKey, principal)` as described in the [operations runbook](operations.md). It is not an assistant capability or a public endpoint and does not revoke host sessions or delete provider/backups.
+
 After root `npm ci`, `composer install` and `npm run build`:
 
 ```sh

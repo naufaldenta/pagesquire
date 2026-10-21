@@ -8,6 +8,10 @@ Registered and verified browser capabilities, a conversation widget, six-state e
 
 Each complete candidate directory contains six npm tarballs, two PHP source ZIPs, a WordPress installation ZIP, the full editable source ZIP, a Composer path-repository example, these notes, `release-manifest.json` and `SHA256SUMS`. npm, Packagist and WordPress.org accounts are not needed for local files. Third-party dependencies still need normal installation; this is not a complete offline dependency mirror.
 
+B4 adds budget-preserving host-only transcript erasure and a PostgreSQL cleanup concurrency correction. B5 adds beta-aware release checks, explicit review gates and [independent tester guidance](beta.md); this candidate itself remains alpha and no beta release is published. These changes are not automatically deployed by creating a local archive.
+
+R1 adds a reviewed [API inventory/drift baseline](api-contract.md), CI/candidate enforcement and same-format synthetic Node checkpoint recovery checks, with [upgrade](upgrading.md) and [maintenance](maintenance.md) guidance. No API freeze, historical-release upgrade certification, RC/stable version or production restore is implied.
+
 ## Before using a download
 
 Verify every checksum with `npm run release:verify -- <candidate-directory>` from a trusted source checkout. Checksums detect corruption; they are not signatures or proof of publisher identity. Confirm the candidate/version with the owner through a trusted channel. The built WordPress ZIP is the installable plugin; neither GitHub's automatic source ZIP nor `pagesquire-source-*.zip` is a ready-to-upload plugin.

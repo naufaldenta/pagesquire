@@ -143,7 +143,7 @@ $provider = new class($fixture) implements \PageSquire\Server\Provider {
 };
 $engine = new \PageSquire\Server\ConversationEngine($provider, new \PageSquire\Server\ProtocolValidator, $fixture['manifest']);
 $result = $engine->handle($fixture['request'], null, []);
-if ($result['reply']['response']['emotion'] !== 'happy' || class_exists(\Illuminate\Foundation\Application::class)) {
+if ($result['reply']['response']['emotion'] !== 'happy' || class_exists(\Illuminate\Foundation\Application::class) || !class_exists(\PageSquire\Server\Http\ConversationPrivacy::class)) {
     exit(1);
 }
 echo 'standalone-php-artifact-ok';

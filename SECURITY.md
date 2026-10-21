@@ -1,5 +1,7 @@
 # Security scope
 
+For incident containment, lock/lease recovery, budget-preserving transcript erasure and retention boundaries, see the [operations runbook](docs/operations.md). The optional Node/PHP erasure APIs are trusted server integrations, not public endpoints or assistant capabilities.
+
 PageSquire is not ready for unrestricted production action execution. The F2 alpha adds a server-owned PHP conversation engine, a Laravel endpoint, and a widget to the explicitly registered browser runtime. Automated checks use synthetic content and credentials, not live accounts.
 
 Treat manifests, installed handlers, verifiers, and permission callbacks as trusted host configuration. Treat model calls and webpage text as untrusted input. Client checks do not replace server authorization, CSRF protection, endpoint abuse controls, or inference budgets.
@@ -12,7 +14,7 @@ Keep provider endpoints/models/keys in server configuration. Enable the Laravel 
 
 Browser results are untrusted telemetry. They do not grant business permissions or prove server-side state changes. Consequential actions remain disabled. Trusted handlers may still be unsafe or mislabel impact; review every installed capability. Prompt instructions cannot guarantee factual correctness or prevent all prompt injection.
 
-Known boundaries: one conversation slot per session, no cross-tab coordination, no general transcript restoration, no live-model evaluation, no production-host audit, and no assistive-technology review yet. Full-document navigation continuation is opt-in, same-tab, short-lived, consumes minimal IDs/URL once and does not rerun the action. The local PHP/Node/Next.js demos are for localhost only and must not be deployed as public services.
+Known boundaries: one conversation slot per session, no cross-tab coordination, no general transcript restoration, no production-host security audit, and no assistive-technology review yet. A bounded Sumopod smoke is recorded in [model evaluation](docs/model-evaluation.md); it is not a broad accuracy or prompt-injection benchmark. Full-document navigation continuation is opt-in, same-tab, short-lived, consumes minimal IDs/URL once and does not rerun the action. The local PHP/Node/Next.js demos are for localhost only and must not be deployed as public services.
 
 F4 Node/native PHP endpoints require an explicitly configured public Origin, POST JSON, session-bound CSRF and host authorization. Internal/proxy Request URLs never determine the trusted origin. File stores require a private persistent local directory, single host and service-account ACLs. Multi-host/serverless deployments need a genuinely shared atomic durable store. Host session creation, global/principal/IP quotas, storage quotas, retention cleanup, safe lock recovery and edge connection limits remain deployment responsibilities. Per-session budgets are not currency caps. Node lock directories can remain after process termination; never break a lock without verifying its owner stopped. Custom transport/storage/auth implementations are trusted host code and must bound their own I/O.
 

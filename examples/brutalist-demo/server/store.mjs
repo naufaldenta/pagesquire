@@ -115,9 +115,18 @@ export class PostgresConversationStore {
   }
 
   async cleanup() {
-    await this.pool.query(`DELETE FROM pagesquire_private.sessions WHERE id IN
-      (SELECT id FROM pagesquire_private.sessions WHERE expires_at < clock_timestamp() AND lease_until <= clock_timestamp() LIMIT 100)`);
-    await this.pool.query(`DELETE FROM pagesquire_private.budgets WHERE id IN
-      (SELECT id FROM pagesquire_private.budgets WHERE expires_at < clock_timestamp() LIMIT 100)`);
+    await this.pool.query(`WITH expired AS (
+      SELECT id FROM pagesquire_private.sessions
+      WHERE expires_at < clock_timestamp() AND lease_until <= clock_timestamp()
+      ORDER BY expires_at, id LIMIT 100 FOR UPDATE SKIP LOCKED
+    ) DELETE FROM pagesquire_private.sessions AS target USING expired
+      WHERE target.id = expired.id AND target.expires_at < clock_timestamp()
+      AND target.lease_until <= clock_timestamp()`);
+    await this.pool.query(`WITH expired AS (
+      SELECT id FROM pagesquire_private.budgets
+      WHERE expires_at < clock_timestamp()
+      ORDER BY expires_at, id LIMIT 100 FOR UPDATE SKIP LOCKED
+    ) DELETE FROM pagesquire_private.budgets AS target USING expired
+      WHERE target.id = expired.id AND target.expires_at < clock_timestamp()`);
   }
 }

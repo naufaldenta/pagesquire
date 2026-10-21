@@ -55,4 +55,6 @@ For full-document pages, opt into the [client navigation checkpoint](../packages
 
 ## Tests
 
+For trusted server-only transcript erasure, `PageSquire\Server\Http\ConversationPrivacy::forget($store, $sessionKey, $principal)` clears conversation state in the existing exclusive transaction while retaining request/provider budgets. Review the [operations runbook](operations.md) before integrating it; it is not a public route, session revocation or a vendor/backup erasure guarantee.
+
 The [localhost-only PHP router](../examples/php-chat/router.php) uses the native endpoint/store with a deterministic provider. Never deploy that development router publicly. Shared fixtures cover the same protocol scenarios in PHP and Node; native tests cover CSRF/origin/default-deny, replay, principal changes, rate/lock behavior, durable failed attempts, raw object-vs-array validation and bounded provider configuration. Live provider delivery/model quality and production hosting are separate evaluation gates.

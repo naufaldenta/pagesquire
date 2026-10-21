@@ -47,6 +47,10 @@ Not implemented yet: speech and a bundled Rive renderer. Connect your own licens
 
 The development repository is [naufaldenta/pagesquire](https://github.com/naufaldenta/pagesquire). F6 adds GitHub-first release preparation; no tagged release or registry package has been published. Package names remain provisional, private and unreserved on npm/Packagist. See [tested compatibility](docs/compatibility.md), [release/download instructions](docs/releasing.md), [changelog](CHANGELOG.md) and [contributing](CONTRIBUTING.md).
 
+B5 adds [guarded public-beta preparation](docs/beta.md), alpha/beta-aware candidate tooling and an [independent tester feedback template](.github/ISSUE_TEMPLATE/beta_feedback.md). Run `npm run release:check -- --beta` to see the remaining gates; it deliberately fails while readiness is incomplete. The current version remains **0.1.0-alpha.0**. Local archives and a beta-capable tool do not mean a public beta exists.
+
+R1 local foundations add an [API inventory and drift baseline](docs/api-contract.md), [upgrade/recovery guidance](docs/upgrading.md) and [maintenance policy](docs/maintenance.md). `npm run api:check` requires a build and flags changes for review; it does not freeze the API, prove historical-release upgrades or enable RC/stable publication.
+
 ## Run the foundation demo
 
 For the independent art playground, see [OFFBEAT](examples/brutalist-demo/README.md). Run `npm run demo:build` then `npm run demo:serve` for a static local preview with guided actions. Root `vercel.json` deploys its static frontend **and** the dedicated `/api/session` and `/api/chat` Node function; other local example servers are not deployed.
@@ -87,9 +91,12 @@ Review the installed guidance and invoke `$assistant-setup` in Codex or `/assist
 
 ## Verification commands
 
+Before exposing inference publicly, review the [security and operations runbook](docs/operations.md): incident containment, safe lock recovery, durable budgets and server-only transcript erasure. These alpha procedures do not certify production hosting or live-model prompt-injection resistance.
+
 ```sh
 npm exec -- playwright install chromium
 npm test
+npm run api:check
 npm run test:php
 npm run test:wordpress
 npm run test:next-build

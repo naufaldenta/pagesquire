@@ -9,6 +9,17 @@
     "remoteCiPassed": false,
     "ownerApprovedRelease": false
   },
+  "beta": {
+    "externalOnboarding": { "approved": false, "evidence": [] },
+    "supportScopeReviewed": {
+      "approved": false,
+      "evidence": ["docs/compatibility.md", "docs/model-evaluation.md"]
+    },
+    "securityOperationsReviewed": {
+      "approved": false,
+      "evidence": ["docs/operations.md"]
+    }
+  },
   "registries": {
     "npm": "deferred",
     "packagist": "deferred",

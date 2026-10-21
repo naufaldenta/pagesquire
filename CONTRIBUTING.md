@@ -14,6 +14,8 @@ npm run format:check
 
 Use Node.js 24 or later and PHP 8.3. `npm test` includes PHP engine/Laravel tests, browser conversations, type checks and offline package installation. Add meaningful tests for changed contracts or behavior. Browser changes need a real DOM/postcondition test rather than only a mocked successful tool response. PHP tests use PHPUnit classes and faked providers; never add a live-key requirement. Run Pint on changed PHP sources and Prettier on supported source/docs.
 
+R1 adds `npm run api:check` after build in the test/CI workflow and during candidate preparation. Follow [API review](docs/api-contract.md), [upgrade/recovery](docs/upgrading.md) and [maintenance](docs/maintenance.md); do not blindly refresh the fingerprint baseline to hide drift. Current synthetic serialized-state tests are not a stable-format or production-rollback guarantee.
+
 ## Project conventions
 
 - Write canonical documentation, setup instructions, comments, and public technical messages in English.
@@ -34,3 +36,5 @@ Before a substantial change, describe the integration boundary and compatibility
 Contributions must be your own or carry compatible redistribution rights. Shared packages are MIT; the combined WordPress plugin is GPL-3.0-or-later and preserves dependency notices/corresponding source. Do not change licenses or add dependencies without maintainer review. No CLA, funding commitment or response-time guarantee is established.
 
 See [adapter authoring](docs/adapter-authoring.md) for capability contracts and [releasing](docs/releasing.md) for package/version/approval gates. Local artifact preparation is not permission to publish, register namespaces or deploy examples.
+
+For independent onboarding trials, follow the [beta testing guide](docs/beta.md) and [sanitized feedback template](.github/ISSUE_TEMPLATE/beta_feedback.md). Distinguish independent owners from maintainer-assisted labs, and real postconditions from model text. The current alpha is not a published beta; feedback does not grant publication approval or a paid-call allowance.

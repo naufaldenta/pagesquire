@@ -29,6 +29,7 @@ import {
 } from '../../scripts/distribution-sources.mjs';
 import {
   checkRelease,
+  prepareRelease,
   checkDocumentation,
   zipSources,
   sha256,
@@ -38,6 +39,12 @@ import {
   buildEvidence,
   sourceDigest,
 } from '../../scripts/release.mjs';
+import {
+  assessBetaPolicy,
+  betaRequirementIds,
+  prereleaseChannel,
+} from '../../scripts/release-policy.mjs';
+import { captureApi } from '../../scripts/check-api.mjs';
 
 async function temporary(t) {
   const parent = path.resolve(tmpdir());
@@ -64,6 +71,7 @@ test('CI isolates browser artifacts and enumerates every verification component'
   );
   for (const script of [
     'build',
+    'api:check',
     'typecheck',
     'test:unit',
     'test:php',
@@ -336,6 +344,198 @@ test('valid local alpha does not imply public-release readiness', async (t) => {
   assert.ok(result.gates.includes('ownerApprovedRelease'));
   assert.equal(result.repository.owner, 'naufaldenta');
   assert.ok(result.documentation.guides >= 30);
+  assert.equal(result.beta.ready, false);
+  assert.ok(result.beta.gates.includes('betaVersionRequired'));
+  assert.ok(!result.gates.some((gate) => gate.startsWith('beta.')));
+});
+
+test('reviewed prerelease channels enforce canonical SemVer numbers without stable or RC aliases', () => {
+  for (const [version, expected] of [
+    ['0.1.0-alpha.0', 'github-alpha'],
+    ['0.12.3-beta.10', 'github-beta'],
+    ['0.0.0-beta.0', 'github-beta'],
+  ])
+    assert.equal(prereleaseChannel(version), expected);
+  for (const version of [
+    null,
+    1,
+    '1.0.0',
+    '0.1.0',
+    '1.0.0-beta.0',
+    '0.1.0-rc.0',
+    '0.01.0-beta.0',
+    '0.1.00-beta.0',
+    '0.1.0-beta.01',
+    'v0.1.0-beta.0',
+    '0.1.0-beta.0+alias',
+    '0.1.0-beta.0\n',
+  ])
+    assert.equal(prereleaseChannel(version), null, String(version));
+});
+
+function betaPolicy(approved = false) {
+  return Object.fromEntries(
+    betaRequirementIds.map((id) => [
+      id,
+      {
+        approved,
+        evidence: approved ? ['docs/compatibility.md'] : [],
+      },
+    ]),
+  );
+}
+
+test('beta review records require explicit approval and existing bounded evidence, not document presence alone', () => {
+  const files = new Map([
+    ['docs/compatibility.md', Buffer.from('synthetic review')],
+  ]);
+  const pending = betaPolicy();
+  pending.supportScopeReviewed.evidence = ['docs/compatibility.md'];
+  const result = assessBetaPolicy(pending, files);
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.gates.length, 3);
+  const approved = assessBetaPolicy(betaPolicy(true), files);
+  assert.deepEqual(approved.errors, []);
+  assert.deepEqual(approved.gates, []);
+  assert.ok(approved.requirements.every((item) => item.approved));
+});
+
+test('beta policy rejects unknown/missing records, coercion, unsafe or absent evidence and false approvals', () => {
+  const files = new Map([['docs/compatibility.md', Buffer.from('synthetic')]]);
+  for (const policy of [
+    null,
+    [],
+    {},
+    { ...betaPolicy(), imaginaryGate: { approved: true, evidence: [] } },
+  ])
+    assert.ok(assessBetaPolicy(policy, files).errors.length > 0);
+  for (const record of [
+    null,
+    true,
+    [],
+    { approved: 'true', evidence: ['docs/compatibility.md'] },
+    { approved: true, evidence: [] },
+    { approved: false },
+    { approved: true, evidence: ['docs/missing.md'] },
+    ...[
+      '../private.md',
+      'C:/private.md',
+      'docs/../README.md',
+      'docs\\compatibility.md',
+      'docs/.cache/review.md',
+      'docs/.env.md',
+      'https://example.test/review.md',
+      'docs/compatibility.md#review',
+    ].map((reference) => ({ approved: true, evidence: [reference] })),
+    { approved: true, evidence: Array(9).fill('docs/compatibility.md') },
+    {
+      approved: true,
+      evidence: ['docs/compatibility.md', 'docs/compatibility.md'],
+    },
+    { approved: true, evidence: ['docs/compatibility.md'], skip: true },
+  ]) {
+    const result = assessBetaPolicy(
+      { ...betaPolicy(), externalOnboarding: record },
+      files,
+    );
+    assert.ok(result.errors.length > 0);
+    assert.ok(result.gates.includes('beta.externalOnboarding'));
+  }
+});
+
+async function betaFixture(t) {
+  const root = await fixture(t);
+  const version = '0.1.0-beta.0';
+  await mutateJson(root, 'package.json', (item) => {
+    item.version = version;
+  });
+  await mutateJson(root, 'package-lock.json', (item) => {
+    item.version = version;
+    item.packages[''].version = version;
+    for (const name of ['protocol', 'core', 'client', 'react', 'cli', 'server'])
+      item.packages[`packages/${name}`].version = version;
+  });
+  for (const name of ['protocol', 'core', 'client', 'react', 'cli', 'server'])
+    await mutateJson(root, `packages/${name}/package.json`, (item) => {
+      item.version = version;
+      for (const dependency of Object.keys(item.dependencies ?? {}))
+        if (dependency.startsWith('@pagesquire/'))
+          item.dependencies[dependency] = version;
+    });
+  await mutateJson(root, 'release.config.json', (item) => {
+    item.channel = 'github-beta';
+  });
+  await mutateJson(root, 'docs/compatibility.json', (item) => {
+    item.release = version;
+  });
+  for (const name of [
+    'packages/wordpress/pagesquire.php',
+    'packages/wordpress/readme.txt',
+    'docs/release-notes.md',
+  ]) {
+    const file = path.join(root, name);
+    await writeFile(
+      file,
+      (await readFile(file, 'utf8')).replaceAll('0.1.0-alpha.0', version),
+    );
+  }
+  return root;
+}
+
+test('synchronized beta preview is valid but cannot bypass B3/support/security, checkout and publication gates', async (t) => {
+  const root = await betaFixture(t);
+  let result = await checkRelease(root);
+  assert.equal(result.valid, true, JSON.stringify(result.errors));
+  assert.equal(result.channel, 'github-beta');
+  assert.equal(result.beta.ready, false);
+  for (const id of betaRequirementIds)
+    assert.ok(result.gates.includes(`beta.${id}`));
+  assert.ok(!result.beta.gates.includes('betaVersionRequired'));
+  await mutateJson(root, 'release.config.json', (item) => {
+    item.beta = betaPolicy(true);
+  });
+  result = await checkRelease(root);
+  assert.equal(result.valid, true, JSON.stringify(result.errors));
+  assert.equal(result.publicationReady, false);
+  assert.equal(result.beta.ready, false);
+  assert.ok(result.gates.includes('ownerApprovedRelease'));
+  assert.ok(result.gates.includes('remoteCiPassed'));
+  assert.ok(result.gates.includes('committedOriginRequired'));
+  assert.ok(result.gates.includes('cleanCheckoutRequired'));
+});
+
+test('beta version cannot disguise itself as the alpha channel or assert evidence-free approval', async (t) => {
+  const root = await betaFixture(t);
+  await mutateJson(root, 'release.config.json', (item) => {
+    item.channel = 'github-alpha';
+    item.beta.externalOnboarding = { approved: true, evidence: [] };
+  });
+  const result = await checkRelease(root);
+  assert.equal(result.valid, false);
+  assert.ok(result.errors.includes('Unsupported release configuration.'));
+  assert.ok(
+    result.errors.some((error) => error.includes('Invalid beta review record')),
+  );
+  assert.ok(result.gates.includes('beta.externalOnboarding'));
+});
+
+test('beta readiness CLI is read-only, offline and fails while current alpha gates remain open', async () => {
+  const before = await readFile(path.join(projectRoot, 'release.config.json'));
+  const result = spawnSync(
+    process.execPath,
+    ['scripts/release.mjs', 'check', '--beta'],
+    { cwd: projectRoot, encoding: 'utf8' },
+  );
+  assert.equal(result.status, 1);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.valid, true);
+  assert.equal(report.beta.ready, false);
+  assert.ok(report.beta.gates.includes('beta.externalOnboarding'));
+  assert.ok(report.beta.gates.includes('betaVersionRequired'));
+  assert.deepEqual(
+    await readFile(path.join(projectRoot, 'release.config.json')),
+    before,
+  );
 });
 
 test('metadata checks reject drift in versions, licenses, dependencies and registry guards', async (t) => {
@@ -367,7 +567,7 @@ test('metadata checks reject drift in versions, licenses, dependencies and regis
     );
 });
 
-test('alpha tooling refuses stable promotion, WordPress drift and unsupported compatibility claims', async (t) => {
+test('prerelease tooling refuses stable promotion, WordPress drift and unsupported compatibility claims', async (t) => {
   const root = await fixture(t);
   await mutateJson(root, 'package.json', (item) => {
     item.version = '1.0.0';
@@ -377,7 +577,7 @@ test('alpha tooling refuses stable promotion, WordPress drift and unsupported co
   });
   const result = await checkRelease(root);
   for (const text of [
-    'alpha release',
+    'alpha/beta prerelease',
     'WordPress plugin version',
     'WordPress stable tag',
     'Unsupported compatibility claim',
@@ -468,6 +668,47 @@ test('build evidence detects changed inputs, missing outputs and altered compile
   await assert.rejects(buildEvidence(root), /ENOENT/);
 });
 
+test('candidate preparation rejects declaration drift even with a fresh build fingerprint', async (t) => {
+  const root = await fixture(t);
+  for (const name of ['protocol', 'core', 'client', 'react', 'cli', 'server']) {
+    await mkdir(path.join(root, `packages/${name}/dist`), { recursive: true });
+    await writeFile(
+      path.join(root, `packages/${name}/dist/index.d.ts`),
+      'export declare const fixture: string;',
+    );
+    await writeFile(
+      path.join(root, `packages/${name}/dist/index.js`),
+      'export {};',
+    );
+  }
+  await mkdir(path.join(root, 'packages/protocol/dist/schemas'), {
+    recursive: true,
+  });
+  await writeFile(
+    path.join(root, 'packages/protocol/dist/schemas/fixture.json'),
+    '{"type":"string"}',
+  );
+  await mkdir(path.join(root, 'packages/wordpress/dist'), { recursive: true });
+  await writeFile(
+    path.join(root, 'packages/wordpress/dist/pagesquire-0.1.0-alpha.0.zip'),
+    'synthetic',
+  );
+  await writeFile(
+    path.join(root, 'docs/api-baseline.json'),
+    JSON.stringify(await captureApi(root)),
+  );
+  await writeFile(
+    path.join(root, 'packages/core/dist/index.d.ts'),
+    'export declare const fixture: number;',
+  );
+  await mkdir(path.join(root, 'dist'), { recursive: true });
+  await writeFile(
+    path.join(root, 'dist/build-evidence.json'),
+    JSON.stringify(await buildEvidence(root)),
+  );
+  await assert.rejects(prepareRelease(root), /API review baseline drift/);
+});
+
 test('release CLI has no publisher and enforces current owner/remote publication gates', async () => {
   assert.throws(
     () =>
@@ -491,9 +732,8 @@ test('release CLI has no publisher and enforces current owner/remote publication
   );
 });
 
-async function fakeCandidate(t) {
+async function fakeCandidate(t, version = '0.1.0-alpha.0', channel) {
   const directory = await temporary(t);
-  const version = '0.1.0-alpha.0';
   const names = ['protocol', 'core', 'client', 'react', 'cli', 'server'].map(
     (name) => `pagesquire-${name}-${version}.tgz`,
   );
@@ -514,6 +754,7 @@ async function fakeCandidate(t) {
   const manifest = {
     schemaVersion: 1,
     version,
+    ...(channel === undefined ? {} : { channel }),
     status: 'local-preview',
     artifacts,
   };
@@ -540,6 +781,29 @@ test('candidate verifier accepts a complete checksum inventory', async (t) => {
     version: '0.1.0-alpha.0',
     artifacts: 12,
   });
+});
+
+test('beta candidate inventory round-trips with its explicit channel while legacy alpha remains readable', async (t) => {
+  const { directory } = await fakeCandidate(t, '0.1.0-beta.0', 'github-beta');
+  assert.deepEqual(await verifyRelease(directory), {
+    valid: true,
+    version: '0.1.0-beta.0',
+    artifacts: 12,
+  });
+});
+
+test('candidate verifier rejects beta channel downgrade/missing channel and unsupported versions despite valid checksums', async (t) => {
+  for (const [version, channel] of [
+    ['0.1.0-beta.0', undefined],
+    ['0.1.0-beta.0', 'github-alpha'],
+    ['0.1.0-alpha.0', 'github-beta'],
+    ['0.1.0-alpha.0', null],
+    ['1.0.0', 'github-beta'],
+    ['0.1.0-beta.01', 'github-beta'],
+  ]) {
+    const { directory } = await fakeCandidate(t, version, channel);
+    await assert.rejects(verifyRelease(directory), /Invalid release manifest/);
+  }
 });
 
 test('candidate verifier rejects corruption, missing and unexpected files', async (t) => {
