@@ -57,6 +57,12 @@ test('actual candidate has complete checksums, exact editable sources and licens
     ),
   );
   assert.equal(manifest.status, 'local-preview');
+  assert.equal(manifest.channel, candidate.channel);
+  assert.deepEqual(manifest.beta, candidate.beta);
+  assert.equal(manifest.publicationReady, candidate.publicationReady);
+  assert.equal(manifest.apiReview.valid, true);
+  assert.equal(manifest.apiReview.status, 'review-baseline-not-frozen');
+  assert.ok(manifest.apiReview.entries > 50);
   assert.equal(
     manifest.source.sha256,
     sourceDigest(await collectDistributionSources(projectRoot)),
@@ -74,6 +80,13 @@ test('actual candidate has complete checksums, exact editable sources and licens
     'CODE_OF_CONDUCT.md',
     '.github/workflows/ci.yml',
     'scripts/release.mjs',
+    'scripts/release-policy.mjs',
+    'docs/beta.md',
+    'docs/api-baseline.json',
+    'docs/api-contract.md',
+    'docs/upgrading.md',
+    'docs/maintenance.md',
+    'scripts/check-api.mjs',
     'packages/core/src/index.ts',
     'packages/wordpress/LICENSE',
   ])

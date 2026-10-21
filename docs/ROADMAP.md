@@ -14,6 +14,22 @@ PageSquire is the selected project name. This repository begins the roadmap desi
 
 ## Next implementation milestone
 
+### R1: Release candidate to stable — local foundations, promotion gated
+
+The owner selected R1 preparation while independent beta acceptance is pending. The [API inventory/drift baseline](api-contract.md), [upgrade/recovery evidence](upgrading.md) and [maintenance policy](maintenance.md) establish local review boundaries. Baseline checks run after build in CI and candidate preparation; synthetic same-format Node file-store tests cover checkpoint/replay/authorization/accounting recovery. They do not certify historical-release migration, distributed restore or production rollback. API freeze, pilot findings, released-candidate upgrade matrices, stable maintenance commitments and RC/stable policy approval remain outstanding. Version stays alpha and the existing B3/B5/publication gates are not bypassed.
+
+### B5: Public beta — preparation in progress, publication gated
+
+The owner selected B5. Release tooling now accepts canonical `0.x.y-alpha.n` and `0.x.y-beta.n` previews with matching GitHub channels, explicit beta review records and a failing-until-ready beta check. See [beta testing, evidence and promotion](beta.md). B4 local fixes and beta tooling do not replace independent B3 acceptance, final-candidate CI, support/security/redistribution reviews or owner publication approval. Version remains alpha. B5 is complete only when exact verified clean-checkout artifacts are published as an authorized GitHub prerelease; no registry or stable release is included.
+
+### B4: Security and operations
+
+B4 can proceed while B3 independent-user acceptance is pending. Local implementation adds adversarial Node/PHP authorization/schema/cost regressions, budget-preserving server-only conversation erasure, and concurrent PostgreSQL cleanup/renewal coverage. Cleanup now locks expired candidates and rechecks deletion eligibility instead of deleting newly active sessions or renewed budget rows. See the [operations and data-erasure runbook](operations.md). This is local implementation evidence, not a production deployment, independent penetration test or beta promotion; exact-commit CI and release approval remain separate gates.
+
+### B3: External onboarding — independent acceptance pending
+
+Maintainer-assisted local pilots do not replace installation by genuinely independent website owners. That acceptance remains open and can run in parallel with B4. Private pilot fixtures/results are not bundled in this repository. No beta readiness is inferred from generated setup skills, static validation or the absence of an external bug report.
+
 ### B2: Scoped model evaluation
 
 At the owner's request, B2 live access is limited to Sumopod; other presets receive current official-documentation review and synthetic checks. The reproducible evaluator, 246-case EN/ID contract matrix and five-case real-browser smoke are implemented. The owner-approved live Sumopod campaign used all twelve permitted attempts and passed its five scenarios. See [evaluation scope, commands and sanitized evidence](model-evaluation.md). This closes the requested bounded B2 implementation, not the broader multi-provider/large-sample beta accuracy gate. Version and publication channel remain alpha; outside-user onboarding trials and release/security gates remain separate work.

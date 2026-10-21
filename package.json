@@ -13,6 +13,7 @@
   "scripts": {
     "build": "tsc -b packages/protocol && node scripts/build-protocol.mjs && tsc -b packages/core packages/client packages/react packages/cli packages/server && node scripts/build-adapters.mjs && node scripts/build-cli.mjs && node scripts/build-demo.mjs && tsc -p examples/plain-html && npm run build:wordpress && node scripts/release.mjs stamp",
     "typecheck": "tsc -b packages/protocol packages/core packages/client packages/react packages/cli packages/server --pretty false && tsc -p examples/plain-html && tsc -p tests/typecheck",
+    "api:check": "node scripts/check-api.mjs",
     "pagesquire": "node packages/cli/dist/bin.js",
     "test:unit": "node --test --test-reporter=spec tests/unit/*.test.mjs",
     "test:browser": "playwright test",
@@ -25,7 +26,7 @@
     "test:next-build": "npm --prefix examples/nextjs run build",
     "build:wordpress": "node scripts/build-wordpress.mjs",
     "test:wordpress": "playwright test --config playwright.wordpress.config.mjs",
-    "test": "npm run build && npm run typecheck && npm run test:unit && npm run test:php && npm run test:browser && npm run test:wordpress && npm run test:package && npm run release:check && npm run test:release",
+    "test": "npm run build && npm run api:check && npm run typecheck && npm run test:unit && npm run test:php && npm run test:browser && npm run test:wordpress && npm run test:package && npm run release:check && npm run test:release",
     "demo": "node scripts/serve-demo.mjs",
     "demo:build": "node scripts/build-offbeat.mjs",
     "demo:dev": "node scripts/build-offbeat.mjs --prepare-only && next dev examples/brutalist-demo --webpack --hostname 127.0.0.1 --port 4180",

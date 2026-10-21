@@ -32,9 +32,18 @@ test('database checks and migrations do not require compiled AI packages on a cl
     'scripts/migrate-offbeat.mjs',
   ]) {
     const source = await readFile(path, 'utf8');
-    assert.match(source, /server\/database\.mjs/);
-    assert.doesNotMatch(source, /server\/config\.mjs/);
+    assert.doesNotMatch(source, /server\/config\.mjs|\/dist\//);
+    assert.match(
+      source,
+      path.startsWith('tests/')
+        ? /fixtures\/disposable-postgres\.mjs/
+        : /server\/database\.mjs/,
+    );
   }
+  const privacy = await readFile('packages/server/src/privacy.ts', 'utf8');
+  assert.doesNotMatch(privacy, /^import(?! type )/m);
+  const unbuiltPrivacy = await import('../../packages/server/src/privacy.ts');
+  assert.equal(typeof unbuiltPrivacy.forgetConversation, 'function');
   const { createPool } =
     await import('../../examples/brutalist-demo/server/database.mjs');
   assert.equal(typeof createPool, 'function');

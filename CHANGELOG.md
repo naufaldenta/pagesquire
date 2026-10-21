@@ -6,6 +6,12 @@ All canonical release notes are English. PageSquire uses SemVer for packages and
 
 ### Added
 
+- R1 local API inventory and conservative normalized declaration/schema/manifest/PHP-source baseline, a read-only `api:check` enforced in CI and candidate preparation, and synthetic serialized Node checkpoint recovery regressions. English compatibility/deprecation, upgrade/recovery and maintenance guidance explicitly excludes API freeze, historical-release upgrade certification and RC/stable promotion.
+
+- B5 alpha/beta prerelease policy, explicit independent-onboarding/support/security review records, a read-only `release:check -- --beta` readiness gate, channel-bound candidate manifests and beta inventory regressions. English beta testing/feedback/promotion guidance preserves clean-checkout, CI, approval and deferred-registry boundaries; no version promotion or public beta is implied.
+
+- B4 trusted server-only Node/PHP conversation-erasure helpers preserve request buckets, host metadata and separate provider budgets. English operations guidance covers incident containment, lock/lease recovery, retention and integration-specific deletion boundaries; no public deletion endpoint is enabled.
+
 - B2 opt-in Sumopod evaluator with an exclusive durable attempt ledger, bounded transport, no automatic paid retries, and real isolated OFFBEAT browser verification. A dated sanitized twelve-call/five-scenario live result is separate from the 246 EN/ID synthetic contract variants and fifteen named providers' official-documentation reviews. CI runs only the deterministic offline browser smoke; model/provider settings remain environment-owned.
 
 - Sixteen server-side provider profiles (fifteen named service/gateway profiles plus Custom), shared Node/PHP configuration, canonical environment settings, Laravel wiring and an administrator-only WordPress provider selector. English support matrix and per-integration tutorials distinguish synthetic transport support from live-model certification.
@@ -26,6 +32,8 @@ All canonical release notes are English. PageSquire uses SemVer for packages and
 - GitHub-first release checks, local source/npm/PHP/plugin artifacts, checksums, compatibility evidence and community templates.
 
 ### Fixed
+
+- OFFBEAT PostgreSQL expiry cleanup locks bounded candidates and rechecks target expiry/lease conditions. Concurrent session lease and cost-bucket renewals no longer get deleted using stale candidate IDs; disposable real-database regressions cover both races and batch limits. Production rollout remains a separate owner-authorized step.
 
 - Browser cancellation is rechecked immediately before queued handlers and verifiers start, including resumed navigation. Cancelling an action before its callback starts no longer invokes that callback; a fresh action can still run afterward.
 - The real WordPress browser fixture waits for WordPress's deferred login autofocus before filling credentials and verifies both fields before submitting. A delayed-autofocus regression covers the credential-focus race found in Windows CI without altering plugin authentication or relaxing test assertions.
