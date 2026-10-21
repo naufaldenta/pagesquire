@@ -23,6 +23,12 @@ All canonical release notes are English. PageSquire uses SemVer for packages and
 - Self-contained WordPress ZIP, guided dashboard setup, filtered context export and configuration-only import.
 - GitHub-first release checks, local source/npm/PHP/plugin artifacts, checksums, compatibility evidence and community templates.
 
+### Fixed
+
+- Browser cancellation is rechecked immediately before queued handlers and verifiers start, including resumed navigation. Cancelling an action before its callback starts no longer invokes that callback; a fresh action can still run afterward.
+- The real WordPress browser fixture waits for WordPress's deferred login autofocus before filling credentials and verifies both fields before submitting. A delayed-autofocus regression covers the credential-focus race found in Windows CI without altering plugin authentication or relaxing test assertions.
+- B1 regressions cover five independent PHP/Node chat messages, continuing after cancellation, ignoring late transport/provider replies after cancellation or timeout, and shared PHP/Node recovery without action replay or attempt-budget resets. These use deterministic providers, not live-model accuracy certification.
+
 ### Security and distribution
 
 - Node/PHP assistant history now preserves the provider response schema for both action and final turns, without internal call/snapshot identifiers. This avoids teaching live models an incompatible internal action format; strict response and parameter validation remains unchanged.

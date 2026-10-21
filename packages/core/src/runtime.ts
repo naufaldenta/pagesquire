@@ -253,12 +253,18 @@ export class BrowserRuntime {
       }
       const context = this.context(call, signal, onBeforeNavigate);
       await withAbort(
-        Promise.resolve().then(() => entry.execute(call.parameters, context)),
+        Promise.resolve().then(() => {
+          signal.throwIfAborted();
+          return entry.execute(call.parameters, context);
+        }),
         signal,
       );
       signal.throwIfAborted();
       const verification = await withAbort(
-        Promise.resolve().then(() => entry.verify(call.parameters, context)),
+        Promise.resolve().then(() => {
+          signal.throwIfAborted();
+          return entry.verify(call.parameters, context);
+        }),
         signal,
       );
       signal.throwIfAborted();
@@ -421,14 +427,16 @@ export class BrowserRuntime {
       this.setActivity('thinking');
       try {
         const verification = await withAbort(
-          Promise.resolve().then(() =>
-            entry.verify(
+          Promise.resolve().then(() => {
+            controller.signal.throwIfAborted();
+            return entry.verify(
               call.parameters,
               this.context(call, controller.signal),
-            ),
-          ),
+            );
+          }),
           controller.signal,
         );
+        controller.signal.throwIfAborted();
         if (
           !verification ||
           typeof verification.verified !== 'boolean' ||

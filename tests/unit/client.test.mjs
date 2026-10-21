@@ -171,6 +171,38 @@ test('cancel and timeout settle even a transport that ignores its AbortSignal', 
   assert.match(timeout.state.messages.at(-1).text, /timed out/);
 });
 
+for (const interruption of ['cancel', 'timeout'])
+  test(`${interruption} ignores a late transport reply and permits another message without replay`, async () => {
+    let resolveLate;
+    const requests = [];
+    const instance = client(
+      (request) => {
+        requests.push(request);
+        return requests.length === 1
+          ? new Promise((resolve) => (resolveLate = resolve))
+          : Promise.resolve({ ...final, conversationId: 'fresh-conversation' });
+      },
+      { timeoutMs: interruption === 'timeout' ? 20 : 60000 },
+    );
+    const interrupted = instance.send('First question');
+    if (interruption === 'cancel') instance.cancel();
+    await interrupted;
+    assert.equal(instance.state.busy, false);
+    await instance.send('A fresh question');
+    const completed = instance.state;
+    assert.equal(requests.length, 2);
+    assert.equal(requests[1].conversationId, undefined);
+    assert.equal(completed.messages.at(-1).text, 'Hello');
+    resolveLate({
+      ...final,
+      response: { ...final.response, text: 'Stale response must be ignored' },
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(instance.state, completed);
+    await instance.send('Continue the fresh conversation');
+    assert.equal(requests[2].conversationId, 'fresh-conversation');
+  });
+
 test('HTTP transport enforces same-origin, CSRF, bounded responses and sanitized errors', async () => {
   assert.throws(
     () =>

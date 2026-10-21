@@ -1,5 +1,47 @@
 import { test, expect } from '@playwright/test';
 for (const port of [4174, 4175]) {
+  test(`native ${port === 4174 ? 'PHP' : 'Node'} accepts five independent messages in one conversation`, async ({
+    page,
+  }) => {
+    const requests = [];
+    page.on('request', (request) => {
+      if (request.method() === 'POST' && request.url().endsWith('/chat'))
+        requests.push(request.postDataJSON());
+    });
+    await page.goto(`http://127.0.0.1:${port}/`);
+    await page.waitForFunction(() => Boolean(window.pagesquireChat));
+    const widget = page.locator('.pagesquire-widget');
+    for (const message of [
+      'Make headings red',
+      'Highlight links',
+      'Use bold text',
+      'Hello',
+      'Highlight links',
+    ]) {
+      await widget.getByRole('textbox').fill(message);
+      await widget.getByRole('button', { name: 'Send', exact: true }).click();
+      await expect(widget).toHaveAttribute('aria-busy', 'false', {
+        timeout: 15000,
+      });
+      await expect(widget.getByRole('log')).not.toContainText(
+        /request was rejected|unavailable|expired|could not complete/,
+      );
+    }
+    expect(requests.filter((request) => request.message)).toHaveLength(5);
+    expect(requests.filter((request) => request.result)).toHaveLength(4);
+    expect(requests[0].conversationId).toBeUndefined();
+    const ids = new Set(
+      requests.slice(1).map((request) => request.conversationId),
+    );
+    expect(ids.size).toBe(1);
+    expect([...ids][0]).toBeTruthy();
+    expect(new Set(requests.map((request) => request.requestId)).size).toBe(9);
+    await expect(page.locator('main h1')).toHaveCSS('color', 'rgb(255, 0, 0)');
+    await expect(page.locator('main')).toHaveClass('links-highlighted');
+    await expect(page.locator('body')).toHaveCSS('font-weight', '700');
+    await expect(widget).toHaveAttribute('data-emotion', 'happy');
+  });
+
   test(`native ${port === 4174 ? 'PHP' : 'Node'} full-document conversation resumes once without replaying navigation`, async ({
     page,
   }) => {

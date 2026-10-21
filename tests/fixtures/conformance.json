@@ -300,6 +300,134 @@
       ]
     },
     {
+      "name": "provider failure after verified action permits an explicit follow-up without replay",
+      "turns": [
+        {
+          "kind": "initial",
+          "draft": "action",
+          "expected": { "code": "OK", "calls": 1, "attempts": 1, "steps": 1 }
+        },
+        {
+          "kind": "result",
+          "draft": "error",
+          "expected": {
+            "code": "PROVIDER_UNAVAILABLE",
+            "status": 502,
+            "calls": 2,
+            "attempts": 2,
+            "steps": 1
+          }
+        },
+        {
+          "kind": "message",
+          "draft": "final",
+          "expected": {
+            "code": "OK",
+            "finished": true,
+            "calls": 3,
+            "attempts": 3,
+            "steps": 1
+          }
+        },
+        {
+          "kind": "replay",
+          "expected": { "code": "OK", "calls": 3, "attempts": 3, "steps": 1 }
+        },
+        {
+          "kind": "message",
+          "draft": "action",
+          "expected": {
+            "code": "OK",
+            "finished": false,
+            "calls": 4,
+            "attempts": 4,
+            "steps": 2
+          }
+        },
+        {
+          "kind": "result",
+          "draft": "final",
+          "expected": {
+            "code": "OK",
+            "finished": true,
+            "calls": 5,
+            "attempts": 5,
+            "steps": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "unverified action stops inference but allows a later explicit request",
+      "turns": [
+        {
+          "kind": "initial",
+          "draft": "action",
+          "expected": { "code": "OK", "calls": 1, "steps": 1 }
+        },
+        {
+          "kind": "result",
+          "resultStatus": "unverified",
+          "expected": {
+            "code": "OK",
+            "finished": true,
+            "emotion": "confused",
+            "calls": 1,
+            "steps": 1
+          }
+        },
+        {
+          "kind": "message",
+          "draft": "action",
+          "expected": { "code": "OK", "calls": 2, "steps": 2 }
+        },
+        {
+          "kind": "result",
+          "draft": "final",
+          "expected": { "code": "OK", "finished": true, "calls": 3, "steps": 2 }
+        }
+      ]
+    },
+    {
+      "name": "provider recovery preserves the remaining attempt budget",
+      "maxAttempts": 3,
+      "turns": [
+        {
+          "kind": "initial",
+          "draft": "final",
+          "expected": { "code": "OK", "calls": 1, "attempts": 1 }
+        },
+        {
+          "kind": "message",
+          "draft": "error",
+          "expected": {
+            "code": "PROVIDER_UNAVAILABLE",
+            "calls": 2,
+            "attempts": 2
+          }
+        },
+        {
+          "kind": "replay",
+          "expected": { "code": "REPLAY_REJECTED", "calls": 2, "attempts": 2 }
+        },
+        {
+          "kind": "message",
+          "draft": "final",
+          "expected": { "code": "OK", "calls": 3, "attempts": 3 }
+        },
+        {
+          "kind": "message",
+          "expected": {
+            "code": "OK",
+            "finished": true,
+            "emotion": "idle",
+            "calls": 3,
+            "attempts": 3
+          }
+        }
+      ]
+    },
+    {
       "name": "expiry",
       "turns": [
         { "kind": "initial", "draft": "action", "expected": { "code": "OK" } },
