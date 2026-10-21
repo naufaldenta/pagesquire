@@ -1,0 +1,46 @@
+body {
+  max-width: 72rem;
+  margin: auto;
+  padding: 24px;
+}
+header {
+  border-bottom: 3px solid #07535b;
+  padding-bottom: 24px;
+}
+header h1 {
+  max-width: 18ch;
+  font-size: clamp(30px, 5vw, 56px);
+}
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+nav button {
+  min-height: 44px;
+}
+main {
+  padding-top: 32px;
+}
+article {
+  padding-top: 32px;
+  max-width: 65ch;
+}
+.driving-long-copy {
+  min-height: 1400px;
+  padding-top: 100px;
+}
+#driving-result {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 220px;
+  overflow: auto;
+}
+@media (max-width: 420px) {
+  body {
+    padding: 16px;
+  }
+  nav button {
+    width: 100%;
+  }
+}

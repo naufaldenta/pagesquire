@@ -4,6 +4,8 @@ R1 starts with an inventory and a drift guard, **not an API freeze or a stable r
 
 ## Integration surfaces
 
+D1 adds optional core presentation/control/reading helpers, `ExecutionContext.present`, `PageObserver.readContent`, and client tour/speech helpers. Real runtime contexts receive `present` automatically; hand-built typed contexts/mocks must add it. These additions and the new optional WordPress built-ins require deliberate baseline review. Protocol `0.1` fields, storage envelopes, action permissions and provider retry policy are unchanged. See [assistant driving](assistant-driving.md).
+
 Use package entrypoints and the corresponding integration guides, not private build paths. Current exported types are the authoritative signatures; the table describes the intended review boundary rather than promising every class or option is stable.
 
 | Surface                                                     | Intended integration contract                                                                                                                                                                                                           |

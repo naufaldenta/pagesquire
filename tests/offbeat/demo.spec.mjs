@@ -33,6 +33,22 @@ async function sendMessage(panel, text) {
   await expect(panel.getByLabel('Message PageSquire')).toBeEnabled();
 }
 
+test('guided actions show the real presenter before verified changes and clear it afterward', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const panel = await openAssistant(page);
+  await panel
+    .getByRole('button', { name: 'Make headings red', exact: true })
+    .click();
+  await expect(page.locator('.pagesquire-driving__cursor')).toBeVisible();
+  await expect(page.locator('#hero-title')).toHaveCSS(
+    'color',
+    'rgb(197, 43, 40)',
+  );
+  await expect(page.locator('.pagesquire-driving')).toHaveCount(0);
+});
+
 test('five separate follow-ups keep one conversation and verify body versus headings, spacing and reset', async ({
   page,
 }) => {

@@ -42,6 +42,20 @@ final class MappingTest extends TestCase
         yield 'nested code' => [['capabilityIds' => [(object) ['eval' => 'bad']]]];
         yield 'version' => [['schemaVersion' => '100']];
         yield 'permissions' => [['permissions' => ['administrator']]];
+        yield 'unknown reading scope control' => [['capabilityIds' => ['page.read_private']]];
+    }
+
+    public function test_reading_scrolling_and_highlighting_are_explicit_optional_public_content_adapters(): void
+    {
+        $mapping = Mapping::defaults('https://example.test');
+        self::assertNotContains('page.read', $mapping['capabilityIds']);
+        $mapping['capabilityIds'] = Mapping::CAPABILITIES;
+        self::assertSame($mapping, Mapping::validate((object) $mapping, 'https://example.test'));
+        $manifest = Mapping::manifest($mapping);
+        self::assertSame(Mapping::CAPABILITIES, array_column($manifest['capabilities'], 'id'));
+        $read = array_values(array_filter($manifest['capabilities'], static fn (array $definition): bool => $definition['id'] === 'page.read'))[0];
+        self::assertSame(['content'], $read['inputSchema']['properties']['scope']['enum']);
+        self::assertFalse($read['inputSchema']['additionalProperties']);
     }
 
     public function test_block_export_omits_attributes_bodies_and_unbounded_depth(): void

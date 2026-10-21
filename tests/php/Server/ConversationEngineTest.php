@@ -13,6 +13,37 @@ use RuntimeException;
 
 final class ConversationEngineTest extends TestCase
 {
+    public function test_compound_goal_continues_from_verified_open_to_verified_read_without_replaying_navigation(): void
+    {
+        $capabilities = [];
+        foreach (['content.open', 'page.read'] as $id) {
+            $capabilities[] = ['id' => $id, 'description' => 'Explicit synthetic public action.', 'execution' => 'browser', 'handler' => $id, 'inputSchema' => ['type' => 'object', 'properties' => (object) [], 'additionalProperties' => false], 'risk' => 'reversible', 'verification' => ['handler' => $id.'.verify']];
+        }
+        $draft = static fn (string $id): array => ['text' => 'Checking…', 'emotion' => 'thinking', 'finished' => false, 'toolCalls' => [['capabilityId' => $id, 'parameters' => (object) []]]];
+        $provider = $this->provider([$draft('content.open'), $draft('page.read'), ['text' => 'A partial synthetic summary.', 'emotion' => 'happy', 'finished' => true, 'toolCalls' => []]]);
+        $engine = new ConversationEngine($provider, new ProtocolValidator, ['schemaVersion' => '0.1', 'capabilities' => $capabilities]);
+        $ids = ['content.open', 'page.read'];
+        $request = ['protocolVersion' => '0.1', 'requestId' => 'compound-1', 'message' => 'Open the article, read it and summarize.', 'snapshot' => $this->snapshot(), 'capabilityIds' => $ids];
+        $next = $engine->handle($request, null, $ids);
+        $conversationId = $next['state']['id'];
+        foreach ($ids as $index => $id) {
+            $this->assertFalse($next['reply']['response']['finished']);
+            $call = $next['reply']['response']['toolCalls'][0];
+            $this->assertSame($id, $call['capabilityId']);
+            $continuation = ['protocolVersion' => '0.1', 'requestId' => 'compound-result-'.$index, 'conversationId' => $conversationId, 'snapshot' => [...$this->snapshot('compound-snapshot-'.$index), 'url' => 'https://example.test/article'], 'capabilityIds' => $ids, 'result' => ['protocolVersion' => '0.1', 'callId' => $call['callId'], 'capabilityId' => $id, 'status' => 'success', 'code' => 'VERIFIED', 'message' => 'Verified telemetry', 'evidence' => $index === 1 ? (object) ['text' => 'verified article text', 'truncated' => true, 'nextOffset' => null] : (object) []]];
+            $next = $engine->handle($continuation, $next['state'], $ids);
+        }
+        $this->assertTrue($next['reply']['response']['finished']);
+        $this->assertSame($conversationId, $next['state']['id']);
+        $this->assertSame(3, $provider->calls);
+        $this->assertSame(3, $next['state']['attempts']);
+        foreach ($provider->received as $received) {
+            $this->assertStringContainsString('preserve the entire user goal', $received['messages'][0]['content']);
+            $this->assertStringContainsString('visual scrolling does not prove reading completeness', $received['messages'][0]['content']);
+        }
+        $this->assertStringContainsString('verified article text', json_encode($provider->received[2]['messages'], JSON_THROW_ON_ERROR));
+    }
+
     private function manifest(): array
     {
         return ['schemaVersion' => '0.1', 'capabilities' => [[

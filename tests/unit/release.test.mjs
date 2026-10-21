@@ -218,7 +218,7 @@ test('demo build creates absent output directories on a clean checkout and remai
     path.join(root, 'packages/client/src/widget.css'),
     '.fixture { color: red; }',
   );
-  for (const name of ['main.ts', 'react-demo.tsx'])
+  for (const name of ['main.ts', 'react-demo.tsx', 'driving.ts'])
     await writeFile(
       path.join(root, 'examples/plain-html', name),
       'export const fixture = true;',
@@ -229,7 +229,14 @@ test('demo build creates absent output directories on a clean checkout and remai
       [path.join(projectRoot, 'scripts/build-demo.mjs')],
       { cwd: root, stdio: 'pipe' },
     );
-  for (const name of ['demo.js', 'react-demo.js', 'widget.css'])
+  for (const name of [
+    'demo.js',
+    'react-demo.js',
+    'driving.js',
+    'driving-parameters.js',
+    'driving-bindings.js',
+    'widget.css',
+  ])
     assert.ok(
       (await readFile(path.join(root, 'examples/plain-html/dist', name)))
         .length > 0,

@@ -10,7 +10,7 @@ final class Mapping
 {
     public const ROOTS = ['main', '#content', '#primary', '.wp-site-blocks', '[data-pagesquire-content]'];
 
-    public const CAPABILITIES = ['accessibility.set_heading_color', 'accessibility.set_link_highlight', 'accessibility.set_font_weight', 'browser.navigate'];
+    public const CAPABILITIES = ['accessibility.set_heading_color', 'accessibility.set_link_highlight', 'accessibility.set_font_weight', 'browser.navigate', 'page.read', 'page.scroll_to', 'page.highlight'];
 
     /** @return array<string, mixed> */
     public static function defaults(string $origin): array
@@ -21,7 +21,7 @@ final class Mapping
     /** @return array<string, mixed> */
     public static function validate(mixed $raw, string $origin): array
     {
-        if (! $raw instanceof \stdClass || array_diff(array_keys(get_object_vars($raw)), ['schemaVersion', 'kind', 'siteOrigin', 'contentRoot', 'capabilityIds']) !== [] || count(get_object_vars($raw)) !== 5 || ($raw->schemaVersion ?? '') !== '0.1' || ($raw->kind ?? '') !== 'pagesquire.wordpress.mapping' || ($raw->siteOrigin ?? '') !== $origin || ! in_array($raw->contentRoot ?? null, self::ROOTS, true) || ! is_array($raw->capabilityIds ?? null) || ! array_is_list($raw->capabilityIds) || count($raw->capabilityIds) < 1 || count($raw->capabilityIds) > 4) {
+        if (! $raw instanceof \stdClass || array_diff(array_keys(get_object_vars($raw)), ['schemaVersion', 'kind', 'siteOrigin', 'contentRoot', 'capabilityIds']) !== [] || count(get_object_vars($raw)) !== 5 || ($raw->schemaVersion ?? '') !== '0.1' || ($raw->kind ?? '') !== 'pagesquire.wordpress.mapping' || ($raw->siteOrigin ?? '') !== $origin || ! in_array($raw->contentRoot ?? null, self::ROOTS, true) || ! is_array($raw->capabilityIds ?? null) || ! array_is_list($raw->capabilityIds) || count($raw->capabilityIds) < 1 || count($raw->capabilityIds) > count(self::CAPABILITIES)) {
             throw new AssistantException('INVALID_MAPPING', 'Import a closed PageSquire mapping for this site and a supported content root.');
         }
         foreach ($raw->capabilityIds as $id) {

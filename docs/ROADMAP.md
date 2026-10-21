@@ -14,6 +14,10 @@ PageSquire is the selected project name. This repository begins the roadmap desi
 
 ## Next implementation milestone
 
+### D1: Assistant-driving parity after a real host pilot
+
+The owner requested reusable reference-assistant behavior after the Kabarin pilot. [Assistant driving](assistant-driving.md) adds an optional cursor/outline/click presenter, nested scrolling, explicit menu/control preparation, private-aware bounded content reading, tours and opt-in local speech. Existing six-state emotion and navigation continuation remain in use. PHP/Node instructions preserve compound goals; WordPress offers three optional inspected public-content capabilities with unchanged defaults. Reference-site IDs/content, third-party accessibility UI and licensed Rive/TTS assets are not copied. Local regressions cover Node/PHP, framework/WordPress/OFFBEAT browsers, production builds and independent package consumers. Exact-commit CI and deployment must be checked for each delivery; earlier source b22321e's passing checks do not attest a later commit. Live-model understanding, arbitrary site/assistive-technology support and independent B3 acceptance are not implied. Version and publication gates remain alpha.
+
 ### R1: Release candidate to stable — local foundations, promotion gated
 
 The owner selected R1 preparation while independent beta acceptance is pending. The [API inventory/drift baseline](api-contract.md), [upgrade/recovery evidence](upgrading.md) and [maintenance policy](maintenance.md) establish local review boundaries. Baseline checks run after build in CI and candidate preparation; synthetic same-format Node file-store tests cover checkpoint/replay/authorization/accounting recovery. They do not certify historical-release migration, distributed restore or production rollback. API freeze, pilot findings, released-candidate upgrade matrices, stable maintenance commitments and RC/stable policy approval remain outstanding. Version stays alpha and the existing B3/B5/publication gates are not bypassed.

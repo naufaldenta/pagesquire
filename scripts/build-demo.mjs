@@ -4,6 +4,7 @@ import { build } from 'esbuild';
 import { validateManifest } from '../packages/protocol/dist/index.js';
 import { manifest } from '../tests/fixtures/capabilities.mjs';
 import { compileValidators } from './compile-validators.mjs';
+import { drivingManifest } from '../examples/plain-html/driving-capabilities.mjs';
 
 const validation = validateManifest(manifest);
 if (!validation.valid) throw new Error(validation.errors.join('; '));
@@ -57,4 +58,34 @@ await build({
   jsx: 'automatic',
   define: { 'process.env.NODE_ENV': '"development"' },
   outfile: 'examples/plain-html/dist/react-demo.js',
+});
+const drivingSchemas = {};
+const drivingBindings = [];
+for (const [index, definition] of drivingManifest.capabilities.entries()) {
+  const name = `d${index}`;
+  drivingSchemas[name] = {
+    ...definition.inputSchema,
+    $id: `urn:pagesquire:driving:${index}`,
+  };
+  drivingBindings.push(
+    `${JSON.stringify(definition.id)}: { schema: ${JSON.stringify(definition.inputSchema)}, validate: validators.${name} }`,
+  );
+}
+if (!validateManifest(drivingManifest).valid)
+  throw Error('Invalid driving example manifest.');
+await compileValidators(
+  drivingSchemas,
+  'examples/plain-html/dist/driving-parameters.js',
+);
+await writeFile(
+  'examples/plain-html/dist/driving-bindings.js',
+  `import * as validators from './driving-parameters.js';\nexport const parameters = { ${drivingBindings.join(',\n')} };\n`,
+);
+await build({
+  entryPoints: ['examples/plain-html/driving.ts'],
+  bundle: true,
+  format: 'esm',
+  platform: 'browser',
+  target: 'es2022',
+  outfile: 'examples/plain-html/dist/driving.js',
 });

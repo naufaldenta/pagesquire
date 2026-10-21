@@ -1,5 +1,7 @@
 # Upgrade and recovery guidance
 
+D1 adds optional [driving/read/control/tour/speech APIs](assistant-driving.md). Existing real runtime contexts provide `present`; typed hand-built contexts/mocks must add it. WordPress's three new content capabilities are opt-in and require fresh inspection, not automatic permission expansion. Rebuild browser assets and the corresponding PHP/WordPress catalog together. No protocol field or stored-state format changes are introduced; no live-model accuracy or version-pair migration is certified by these additions.
+
 This is R1 **local preparation**, not a certified version-to-version migration or production rollback procedure. No public beta/RC/stable release is recorded yet; the current version is `0.1.0-alpha.0`. No command here automatically changes databases, restores backups, revokes tokens or resets usage counters. Review [API boundaries](api-contract.md), [operations](operations.md) and [beta gates](beta.md) first.
 
 ## Before changing a host

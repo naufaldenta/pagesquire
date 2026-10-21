@@ -1,5 +1,7 @@
 # Laravel 13 + React 19 + Inertia v3 alpha
 
+For cursor/click feedback, reading/summary, full host-control inventory, tours and optional speech, see [assistant driving](assistant-driving.md). Mount helpers with the existing persistent layout/runtime, retain the Inertia navigation adapter and dispose them on teardown. No JDIH route, mascot or accessibility library is required.
+
 This guide connects existing site capabilities; it does not train a model or scan source code. F3 will add onboarding automation. The JDIH pilot application, routes, credentials, and artwork are not part of this distribution and are not modified by this guide.
 
 ## 1. Install the local packages

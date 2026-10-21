@@ -11,6 +11,7 @@ import { NavigationStore, documentNavigation } from './navigation.js';
 import { PageObserver } from './observer.js';
 import { CapabilityRegistry } from './registry.js';
 import type { ExecutionContext, NavigationAdapter } from './types.js';
+import type { ActionPresentation } from './driving.js';
 
 export interface RuntimeOptions {
   observer: PageObserver;
@@ -20,6 +21,7 @@ export interface RuntimeOptions {
   timeoutMs?: number;
   maxActions?: number;
   onActivityChange?: (activity: 'thinking' | 'idle') => void;
+  presentation?: ActionPresentation;
 }
 
 interface CallRecord {
@@ -323,6 +325,11 @@ export class BrowserRuntime {
       externalSignal?.removeEventListener('abort', abort);
       this.active = undefined;
       this.setActivity('idle');
+      try {
+        this.options.presentation?.clear();
+      } catch {
+        /* Presentation cleanup never changes a verified outcome. */
+      }
     }
   }
 
@@ -333,6 +340,28 @@ export class BrowserRuntime {
   ): ExecutionContext {
     return {
       document: this.observer.document,
+      present: async (target, kind) => {
+        signal.throwIfAborted();
+        if (
+          target.ownerDocument !== this.observer.document ||
+          !target.isConnected ||
+          this.observer.isExcluded(target) ||
+          !this.observer.isVisible(target)
+        ) {
+          throw new PageSquireError(
+            'TARGET_MISSING',
+            'The presentation target must be visible and public.',
+          );
+        }
+        await withAbort(
+          Promise.resolve().then(() => {
+            signal.throwIfAborted();
+            return this.options.presentation?.present(target, signal, kind);
+          }),
+          signal,
+        );
+        signal.throwIfAborted();
+      },
       observer: this.observer,
       call,
       signal,

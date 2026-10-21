@@ -208,6 +208,47 @@ export class PageObserver {
     return this.options.canInteract?.(element, interaction) === true;
   }
 
+  /** Host-selected public DOM text, without replacing the active action snapshot. */
+  readContent(
+    root: Element,
+    maxLength = 12000,
+    offset = 0,
+  ): { text: string; truncated: boolean; nextOffset: number | null } {
+    if (
+      root.ownerDocument !== this.document ||
+      !root.isConnected ||
+      this.isExcluded(root) ||
+      !this.isVisible(root)
+    ) {
+      throw new PageSquireError(
+        'TARGET_MISSING',
+        'Reading requires one visible, public host-selected content root.',
+      );
+    }
+    if (
+      !Number.isInteger(maxLength) ||
+      maxLength < 1 ||
+      maxLength > 24000 ||
+      !Number.isInteger(offset) ||
+      offset < 0 ||
+      offset > 40000
+    ) {
+      throw new PageSquireError(
+        'INVALID_OPTIONS',
+        'Content length and offset must remain within the reading budget.',
+      );
+    }
+    const result = this.text(root, offset + maxLength);
+    return {
+      text: result.value.slice(offset, offset + maxLength),
+      truncated: result.truncated,
+      nextOffset:
+        result.truncated && offset + maxLength <= 40000
+          ? offset + maxLength
+          : null,
+    };
+  }
+
   observe(): PageSnapshot {
     const url = this.allowedUrl(this.document.URL);
     const maxText = this.options.maxTextLength ?? 4000;

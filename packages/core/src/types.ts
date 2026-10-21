@@ -1,5 +1,6 @@
 import type { ActionCall, JsonObject } from '@pagesquire/protocol';
 import type { PageObserver } from './observer.js';
+import type { PresentationKind } from './driving.js';
 
 export interface ExecutionContext {
   document: Document;
@@ -8,6 +9,7 @@ export interface ExecutionContext {
   signal: AbortSignal;
   navigate: (url: string) => Promise<void>;
   waitFor: (predicate: () => boolean | Promise<boolean>) => Promise<void>;
+  present: (target: Element, kind?: PresentationKind) => Promise<void>;
 }
 
 export type CapabilityHandler = (

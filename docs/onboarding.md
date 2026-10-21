@@ -1,5 +1,7 @@
 # Hybrid onboarding: scripts first, optional coding-agent help
 
+For cursor/target feedback, nested scrolling, reading/summary workflows, complete host accessibility-control inventory, tours and opt-in voice, follow [assistant driving](assistant-driving.md). A successful install is not complete feature coverage: inspect every actual host control, compile its exact schema and verify its real effect. Do not install site-specific intent rules that discard the rest of a compound request.
+
 PageSquire does not require model fine-tuning for each website. The model receives reviewed capabilities and filtered runtime context. F3 helps the website owner discover candidate integration points, then map actual behavior to the same contract used by execution and verification.
 
 The scripts work without an AI. A coding assistant can help complete the semantic mapping and tests using a prepared English skill. Neither path automatically enables discovered buttons or infers business permissions.

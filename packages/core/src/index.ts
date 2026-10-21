@@ -5,4 +5,6 @@ export * from './observer.js';
 export * from './navigation.js';
 export * from './runtime.js';
 export * from './controls.js';
+export * from './driving.js';
+export * from './bindings.js';
 export * from './json.js';

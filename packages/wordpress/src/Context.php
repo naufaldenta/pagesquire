@@ -128,7 +128,7 @@ final class Context
                 throw new AssistantException('INVALID_REPORT', 'Inspection counts must be bounded.');
             }
         }
-        if (! array_is_list($raw->verifiedCapabilityIds) || count($raw->verifiedCapabilityIds) > 4) {
+        if (! array_is_list($raw->verifiedCapabilityIds) || count($raw->verifiedCapabilityIds) > count(Mapping::CAPABILITIES)) {
             throw new AssistantException('INVALID_REPORT', 'Verification IDs must be unique and bounded.');
         }
         foreach ($raw->verifiedCapabilityIds as $id) {
