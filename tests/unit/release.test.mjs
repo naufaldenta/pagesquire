@@ -4,6 +4,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  realpath,
   writeFile,
   rm,
   symlink,
@@ -47,9 +48,9 @@ import {
 import { captureApi } from '../../scripts/check-api.mjs';
 
 async function temporary(t) {
-  const parent = path.resolve(tmpdir());
-  const directory = await mkdtemp(
-    path.join(parent, 'pagesquire-release-test-'),
+  const parent = await realpath(tmpdir());
+  const directory = await realpath(
+    await mkdtemp(path.join(parent, 'pagesquire-release-test-')),
   );
   t.after(async () => {
     assert.equal(path.dirname(directory), parent);
@@ -58,6 +59,11 @@ async function temporary(t) {
   });
   return directory;
 }
+
+test('release fixtures resolve TEMP aliases to canonical private directories', async (t) => {
+  const directory = await temporary(t);
+  assert.equal(await realpath(directory), directory);
+});
 
 test('CI isolates browser artifacts and enumerates every verification component', async () => {
   const browser = path.resolve(projectRoot, browserConfig.outputDir);
