@@ -6,6 +6,8 @@ All canonical release notes are English. PageSquire uses SemVer for packages and
 
 ### Added
 
+- B2 opt-in Sumopod evaluator with an exclusive durable attempt ledger, bounded transport, no automatic paid retries, and real isolated OFFBEAT browser verification. A dated sanitized twelve-call/five-scenario live result is separate from the 246 EN/ID synthetic contract variants and fifteen named providers' official-documentation reviews. CI runs only the deterministic offline browser smoke; model/provider settings remain environment-owned.
+
 - Sixteen server-side provider profiles (fifteen named service/gateway profiles plus Custom), shared Node/PHP configuration, canonical environment settings, Laravel wiring and an administrator-only WordPress provider selector. English support matrix and per-integration tutorials distinguish synthetic transport support from live-model certification.
 - Explicit JSON/prompt, output-token field, instruction-role and supported thinking switches; bounded whole-fence/text-part normalization and refusal/truncation rejection without automatic provider fallback or paid retries. Existing explicit-endpoint configuration remains compatible.
 

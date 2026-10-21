@@ -14,6 +14,10 @@ PageSquire is the selected project name. This repository begins the roadmap desi
 
 ## Next implementation milestone
 
+### B2: Scoped model evaluation
+
+At the owner's request, B2 live access is limited to Sumopod; other presets receive current official-documentation review and synthetic checks. The reproducible evaluator, 246-case EN/ID contract matrix and five-case real-browser smoke are implemented. The owner-approved live Sumopod campaign used all twelve permitted attempts and passed its five scenarios. See [evaluation scope, commands and sanitized evidence](model-evaluation.md). This closes the requested bounded B2 implementation, not the broader multi-provider/large-sample beta accuracy gate. Version and publication channel remain alpha; outside-user onboarding trials and release/security gates remain separate work.
+
 ### B1: Stabilization before beta
 
 The owner selected B1 as the next implementation step. Version and release channel remain alpha. B1 addresses the Windows WordPress login autofocus race, cancellation before queued browser handlers/verifiers start, and regression coverage for independent chat turns, timeout/cancellation recovery, late replies and navigation continuation. It does not expand the provider/platform support matrix or certify live-model accuracy.

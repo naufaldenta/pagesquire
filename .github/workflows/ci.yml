@@ -63,6 +63,7 @@ jobs:
       - run: npm run test:release
       - run: npm run test:next-build
       - run: npm run demo:build
+      - run: npm run test:eval
       - run: npm run test:demo
       - run: npm run format:check
       - run: npm run build

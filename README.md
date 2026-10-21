@@ -18,6 +18,8 @@ Choose a server-side preset: **Sumopod, OpenAI, OpenRouter, Groq, DeepSeek, Qwen
 
 See the [support matrix and per-integration setup tutorials](docs/providers.md) for endpoints, compatibility options, required fields, and honest support limits. These are tested transport presets, not a claim that every model is live-certified. Validation, verified actions and usage budgets remain enforced.
 
+B2 adds [reproducible model evaluation](docs/model-evaluation.md): the owner's configured Sumopod model passed a bounded twelve-call, five-scenario live smoke. Other profiles have [dated official-documentation reviews](docs/provider-evidence.json) and synthetic coverage, not live certification. The 246 English/Indonesian matrix variants are synthetic contract cases, not 246 paid model evaluations.
+
 ## Current status
 
 This repository implements the F0/F1 foundation, F2 Laravel/React alpha, F3 hybrid onboarding, F4 standalone PHP/Node/Next.js integration, and F5 WordPress plugin. It is an early development preview, not a production-ready autonomous assistant.

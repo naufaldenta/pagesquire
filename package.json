@@ -33,6 +33,8 @@
     "demo:migrate": "node scripts/migrate-offbeat.mjs --apply",
     "test:demo": "playwright test --config playwright.offbeat.config.mjs",
     "test:demo-db": "node --test tests/database/offbeat.test.mjs",
+    "eval:plan": "node scripts/evaluate-model.mjs --plan",
+    "test:eval": "node scripts/evaluate-model.mjs --synthetic --max-calls 12 --campaign offline-smoke",
     "demo:chat": "php -S 127.0.0.1:4174 examples/php-chat/router.php",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
