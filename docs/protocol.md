@@ -37,7 +37,9 @@ The registry requires a handler, verifier, and compiled parameter validator for 
 
 `ChatReply` contains `protocolVersion`, a server-owned `conversationId`, and an `AssistantResponse`. F2 accepts one tool call in an unfinished response, and none in a finished response. The server assigns call/snapshot IDs; the provider draft only names an authorized capability and its parameters. Each result must match the pending call before inference continues. These sequencing/authorization rules are enforced beyond structural JSON validation.
 
-All nine schema artifacts are generated from the same definitions for JavaScript and PHP. JSON objects and arrays remain distinct at raw HTTP ingress. Server-side associative PHP values require deliberate object normalization for empty parameters/evidence. Browser telemetry is not server authorization.
+All ten schema artifacts are generated from the same definitions for JavaScript and PHP. JSON objects and arrays remain distinct at raw HTTP ingress. Server-side associative PHP values require deliberate object normalization for empty parameters/evidence. Browser telemetry is not server authorization.
+
+C3 optionally adds `ChatRequest.appContext` with its own `schemaVersion: 1`, up to 20 flat primitive field entries and 100 fixed-enum availability entries. JS/native PHP semantic validators also enforce unique identities and a 16-KiB serialized byte budget. It is untrusted public state, not permission/instructions or part of `PageSnapshot`/action evidence. Pending results retain registered IDs while new proposals may be reduced. Old requests remain valid; old closed-schema servers reject opted-in fields, so coordinated rollout is required. See [app context](app-context.md).
 
 The build compiles fixture parameter validators using Ajv standalone code and bundles their runtime helpers. See `scripts/compile-validators.mjs` and `scripts/build-demo.mjs`. The local onboarding CLI provides `validate --compile`; packages remain unpublished. Do not compile arbitrary model-provided schemas in the browser. Shared JSON conformance cases exercise PHP and Node against identical expected protocol outcomes.
 

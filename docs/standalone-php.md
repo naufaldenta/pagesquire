@@ -1,5 +1,9 @@
 # Standalone PHP integration
 
+The same browser widget now shows [truthful action progress](action-progress.md), with fixed failure guidance and bounded local history. Rebuild matching browser assets; no PHP endpoint/database/provider change is required for C4. The timeline does not enter provider requests or server storage.
+
+The browser runtime can opt into [AppContext](app-context.md) for public state/availability. Install matching PHP schemas and browser packages before enabling it. Native PHP checks structural/semantic limits and filters only future proposals, not pending-result authorization; no new framework/database is needed.
+
 The same frontend can add [assistant driving](assistant-driving.md): `BrowserDriver`, host control bindings, scoped reading, tours and optional local speech. Keep the matching PHP catalog explicit; presentation does not authorize a control or make unverified navigation successful.
 
 `pagesquire/server` supports PHP 8.3 without Laravel. It includes Opis validation, a conversation engine, native cURL provider, bounded endpoint and single-host file store. No framework-specific model training is required. Use the CLI/manual capability workflow and the same trusted manifest on browser/server.

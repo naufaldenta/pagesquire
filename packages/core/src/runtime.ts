@@ -4,14 +4,23 @@ import type {
   ActionResult,
   JsonObject,
   PageSnapshot,
+  AppContextSnapshot,
 } from '@pagesquire/protocol';
 import { PageSquireError, NavigationStarted } from './errors.js';
 import { canonicalJson, immutableCopy } from './json.js';
 import { NavigationStore, documentNavigation } from './navigation.js';
 import { PageObserver } from './observer.js';
 import { CapabilityRegistry } from './registry.js';
-import type { ExecutionContext, NavigationAdapter } from './types.js';
+import { ACTION_PROGRESS_CODES } from './types.js';
+import type {
+  ExecutionContext,
+  NavigationAdapter,
+  ActionProgressEvent,
+  ActionProgressListener,
+  ActionProgressCode,
+} from './types.js';
 import type { ActionPresentation } from './driving.js';
+import type { AppContext } from './app-context.js';
 
 export interface RuntimeOptions {
   observer: PageObserver;
@@ -21,7 +30,9 @@ export interface RuntimeOptions {
   timeoutMs?: number;
   maxActions?: number;
   onActivityChange?: (activity: 'thinking' | 'idle') => void;
+  onActionProgress?: ActionProgressListener;
   presentation?: ActionPresentation;
+  appContext?: AppContext;
 }
 
 interface CallRecord {
@@ -61,6 +72,15 @@ export class BrowserRuntime {
     this.options = options;
     this.observer = options.observer;
     this.registry = options.registry;
+    if (
+      options.appContext &&
+      options.appContext.registry !== options.registry
+    ) {
+      throw new PageSquireError(
+        'INVALID_OPTIONS',
+        'App context must use the runtime registry.',
+      );
+    }
     this.navigation =
       options.navigation ?? documentNavigation(this.observer.document);
     if (options.navigationStore) {
@@ -102,6 +122,64 @@ export class BrowserRuntime {
     }
   }
 
+  private emitProgress(
+    event: ActionProgressEvent,
+    listener?: ActionProgressListener,
+  ): void {
+    const safe = Object.freeze({ ...event });
+    const hooks = new Set<ActionProgressListener | undefined>();
+    try {
+      hooks.add(this.options.onActionProgress);
+    } catch {
+      /* A diagnostic configuration accessor cannot fail an action either. */
+    }
+    hooks.add(listener);
+    for (const hook of hooks) {
+      try {
+        const returned: unknown = hook?.(safe);
+        if (
+          returned &&
+          typeof (returned as { then?: unknown }).then === 'function'
+        )
+          void Promise.resolve(returned).catch(() => {});
+      } catch {
+        /* Diagnostic hooks cannot authorize, fail or retry an action. */
+      }
+    }
+  }
+
+  private completeProgress(
+    result: ActionResult,
+    listener?: ActionProgressListener,
+    replayed = false,
+  ): ActionResult {
+    this.emitProgress(
+      {
+        callId: result.callId,
+        capabilityId: result.capabilityId,
+        stage: replayed
+          ? 'replayed'
+          : result.status === 'unverified' &&
+              result.code === 'NAVIGATION_PENDING'
+            ? 'navigation_pending'
+            : result.code === 'TIMEOUT'
+              ? 'timed_out'
+              : result.status === 'success'
+                ? 'verified'
+                : result.status === 'unverified'
+                  ? 'unverified'
+                  : result.status === 'cancelled'
+                    ? 'cancelled'
+                    : 'failed',
+        code: ACTION_PROGRESS_CODES.includes(result.code as ActionProgressCode)
+          ? (result.code as ActionProgressCode)
+          : 'ACTION_FAILED',
+      },
+      listener,
+    );
+    return result;
+  }
+
   observe(): PageSnapshot {
     if (this.active)
       throw new PageSquireError(
@@ -109,6 +187,10 @@ export class BrowserRuntime {
         'Do not replace the active action snapshot.',
       );
     return this.observer.observe();
+  }
+
+  readAppContext(): AppContextSnapshot | undefined {
+    return this.options.appContext?.snapshot();
   }
 
   cancel(): void {
@@ -149,6 +231,7 @@ export class BrowserRuntime {
     options: {
       signal?: AbortSignal;
       onBeforeNavigate?: (call: ActionCall, destination: URL) => void;
+      onActionProgress?: ActionProgressListener;
     } = {},
   ): Promise<ActionResult> {
     let safeInput: unknown;
@@ -157,57 +240,76 @@ export class BrowserRuntime {
       signature = canonicalJson(input);
       safeInput = JSON.parse(signature);
     } catch {
-      return this.result(
-        { callId: 'invalid', capabilityId: 'invalid.call' },
-        'failed',
-        'INVALID_CALL',
-        'Expected a bounded JSON action call.',
-        {},
-        false,
+      return this.completeProgress(
+        this.result(
+          { callId: 'invalid', capabilityId: 'invalid.call' },
+          'failed',
+          'INVALID_CALL',
+          'Expected a bounded JSON action call.',
+          {},
+          false,
+        ),
+        options.onActionProgress,
       );
     }
     const validation = validateActionCall(safeInput);
     if (!validation.valid) {
-      return this.result(
-        { callId: 'invalid', capabilityId: 'invalid.call' },
-        'failed',
-        'INVALID_CALL',
-        'The action does not match the protocol schema.',
-        {},
-        false,
+      return this.completeProgress(
+        this.result(
+          { callId: 'invalid', capabilityId: 'invalid.call' },
+          'failed',
+          'INVALID_CALL',
+          'The action does not match the protocol schema.',
+          {},
+          false,
+        ),
+        options.onActionProgress,
       );
     }
     const call = immutableCopy(validation.value);
     const previous = this.calls.get(call.callId);
     if (previous) {
       return previous.signature === signature
-        ? previous.result
-        : this.result(
-            call,
-            'failed',
-            'CALL_ID_REUSED',
-            'A call ID cannot identify two different actions.',
-            {},
-            false,
+        ? this.completeProgress(
+            await previous.result,
+            options.onActionProgress,
+            true,
+          )
+        : this.completeProgress(
+            this.result(
+              call,
+              'failed',
+              'CALL_ID_REUSED',
+              'A call ID cannot identify two different actions.',
+              {},
+              false,
+            ),
+            options.onActionProgress,
           );
     }
     if (this.active)
-      return this.result(
-        call,
-        'failed',
-        'BUSY',
-        'Wait for the current action to finish.',
-        {},
-        false,
+      return this.completeProgress(
+        this.result(
+          call,
+          'failed',
+          'BUSY',
+          'Wait for the current action to finish.',
+          {},
+          false,
+        ),
+        options.onActionProgress,
       );
     if (this.calls.size >= Math.min(this.options.maxActions ?? 100, 1000)) {
-      return this.result(
-        call,
-        'failed',
-        'ACTION_LIMIT',
-        'The browser session action limit was reached.',
-        {},
-        false,
+      return this.completeProgress(
+        this.result(
+          call,
+          'failed',
+          'ACTION_LIMIT',
+          'The browser session action limit was reached.',
+          {},
+          false,
+        ),
+        options.onActionProgress,
       );
     }
     const controller = new AbortController();
@@ -217,6 +319,9 @@ export class BrowserRuntime {
       controller,
       options.signal,
       options.onBeforeNavigate,
+      options.onActionProgress,
+    ).then((outcome) =>
+      this.completeProgress(outcome, options.onActionProgress),
     );
     this.calls.set(call.callId, { signature, result });
     return result;
@@ -227,6 +332,7 @@ export class BrowserRuntime {
     controller: AbortController,
     externalSignal?: AbortSignal,
     onBeforeNavigate?: (call: ActionCall, destination: URL) => void,
+    onActionProgress?: ActionProgressListener,
   ): Promise<ActionResult> {
     const signal = controller.signal;
     const abort = () =>
@@ -244,6 +350,14 @@ export class BrowserRuntime {
     );
     this.setActivity('thinking');
     try {
+      this.emitProgress(
+        {
+          callId: call.callId,
+          capabilityId: call.capabilityId,
+          stage: 'checking',
+        },
+        onActionProgress,
+      );
       signal.throwIfAborted();
       this.observer.requireSnapshot(call.snapshotId);
       const entry = this.registry.resolve(call.capabilityId, call.parameters);
@@ -257,6 +371,17 @@ export class BrowserRuntime {
       await withAbort(
         Promise.resolve().then(() => {
           signal.throwIfAborted();
+          this.options.appContext?.assertAvailable(call.capabilityId);
+          signal.throwIfAborted();
+          this.emitProgress(
+            {
+              callId: call.callId,
+              capabilityId: call.capabilityId,
+              stage: 'executing',
+            },
+            onActionProgress,
+          );
+          signal.throwIfAborted();
           return entry.execute(call.parameters, context);
         }),
         signal,
@@ -264,6 +389,15 @@ export class BrowserRuntime {
       signal.throwIfAborted();
       const verification = await withAbort(
         Promise.resolve().then(() => {
+          signal.throwIfAborted();
+          this.emitProgress(
+            {
+              callId: call.callId,
+              capabilityId: call.capabilityId,
+              stage: 'verifying',
+            },
+            onActionProgress,
+          );
           signal.throwIfAborted();
           return entry.verify(call.parameters, context);
         }),
@@ -412,7 +546,9 @@ export class BrowserRuntime {
     };
   }
 
-  async resumeNavigation(): Promise<ActionResult | undefined> {
+  async resumeNavigation(
+    options: { onActionProgress?: ActionProgressListener } = {},
+  ): Promise<ActionResult | undefined> {
     if (!this.navigationStore || this.active) return undefined;
     const checkpoint = this.navigationStore.take(
       new URL(this.observer.document.URL).origin,
@@ -455,8 +591,26 @@ export class BrowserRuntime {
       this.active = controller;
       this.setActivity('thinking');
       try {
+        this.emitProgress(
+          {
+            callId: call.callId,
+            capabilityId: call.capabilityId,
+            stage: 'checking',
+          },
+          options.onActionProgress,
+        );
+        controller.signal.throwIfAborted();
         const verification = await withAbort(
           Promise.resolve().then(() => {
+            controller.signal.throwIfAborted();
+            this.emitProgress(
+              {
+                callId: call.callId,
+                capabilityId: call.capabilityId,
+                stage: 'verifying',
+              },
+              options.onActionProgress,
+            );
             controller.signal.throwIfAborted();
             return entry.verify(
               call.parameters,
@@ -513,6 +667,6 @@ export class BrowserRuntime {
       signature: canonicalJson(call),
       result: Promise.resolve(result),
     });
-    return result;
+    return this.completeProgress(result, options.onActionProgress);
   }
 }

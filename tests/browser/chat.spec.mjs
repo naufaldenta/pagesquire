@@ -9,7 +9,7 @@ async function send(page, text) {
   const widget = page.locator('.pagesquire-widget');
   await widget.getByRole('textbox').fill(text);
   await widget.getByRole('button', { name: 'Send', exact: true }).click();
-  await expect(widget).toHaveAttribute('aria-busy', 'false', {
+  await expect(widget).toHaveAttribute('data-busy', 'false', {
     timeout: 15000,
   });
   return widget;
@@ -89,7 +89,7 @@ test('Escape cancels a running browser action and restores the input', async ({
   await expect(widget).toHaveAttribute('data-emotion', 'thinking');
   await widget.getByRole('textbox').focus();
   await page.keyboard.press('Escape');
-  await expect(widget).toHaveAttribute('aria-busy', 'false');
+  await expect(widget).toHaveAttribute('data-busy', 'false');
   await expect(widget).toHaveAttribute('data-emotion', 'idle');
   await expect(widget.getByRole('log')).toContainText('cancelled');
   await send(page, 'Make headings red');

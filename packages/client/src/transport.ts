@@ -79,7 +79,9 @@ export function createHttpTransport(
         failure ?? `HTTP_${response.status}`,
         failure === 'CAPABILITY_DENIED'
           ? 'The AI requested an action this page does not allow. Please describe a supported page action.'
-          : (explanations[response.status] ??
+          : failure === 'CAPABILITY_UNAVAILABLE'
+            ? 'This action is not available in the current page state. Check the required selection or wait for the page to be ready, then send a new message.'
+            : (explanations[response.status] ??
               'The assistant request was rejected. Start a new conversation or try again later.'),
       );
     }
@@ -130,6 +132,7 @@ async function readFailureCode(
   const codes: Record<number, string[]> = {
     403: ['ACCESS_DENIED', 'CAPABILITY_DENIED'],
     409: [
+      'CAPABILITY_UNAVAILABLE',
       'CONVERSATION_EXPIRED',
       'ACTION_PENDING',
       'REPLAY_REJECTED',

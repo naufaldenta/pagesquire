@@ -10,5 +10,6 @@ export const response: GeneratedValidator;
 export const snapshot: GeneratedValidator;
 export const actionResult: GeneratedValidator;
 export const chatRequest: GeneratedValidator;
+export const appContext: GeneratedValidator;
 export const chatReply: GeneratedValidator;
 export const providerResponse: GeneratedValidator;

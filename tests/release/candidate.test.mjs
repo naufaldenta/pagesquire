@@ -142,16 +142,20 @@ test(
         env: offlineNpmEnvironment,
       },
     );
-    const probe = `import { PROTOCOL_VERSION, validateManifest } from '@pagesquire/protocol';
-import { CapabilityRegistry } from '@pagesquire/core';
-import { AssistantClient } from '@pagesquire/client';
+    const probe = `import { PROTOCOL_VERSION, validateManifest, validateAppContext } from '@pagesquire/protocol';
+import { CapabilityRegistry, CapabilityInspector, AppContext, ACTION_PROGRESS_STAGES } from '@pagesquire/core';
+import { AssistantClient, mountInspector, describeActionProgress } from '@pagesquire/client';
 import { PageSquireWidget } from '@pagesquire/react';
 import { createInertiaNavigation } from '@pagesquire/react/inertia';
 import { createNextNavigation } from '@pagesquire/react/next';
 import { ConversationEngine } from '@pagesquire/server';
-if (PROTOCOL_VERSION !== '0.1' || !validateManifest({schemaVersion:'0.1',capabilities:[]}).valid || [CapabilityRegistry,AssistantClient,PageSquireWidget,createInertiaNavigation,createNextNavigation,ConversationEngine].some(value=>typeof value!=='function')) throw Error('Packed imports failed');
+if (PROTOCOL_VERSION !== '0.1' || !validateManifest({schemaVersion:'0.1',capabilities:[]}).valid || [CapabilityRegistry,CapabilityInspector,AppContext,mountInspector,AssistantClient,PageSquireWidget,createInertiaNavigation,createNextNavigation,ConversationEngine].some(value=>typeof value!=='function')) throw Error('Packed imports failed');
+const registry=new CapabilityRegistry({schemaVersion:'0.1',capabilities:[]},{handlers:{},verifiers:{},parameters:{}});
+const context=new AppContext({registry,fields:{view:{public:true,type:'enum',values:['gallery'],read:()=> 'gallery'}}}).snapshot();
+if(!validateAppContext(context).valid)throw Error('Packed context validation failed');
+if(!Object.isFrozen(ACTION_PROGRESS_STAGES)||describeActionProgress({stage:'replayed'}).label!=='Cached result')throw Error('Packed progress failed');
 const engine = new ConversationEngine({manifest:{schemaVersion:'0.1',capabilities:[]},provider:{async complete(){return {text:'Hello',emotion:'happy',finished:true,toolCalls:[]}}}});
-const {reply}=await engine.handle({protocolVersion:'0.1',requestId:'release',message:'Hello',capabilityIds:[],snapshot:{protocolVersion:'0.1',id:'snapshot',url:'https://example.test/',title:'',text:'',targets:[],truncated:{text:false,targets:false}}},null,[]);
+const {reply}=await engine.handle({protocolVersion:'0.1',requestId:'release',message:'Hello',capabilityIds:[],appContext:context,snapshot:{protocolVersion:'0.1',id:'snapshot',url:'https://example.test/',title:'',text:'',targets:[],truncated:{text:false,targets:false}}},null,[]);
 if(reply.response.emotion!=='happy') throw Error('Packed engine failed');
 console.log('release-consumer-ok');`;
     const result = await execute(

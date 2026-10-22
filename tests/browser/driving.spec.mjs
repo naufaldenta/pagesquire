@@ -139,9 +139,31 @@ test('driving: reading reports truncation and supports bounded explicit continua
 test('driving: stop during cursor movement prevents the host click and clears overlays', async ({
   page,
 }) => {
+  await expect(page.locator('#cancel-driving')).toBeVisible();
+  await page.evaluate(() => {
+    // Stop at the first cursor frame, before a runner round trip can outlast the animation.
+    window.drivingStopPoint = null;
+    const observer = new MutationObserver(() => {
+      const cursor = document.querySelector('.pagesquire-driving__cursor');
+      if (!cursor?.style.transform) return;
+      observer.disconnect();
+      window.drivingStopPoint = {
+        opens: window.pagesquireDriving.opens,
+        busy: window.pagesquireDriving.client.state.busy,
+      };
+      document.querySelector('#cancel-driving').click();
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style'],
+    });
+  });
   await page.locator('#open-summary').click();
-  await expect(page.locator('.pagesquire-driving')).toBeVisible();
-  await page.locator('#cancel-driving').click();
+  await expect
+    .poll(() => page.evaluate(() => window.drivingStopPoint))
+    .toEqual({ opens: 0, busy: true });
   await page.waitForFunction(() => !window.pagesquireDriving.client.state.busy);
   await expect(page.locator('.pagesquire-driving')).toHaveCount(0);
   await page.waitForTimeout(350);

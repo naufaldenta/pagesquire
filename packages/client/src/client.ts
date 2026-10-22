@@ -2,8 +2,15 @@ import {
   PageSquireError,
   canonicalJson,
   immutableCopy,
+  ACTION_PROGRESS_STAGES,
+  ACTION_PROGRESS_CODES,
 } from '@pagesquire/core';
-import type { BrowserRuntime } from '@pagesquire/core';
+import type {
+  BrowserRuntime,
+  ActionProgressEvent,
+  ActionProgressStage,
+  ActionProgressListener,
+} from '@pagesquire/core';
 import {
   PROTOCOL_VERSION,
   validateChatReply,
@@ -26,6 +33,12 @@ export interface ChatState {
   busy: boolean;
   emotion: Emotion;
   messages: readonly ChatMessage[];
+  actionProgress: readonly ActionTimelineEntry[];
+}
+export interface ActionTimelineEntry extends ActionProgressEvent {
+  /** Local attempt identity; a cached call can be observed without re-execution. */
+  id: string;
+  stages: readonly ActionProgressStage[];
 }
 export interface ClientOptions {
   runtime: BrowserRuntime;
@@ -40,7 +53,12 @@ export class AssistantClient {
   private readonly listeners = new Set<(state: ChatState) => void>();
   private controller: AbortController | undefined;
   private conversationId: string | undefined;
-  private value: ChatState = { busy: false, emotion: 'idle', messages: [] };
+  private value: ChatState = {
+    busy: false,
+    emotion: 'idle',
+    messages: [],
+    actionProgress: [],
+  };
   constructor(private readonly options: ClientOptions) {
     for (const [value, maximum] of [
       [options.maxRounds ?? 12, 40],
@@ -84,6 +102,107 @@ export class AssistantClient {
   private append(message: ChatMessage): void {
     this.update({ messages: [...this.value.messages.slice(-99), message] });
   }
+  private trackProgress(
+    controller: AbortController,
+    callId: string,
+    capabilityId: string,
+  ): {
+    listener: ActionProgressListener;
+    interrupt: (stage: 'cancelled' | 'timed_out') => void;
+  } {
+    let id: string | undefined;
+    let closed = false;
+    const listener: ActionProgressListener = (event) => {
+      if (
+        closed ||
+        this.controller !== controller ||
+        event.callId !== callId ||
+        event.capabilityId !== capabilityId ||
+        !ACTION_PROGRESS_STAGES.includes(event.stage)
+      )
+        return;
+      const stage =
+        event.stage === 'cancelled' &&
+        controller.signal.reason instanceof PageSquireError &&
+        controller.signal.reason.code === 'TIMEOUT'
+          ? 'timed_out'
+          : event.stage;
+      const previous = id
+        ? this.value.actionProgress.find((entry) => entry.id === id)
+        : undefined;
+      const allowed: Partial<
+        Record<ActionProgressStage, readonly ActionProgressStage[]>
+      > = {
+        checking: [
+          'executing',
+          'verifying',
+          'failed',
+          'cancelled',
+          'timed_out',
+        ],
+        executing: [
+          'verifying',
+          'navigation_pending',
+          'failed',
+          'cancelled',
+          'timed_out',
+        ],
+        verifying: [
+          'verified',
+          'unverified',
+          'failed',
+          'cancelled',
+          'timed_out',
+        ],
+      };
+      if (previous && !allowed[previous.stage]?.includes(stage)) return;
+      if (
+        !previous &&
+        !['checking', 'failed', 'cancelled', 'timed_out', 'replayed'].includes(
+          stage,
+        )
+      )
+        return;
+      id ??= crypto.randomUUID();
+      closed = !['checking', 'executing', 'verifying'].includes(stage);
+      const entry: ActionTimelineEntry = {
+        id,
+        callId,
+        capabilityId,
+        stage,
+        stages: [...(previous?.stages ?? []), stage].slice(-8),
+        ...(stage === 'timed_out'
+          ? { code: 'TIMEOUT' as const }
+          : event.code !== undefined
+            ? {
+                code: ACTION_PROGRESS_CODES.includes(event.code)
+                  ? event.code
+                  : ('ACTION_FAILED' as const),
+              }
+            : {}),
+      };
+      this.update({
+        actionProgress: [
+          ...this.value.actionProgress
+            .filter((item) => item.id !== id)
+            .slice(-19),
+          entry,
+        ],
+      });
+    };
+    return {
+      listener,
+      interrupt: (stage) => {
+        if (id)
+          listener({
+            callId,
+            capabilityId,
+            stage,
+            code: stage === 'timed_out' ? 'TIMEOUT' : 'CANCELLED',
+          });
+      },
+    };
+  }
   cancel(): void {
     this.controller?.abort(
       new PageSquireError('CANCELLED', 'The conversation was cancelled.'),
@@ -97,7 +216,7 @@ export class AssistantClient {
       );
     this.conversationId = undefined;
     this.options.navigationStore?.clear();
-    this.update({ messages: [], emotion: 'idle' });
+    this.update({ messages: [], emotion: 'idle', actionProgress: [] });
   }
   async send(message: string): Promise<void> {
     if (this.controller)
@@ -133,14 +252,22 @@ export class AssistantClient {
     if (message) this.append({ role: 'user', text: message });
     this.update({ busy: true, emotion: 'thinking' });
     let navigating = false;
+    let progress: ReturnType<AssistantClient['trackProgress']> | undefined;
     try {
       let result: ActionResult | undefined;
       if (resume) {
+        progress = this.trackProgress(
+          controller,
+          resume.callId,
+          'browser.navigate',
+        );
         const abort = () => this.options.runtime.cancel();
         controller.signal.addEventListener('abort', abort, { once: true });
         try {
           result = await abortable(
-            this.options.runtime.resumeNavigation(),
+            this.options.runtime.resumeNavigation({
+              onActionProgress: progress.listener,
+            }),
             controller.signal,
           );
         } finally {
@@ -170,10 +297,13 @@ export class AssistantClient {
       for (let round = 0; round < rounds; round++) {
         controller.signal.throwIfAborted();
         const snapshot = result?.observation ?? this.options.runtime.observe();
+        const appContext = this.options.runtime.readAppContext?.();
+        controller.signal.throwIfAborted();
         const request: ChatRequest = {
           protocolVersion: PROTOCOL_VERSION,
           requestId: crypto.randomUUID(),
           snapshot,
+          ...(appContext ? { appContext } : {}),
           capabilityIds: this.options.runtime.registry
             .list()
             .filter((capability) => capability.risk !== 'consequential')
@@ -247,8 +377,14 @@ export class AssistantClient {
             'ACTION_NOT_VERIFIED',
             'I could not verify that the previous action completed. No further actions were run.',
           );
+        progress = this.trackProgress(
+          controller,
+          call.callId,
+          call.capabilityId,
+        );
         result = await this.options.runtime.execute(call, {
           signal: controller.signal,
+          onActionProgress: progress.listener,
           ...(this.options.navigationStore
             ? {
                 onBeforeNavigate: (_call, destination) => {
@@ -275,7 +411,10 @@ export class AssistantClient {
           text: `${call.capabilityId}: ${result.status}`,
           status: result.status,
         });
-        if (result.code === 'NAVIGATION_PENDING') {
+        if (
+          result.status === 'unverified' &&
+          result.code === 'NAVIGATION_PENDING'
+        ) {
           navigating = true;
           this.append({
             role: 'assistant',
@@ -296,6 +435,12 @@ export class AssistantClient {
     } catch (error: unknown) {
       const cancelled = controller.signal.aborted;
       const reason = cancelled ? (controller.signal.reason as unknown) : error;
+      if (cancelled)
+        progress?.interrupt(
+          reason instanceof PageSquireError && reason.code === 'TIMEOUT'
+            ? 'timed_out'
+            : 'cancelled',
+        );
       const text =
         reason instanceof PageSquireError
           ? reason.message

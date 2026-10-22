@@ -101,9 +101,222 @@
 .pagesquire-widget[data-emotion='thinking'] {
   border-top-style: dashed;
 }
+.pagesquire-widget .pagesquire-action-progress {
+  margin-block: 1rem;
+  padding-block: 0.8rem;
+  border-block: 1px solid var(--ps-line);
+  overflow-wrap: anywhere;
+}
+.pagesquire-widget .pagesquire-action-progress[hidden] {
+  display: none;
+}
+.pagesquire-widget .pagesquire-action-progress h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+.pagesquire-widget .pagesquire-progress-note {
+  color: var(--ps-muted);
+  font-size: 0.75rem;
+}
+.pagesquire-widget .pagesquire-action-list {
+  margin: 0.75rem 0 0;
+  padding: 0.2rem 0.3rem 0.2rem 1.4rem;
+  max-height: 15rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.pagesquire-widget .pagesquire-action-list > li {
+  margin: 0 0 0.8rem;
+  padding-inline-start: 0.65rem;
+  border-inline-start: 3px solid var(--ps-line);
+}
+.pagesquire-widget .pagesquire-action-list > li:last-child {
+  margin-bottom: 0;
+}
+.pagesquire-widget .pagesquire-action-list > li[data-stage='verified'] {
+  border-color: var(--ps-accent);
+}
+.pagesquire-widget
+  .pagesquire-action-list
+  > li:is([data-stage='failed'], [data-stage='timed_out']) {
+  border-color: #a32c27;
+}
+.pagesquire-widget
+  .pagesquire-action-list
+  > li:is([data-stage='unverified'], [data-stage='navigation_pending']) {
+  border-color: #8b610e;
+}
+.pagesquire-widget .pagesquire-action-name {
+  display: block;
+  font:
+    600 0.8rem/1.5 Consolas,
+    monospace;
+}
+.pagesquire-widget .pagesquire-action-outcome {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.pagesquire-widget .pagesquire-action-stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.8rem;
+  margin: 0.35rem 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ps-muted);
+  font-size: 0.75rem;
+}
+.pagesquire-widget .pagesquire-action-stages li:not(:last-child)::after {
+  content: ' →';
+}
+.pagesquire-widget .pagesquire-action-guidance {
+  color: var(--ps-muted);
+  font-size: 0.8rem;
+}
 @media (max-width: 420px) {
   .pagesquire-widget {
     padding: 1rem;
+  }
+}
+.pagesquire-inspector {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 1.25rem;
+  border: 1px solid #c5d9db;
+  border-inline-start: 5px solid #006a70;
+  border-radius: 0.5rem;
+  color: #163438;
+  background: #fff;
+  font:
+    400 0.9375rem/1.5 'Segoe UI',
+    sans-serif;
+  overflow-wrap: anywhere;
+}
+.pagesquire-inspector h2 {
+  margin: 0;
+  font:
+    600 1.6rem/1.2 Georgia,
+    serif;
+}
+.pagesquire-inspector p {
+  margin: 0.75rem 0;
+}
+.pagesquire-inspector .pagesquire-inspector-coverage {
+  padding-block: 0.75rem;
+  border-block: 1px solid #c5d9db;
+  color: #07535b;
+  font-weight: 600;
+}
+.pagesquire-inspector .pagesquire-inspector-controls {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.pagesquire-inspector label {
+  display: block;
+  min-width: 0;
+  font-weight: 600;
+}
+.pagesquire-inspector .pagesquire-inspector-controls label {
+  flex: 1 1 12rem;
+}
+.pagesquire-inspector input,
+.pagesquire-inspector select,
+.pagesquire-inspector textarea,
+.pagesquire-inspector button {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 0.55rem 0.7rem;
+  color: inherit;
+  background: #fff;
+  border: 1px solid #92afb3;
+  border-radius: 0.25rem;
+  font: inherit;
+}
+.pagesquire-inspector input,
+.pagesquire-inspector select,
+.pagesquire-inspector textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+}
+.pagesquire-inspector button {
+  cursor: pointer;
+}
+.pagesquire-inspector button:hover,
+.pagesquire-inspector summary:hover {
+  background: #f1f7f7;
+}
+.pagesquire-inspector :focus-visible {
+  outline: 3px solid #006a70;
+  outline-offset: 3px;
+}
+.pagesquire-inspector [role='status'] {
+  color: #52666a;
+  font-size: 0.875rem;
+}
+.pagesquire-inspector details {
+  margin-block: 0.6rem;
+  border: 1px solid #c5d9db;
+  border-inline-start: 4px solid #92afb3;
+  border-radius: 0.25rem;
+  padding: 0;
+}
+.pagesquire-inspector details[data-status='ready'] {
+  border-inline-start-color: #006a70;
+}
+.pagesquire-inspector details[data-status='needs_preparation'] {
+  border-inline-start-color: #926100;
+}
+.pagesquire-inspector details[data-status='not_registered'],
+.pagesquire-inspector details[data-status^='target_'],
+.pagesquire-inspector details[data-status='probe_failed'],
+.pagesquire-inspector details[data-status='scope_denied'],
+.pagesquire-inspector details[data-status='interaction_denied'] {
+  border-inline-start-color: #a33030;
+}
+.pagesquire-inspector summary {
+  padding: 0.8rem;
+  cursor: pointer;
+}
+.pagesquire-inspector code,
+.pagesquire-inspector pre,
+.pagesquire-inspector textarea {
+  font:
+    400 0.8125rem/1.6 Consolas,
+    monospace;
+}
+.pagesquire-inspector .pagesquire-inspector-badge {
+  display: inline-block;
+  margin-inline-start: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.pagesquire-inspector .pagesquire-inspector-detail {
+  padding: 0 0.8rem 0.8rem;
+}
+.pagesquire-inspector pre {
+  max-height: 18rem;
+  overflow: auto;
+  padding: 0.75rem;
+  background: #f1f7f7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.pagesquire-inspector textarea {
+  max-height: 24rem;
+  resize: vertical;
+}
+@media (max-width: 420px) {
+  .pagesquire-inspector {
+    padding: 0.85rem;
+  }
+  .pagesquire-inspector .pagesquire-inspector-controls > * {
+    width: 100%;
   }
 }
 .pagesquire-driving {

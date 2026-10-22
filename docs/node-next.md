@@ -1,5 +1,9 @@
 # Node and Next.js integration
 
+The shared widget/React wrapper includes [action progress](action-progress.md). Custom Next client UI must render `state.actionProgress` explicitly; do not label a path change as verified navigation or expose model reasoning. C4 changes browser assets/client state, not the Node endpoint, provider configuration or DB schema.
+
+Optional [AppContext](app-context.md) shares declared public state/availability from the runtime. Do not use it as server identity/permission; deploy matching schemas first. Read current host state rather than a stale React closure. No provider/model-specific configuration is required.
+
 Add [assistant driving](assistant-driving.md) inside the existing client runtime: optional animated cursor, host control preparation, scoped reading, tours and local-first speech. Preserve committed-destination readiness before reading or summarizing; a path change alone is insufficient. Keep server catalog/permission checks identical to the browser definitions.
 
 F4 supplies a Node.js 24 backend and a Next.js 16.4.2 App Router fixture. No per-website model training is needed: use the hybrid CLI to map real controls, author verified capabilities and connect a server-owned catalog. All package identifiers remain unpublished local preview identifiers.

@@ -3,6 +3,7 @@ import { EMOTIONS } from './types.js';
 import type {
   ActionCall,
   ActionResult,
+  AppContextSnapshot,
   AssistantResponse,
   CapabilityDefinition,
   CapabilityManifest,
@@ -62,7 +63,38 @@ export function validateActionResult(value: unknown) {
 }
 
 export function validateChatRequest(value: unknown) {
-  return validate<ChatRequest>(validators.chatRequest, value);
+  const result = validate<ChatRequest>(validators.chatRequest, value);
+  if (result.valid && result.value.appContext !== undefined) {
+    const context = validateAppContext(result.value.appContext);
+    if (!context.valid)
+      return { valid: false as const, errors: context.errors };
+  }
+  return result;
+}
+
+export function validateAppContext(
+  value: unknown,
+): ValidationResult<AppContextSnapshot> {
+  const result = validate<AppContextSnapshot>(validators.appContext, value);
+  if (!result.valid) return result;
+  const context = result.value;
+  try {
+    if (
+      new TextEncoder().encode(JSON.stringify(context)).byteLength > 16384 ||
+      new Set(context.fields.map((field) => field.name)).size !==
+        context.fields.length ||
+      new Set(context.availability.map((entry) => entry.capabilityId)).size !==
+        context.availability.length
+    ) {
+      return {
+        valid: false,
+        errors: ['/: app context limits or unique identities were violated'],
+      };
+    }
+  } catch {
+    return { valid: false, errors: ['/: invalid app context'] };
+  }
+  return result;
 }
 
 export function validateChatReply(value: unknown) {

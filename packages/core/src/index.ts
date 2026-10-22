@@ -7,4 +7,6 @@ export * from './runtime.js';
 export * from './controls.js';
 export * from './driving.js';
 export * from './bindings.js';
+export * from './inspector.js';
+export * from './app-context.js';
 export * from './json.js';

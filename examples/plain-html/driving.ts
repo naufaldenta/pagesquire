@@ -2,6 +2,8 @@ import {
   BrowserDriver,
   BrowserRuntime,
   CapabilityRegistry,
+  CapabilityInspector,
+  AppContext,
   PageObserver,
   createControlBindings,
   createPageBindings,
@@ -12,6 +14,7 @@ import {
   GuidedTour,
   SpeechOutput,
   mountWidget,
+  mountInspector,
 } from '@pagesquire/client';
 // @ts-expect-error Built from this same reviewed host example.
 import * as catalog from './driving-capabilities.mjs';
@@ -76,19 +79,94 @@ const pages = createPageBindings({
   },
   driver,
 });
+const registry = new CapabilityRegistry(drivingManifest, {
+  handlers: { ...controls.handlers, ...pages.handlers },
+  verifiers: { ...controls.verifiers, ...pages.verifiers },
+  parameters,
+});
 const runtime = new BrowserRuntime({
   observer,
-  registry: new CapabilityRegistry(drivingManifest, {
-    handlers: { ...controls.handlers, ...pages.handlers },
-    verifiers: { ...controls.verifiers, ...pages.verifiers },
-    parameters,
+  registry,
+  appContext: new AppContext({
+    registry,
+    fields: {
+      article_open: {
+        public: true,
+        type: 'boolean',
+        read: () =>
+          !document.querySelector<HTMLElement>('#driving-article')!.hidden,
+      },
+      settings_open: { public: true, type: 'boolean', read: () => panel.open },
+      heading_color: {
+        public: true,
+        type: 'string',
+        maxLength: 7,
+        read: () => color.value,
+      },
+    },
+    availability: {
+      [controlDefinition.id]: () =>
+        color.disabled
+          ? 'disabled'
+          : panel.open
+            ? 'available'
+            : 'needs_preparation',
+      [openDefinition.id]: () =>
+        document.querySelector<HTMLButtonElement>('#open-article')!.disabled
+          ? 'disabled'
+          : 'available',
+    },
   }),
   presentation: driver,
   timeoutMs: 15000,
 });
+let probeCalls = 0;
+const probe = (selector: string) => () => {
+  probeCalls++;
+  return [...document.querySelectorAll(selector)];
+};
+// Inspector probes sample host-selected targets; they do not cover every parameter.
+const inspector = new CapabilityInspector({
+  registry,
+  observer,
+  expected: [...registry.list().map((entry) => entry.id), 'site.search'],
+  probes: {
+    [controlDefinition.id]: {
+      resolve: probe('#driver-heading-color'),
+      requiresPreparation: true,
+    },
+    [openDefinition.id]: { resolve: probe('#open-article') },
+    'page.read': { resolve: probe('#driving-article') },
+    'page.scroll_to': { resolve: probe('#guide') },
+    'page.highlight': { resolve: probe('#guide') },
+  },
+});
+let unmountInspector: (() => void) | undefined;
+const inspectorButton =
+  document.querySelector<HTMLButtonElement>('#toggle-inspector')!;
+inspectorButton.setAttribute('aria-expanded', 'false');
+inspectorButton.addEventListener('click', () => {
+  if (unmountInspector) {
+    unmountInspector();
+    unmountInspector = undefined;
+  } else {
+    unmountInspector = mountInspector(
+      document.querySelector<HTMLElement>('#capability-inspector')!,
+      inspector,
+    );
+  }
+  inspectorButton.textContent = unmountInspector
+    ? 'Close capability inspector'
+    : 'Open capability inspector';
+  inspectorButton.setAttribute(
+    'aria-expanded',
+    String(Boolean(unmountInspector)),
+  );
+});
 const tour = new GuidedTour({ observer, driver });
 const speech = new SpeechOutput({ window, lang: 'en', localOnly: true });
 const results: unknown[] = [];
+const contexts: unknown[] = [];
 const emotions: string[] = [];
 let requests = 0;
 let plan: 'reading' | 'headings' = 'reading';
@@ -100,6 +178,7 @@ const client = new AssistantClient({
   },
   transport: async (request): Promise<ChatReply> => {
     requests++;
+    contexts.push(request.appContext);
     const result = request.result;
     if (result) results.push(result);
     const next: { id: string; parameters: JsonObject } | null = !result
@@ -211,8 +290,13 @@ Object.assign(window, {
     client,
     tour,
     speech,
+    inspector,
+    get probeCalls() {
+      return probeCalls;
+    },
     call,
     results,
+    contexts,
     emotions,
     get opens() {
       return opens;
@@ -230,6 +314,7 @@ window.addEventListener(
     tour.dispose();
     speech.dispose();
     driver.dispose();
+    unmountInspector?.();
   },
   { once: true },
 );

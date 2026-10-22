@@ -17,12 +17,19 @@
         A framework-neutral, offline driving example. No live model or provider
         keys.
       </p>
+      <p>
+        The chat timeline reports observed action stages, not model thoughts.
+        Navigation is not successful until its destination is verified.
+      </p>
       <nav aria-label="Driving examples">
         <button type="button" id="open-summary">
           Open article, read, then summarize
         </button>
         <button type="button" id="change-headings">Make headings red</button>
         <button type="button" id="start-tour">Start guided tour</button>
+        <button type="button" id="toggle-inspector">
+          Open capability inspector
+        </button>
         <button type="button" id="cancel-driving">Stop</button>
         <button type="button" id="speak-answer">
           Enable local voice and read answer
@@ -31,6 +38,7 @@
       <p id="driving-status" role="status">Ready</p>
       <pre id="driving-result"></pre>
     </header>
+    <div id="capability-inspector" data-pagesquire-ignore></div>
     <main>
       <section id="guide">
         <h2>Public reading guide</h2>

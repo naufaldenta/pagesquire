@@ -31,7 +31,17 @@ final class ProtocolValidator
     public function validate(string $schemaName, mixed $value): void
     {
         $schema = $this->schemas[$schemaName] ?? throw new AssistantException('UNKNOWN_SCHEMA', 'Unknown protocol schema.', 500);
-        $this->against($schema, self::jsonValue($value));
+        $json = self::jsonValue($value);
+        $this->against($schema, $json);
+        $context = $schemaName === 'appContext' ? $json : ($schemaName === 'chatRequest' ? ($json->appContext ?? null) : null);
+        if ($context instanceof stdClass) {
+            $names = array_map(static fn (stdClass $field): string => $field->name, $context->fields);
+            $ids = array_map(static fn (stdClass $entry): string => $entry->capabilityId, $context->availability);
+            $encoded = json_encode($context, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_LINE_TERMINATORS);
+            if (strlen($encoded) > 16384 || count(array_unique($names)) !== count($names) || count(array_unique($ids)) !== count($ids)) {
+                throw new AssistantException('INVALID_PAYLOAD', 'The public app context exceeds its limits or contains duplicate identities.');
+            }
+        }
     }
 
     /** @param array<string, mixed> $schema */

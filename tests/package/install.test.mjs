@@ -96,13 +96,44 @@ test('packed browser packages install into a clean offline ESM consumer', async 
       ['ci', '--offline', '--ignore-scripts', '--no-audit', '--no-fund'],
       temporary,
     );
-    const probe = `import { PROTOCOL_VERSION, validateManifest } from '@pagesquire/protocol'; import { CapabilityRegistry } from '@pagesquire/core'; import { AssistantClient } from '@pagesquire/client'; import { PageSquireWidget } from '@pagesquire/react'; import { createInertiaNavigation } from '@pagesquire/react/inertia'; if (PROTOCOL_VERSION !== '0.1' || !validateManifest({schemaVersion:'0.1',capabilities:[]}).valid || typeof AssistantClient !== 'function' || typeof PageSquireWidget !== 'function' || typeof createInertiaNavigation !== 'function' || new CapabilityRegistry({schemaVersion:'0.1',capabilities:[]},{handlers:{},verifiers:{},parameters:{}}).list().length !== 0) throw new Error('Artifact import failed'); console.log('artifact-import-ok');`;
+    const probe = `import { PROTOCOL_VERSION, validateManifest } from '@pagesquire/protocol'; import { CapabilityRegistry, CapabilityInspector } from '@pagesquire/core'; import { AssistantClient, mountInspector } from '@pagesquire/client'; import { PageSquireWidget } from '@pagesquire/react'; import { createInertiaNavigation } from '@pagesquire/react/inertia'; if (PROTOCOL_VERSION !== '0.1' || !validateManifest({schemaVersion:'0.1',capabilities:[]}).valid || typeof AssistantClient !== 'function' || typeof CapabilityInspector !== 'function' || typeof mountInspector !== 'function' || typeof PageSquireWidget !== 'function' || typeof createInertiaNavigation !== 'function' || new CapabilityRegistry({schemaVersion:'0.1',capabilities:[]},{handlers:{},verifiers:{},parameters:{}}).list().length !== 0) throw new Error('Artifact import failed'); console.log('artifact-import-ok');`;
     const result = execFileSync(
       process.execPath,
       ['--input-type=module', '-e', probe],
       { cwd: temporary, encoding: 'utf8' },
     );
     assert.match(result, /artifact-import-ok/);
+    const contextProbe = execFileSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '-e',
+        `import {CapabilityRegistry,AppContext} from '@pagesquire/core'; import {validateAppContext} from '@pagesquire/protocol'; const registry=new CapabilityRegistry({schemaVersion:'0.1',capabilities:[]},{handlers:{},verifiers:{},parameters:{}});const snapshot=new AppContext({registry,fields:{view:{public:true,type:'enum',values:['gallery'],read:()=> 'gallery'}}}).snapshot();if(!validateAppContext(snapshot).valid||snapshot.fields[0].value!=='gallery')throw Error('Packed context failed');console.log('context-artifact-ok');`,
+      ],
+      { cwd: temporary, encoding: 'utf8' },
+    );
+    assert.match(contextProbe, /context-artifact-ok/);
+    const progressProbe = execFileSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '-e',
+        `
+import {BrowserRuntime,CapabilityRegistry,ACTION_PROGRESS_STAGES} from '@pagesquire/core';
+import {AssistantClient,describeActionProgress} from '@pagesquire/client';
+const definition={id:'app.toggle',description:'Set public state.',execution:'browser',handler:'toggle',verification:{handler:'verify'},risk:'reversible',inputSchema:{type:'object',additionalProperties:false}};
+const registry=new CapabilityRegistry({schemaVersion:'0.1',capabilities:[definition]},{handlers:{toggle:()=>{}},verifiers:{verify:()=>({verified:true})},parameters:{'app.toggle':{schema:definition.inputSchema,validate:()=>true}}});
+const snapshot={protocolVersion:'0.1',id:'snapshot',url:'https://example.test/',title:'',text:'',targets:[],truncated:{text:false,targets:false}};
+const observer={document:{URL:snapshot.url,defaultView:{}},observe:()=>snapshot,requireSnapshot:()=>snapshot};
+const runtime=new BrowserRuntime({observer,registry});const events=[];
+await runtime.execute({protocolVersion:'0.1',callId:'packed',capabilityId:'app.toggle',snapshotId:'snapshot',parameters:{}},{onActionProgress:event=>events.push(event)});
+const client=new AssistantClient({runtime,transport:async()=>{throw Error('No provider request permitted');}});
+if(events.map(e=>e.stage).join(',')!=='checking,executing,verifying,verified'||describeActionProgress(events.at(-1)).label!=='Verified'||!Object.isFrozen(ACTION_PROGRESS_STAGES)||client.state.actionProgress.length!==0)throw Error('Packed progress failed');
+console.log('progress-artifact-ok');`,
+      ],
+      { cwd: temporary, encoding: 'utf8' },
+    );
+    assert.match(progressProbe, /progress-artifact-ok/);
     const serverProbe = execFileSync(
       process.execPath,
       [
@@ -181,7 +212,9 @@ test('packed browser packages install into a clean offline ESM consumer', async 
       { cwd: temporary, encoding: 'utf8' },
     );
     const typeProbe =
-      "import { CapabilityRegistry, type RuntimeOptions } from '@pagesquire/core'; import { type ActionCall } from '@pagesquire/protocol'; import { AssistantClient, ChatNavigationStore } from '@pagesquire/client'; import { PageSquireWidget } from '@pagesquire/react'; import { createNextNavigation } from '@pagesquire/react/next'; import { ConversationEngine, type HandlerOptions } from '@pagesquire/server'; export type Integration = [RuntimeOptions, ActionCall, HandlerOptions]; export const Registry = CapabilityRegistry; export const Client = AssistantClient; export const Widget = PageSquireWidget; export const Next = createNextNavigation; export const Server = ConversationEngine; export const Checkpoint = ChatNavigationStore;";
+      "import { type ActionProgressEvent } from '@pagesquire/core'; import { type ChatState, describeActionProgress } from '@pagesquire/client'; export type Progress = [ActionProgressEvent, ChatState['actionProgress']]; export const DescribeProgress = describeActionProgress;" +
+      "import { type AppContextOptions } from '@pagesquire/core'; import { type AppContextSnapshot } from '@pagesquire/protocol'; export type PublicContext = [AppContextOptions, AppContextSnapshot];" +
+      "import { CapabilityRegistry, CapabilityInspector, type CapabilityInspectionReport, type RuntimeOptions } from '@pagesquire/core'; import { type ActionCall } from '@pagesquire/protocol'; import { AssistantClient, ChatNavigationStore, mountInspector } from '@pagesquire/client'; import { PageSquireWidget } from '@pagesquire/react'; import { createNextNavigation } from '@pagesquire/react/next'; import { ConversationEngine, type HandlerOptions } from '@pagesquire/server'; export type Integration = [RuntimeOptions, ActionCall, HandlerOptions, CapabilityInspectionReport]; export const Registry = CapabilityRegistry; export const Inspector = CapabilityInspector; export const MountInspector = mountInspector; export const Client = AssistantClient; export const Widget = PageSquireWidget; export const Next = createNextNavigation; export const Server = ConversationEngine; export const Checkpoint = ChatNavigationStore;";
     await writeFile(path.join(temporary, 'consumer.ts'), typeProbe);
     await writeFile(
       path.join(temporary, 'tsconfig.json'),
