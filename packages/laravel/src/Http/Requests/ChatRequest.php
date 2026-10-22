@@ -33,6 +33,7 @@ final class ChatRequest extends FormRequest
             'capabilityIds.*' => ['required', 'string', 'max:128'],
             'message' => ['sometimes', 'string', 'max:8000'],
             'result' => ['sometimes', 'array'],
+            'appContext' => ['sometimes', 'array'],
         ];
     }
 

@@ -1,5 +1,7 @@
 # PageSquire Laravel adapter
 
+For optional [public app context and availability](../../docs/app-context.md), install matching browser/PHP schemas first. FormRequest preserves the optional validated array while raw protocol/semantic checks and Gates remain authoritative; no new route or automatic state discovery is enabled.
+
 Early Laravel 13 / PHP 8.3 integration for PageSquire's server-owned conversation engine. This package is developed in the local monorepo and is not published on Packagist yet. Do not treat this preview as a production security audit or a guarantee of model accuracy.
 
 ## Enable deliberately

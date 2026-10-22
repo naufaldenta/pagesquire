@@ -6,6 +6,12 @@ All canonical release notes are English. PageSquire uses SemVer for packages and
 
 ### Added
 
+- C4 metadata-only runtime progress, bounded immutable client action timelines and fixed recovery copy. The shared widget shows actual handler/verifier boundaries, distinguishes cached results and unverified navigation, ignores late/cancelled work, and scopes busy semantics to the message log. No chain of thought, automatic retry/rollback, permission expansion or wire/storage change is introduced.
+
+- C3 optional public `AppContext`, flat typed state, fixed availability statuses and bounded/unique protocol envelope. Clients refresh per round; Node/PHP providers receive ephemeral untrusted state and filter future proposals, runtime handlers recheck availability and Laravel preserves validated context. Pending results, permissions, replay/accounting and default-off behavior remain intact. Coordinated browser/server rollout is required; no training, whole-store upload or inference retry is added.
+
+- C2 optional `CapabilityInspector` and client `mountInspector`, with expected-versus-registered coverage, read-only host target probes, searchable/filterable schema disclosures, explicit refresh and metadata-only diagnostics. The neutral offline example and English guides distinguish target readiness from actual action verification/server permission. No competitor source, provider call, implicit execution or production debug mount is included.
+
 - D1 framework-neutral `BrowserDriver`, runtime presentation context, desired-state control bindings, public reading/scroll/highlight capabilities with bounded truncation/offset evidence, guided tours and opt-in local-first speech. English parity/onboarding guidance and a neutral offline fixture preserve host permissions and licensed-asset boundaries. Node/PHP instructions retain compound goals after verified navigation; synthetic checks do not certify live-model accuracy. WordPress offers optional inspected public-content reading/scroll/highlight without changing default permissions.
 
 - R1 local API inventory and conservative normalized declaration/schema/manifest/PHP-source baseline, a read-only `api:check` enforced in CI and candidate preparation, and synthetic serialized Node checkpoint recovery regressions. English compatibility/deprecation, upgrade/recovery and maintenance guidance explicitly excludes API freeze, historical-release upgrade certification and RC/stable promotion.
@@ -34,6 +40,8 @@ All canonical release notes are English. PageSquire uses SemVer for packages and
 - GitHub-first release checks, local source/npm/PHP/plugin artifacts, checksums, compatibility evidence and community templates.
 
 ### Fixed
+
+- Closed native `details` content is no longer considered visible solely because it retains layout rectangles; its first summary remains available. Registered handlers must explicitly prepare hidden controls.
 
 - OFFBEAT PostgreSQL expiry cleanup locks bounded candidates and rechecks target expiry/lease conditions. Concurrent session lease and cost-bucket renewals no longer get deleted using stale candidate IDs; disposable real-database regressions cover both races and batch limits. Production rollout remains a separate owner-authorized step.
 

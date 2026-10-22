@@ -48,6 +48,7 @@
 #pagesquire-widget > .pagesquire-widget {
   display: flex;
   flex-direction: column;
+  margin: 0;
   width: 100%;
   max-height: var(--pagesquire-panel-height);
 }
@@ -55,6 +56,18 @@
   flex: 1 1 auto;
   min-height: 0;
   overscroll-behavior: contain;
+}
+#pagesquire-widget .pagesquire-action-progress {
+  box-sizing: border-box;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: min(12rem, 22dvh);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+#pagesquire-widget .pagesquire-action-list {
+  max-height: none;
+  overflow: visible;
 }
 #pagesquire-widget .pagesquire-widget > h2,
 #pagesquire-widget .pagesquire-status,

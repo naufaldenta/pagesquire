@@ -356,7 +356,7 @@ test('installed ZIP completes five-step setup and verified full-document assista
     (url) => url.searchParams.get('page_id') === String(ids.beta),
     { timeout: 30000 },
   );
-  await expect(widget).toHaveAttribute('aria-busy', 'false', {
+  await expect(widget).toHaveAttribute('data-busy', 'false', {
     timeout: 30000,
   });
   await expect(widget.getByRole('log')).toContainText(
@@ -599,7 +599,7 @@ test('provider failures consume durable global attempts and changing cookies doe
     const widget = visitor.locator('.pagesquire-widget');
     await widget.getByRole('textbox').fill('Hello');
     await widget.getByRole('button', { name: 'Send', exact: true }).click();
-    await expect(widget).toHaveAttribute('aria-busy', 'false', {
+    await expect(widget).toHaveAttribute('data-busy', 'false', {
       timeout: 20000,
     });
     await expect(widget.getByRole('log')).not.toContainText('secret upstream');
@@ -761,7 +761,7 @@ test('authenticated-reader access uses the reader nonce without granting adminis
   const widget = reader.locator('.pagesquire-widget');
   await widget.getByRole('textbox').fill('Make headings red');
   await widget.getByRole('button', { name: 'Send', exact: true }).click();
-  await expect(widget).toHaveAttribute('aria-busy', 'false');
+  await expect(widget).toHaveAttribute('data-busy', 'false');
   await expect(reader.locator('main h1')).toHaveCSS('color', 'rgb(255, 0, 0)');
   await context.close();
 });
@@ -853,7 +853,7 @@ test('unknown model actions cannot mutate the page or produce a false success', 
   const widget = visitor.locator('.pagesquire-widget');
   await widget.getByRole('textbox').fill('Make headings red');
   await widget.getByRole('button', { name: 'Send', exact: true }).click();
-  await expect(widget).toHaveAttribute('aria-busy', 'false');
+  await expect(widget).toHaveAttribute('data-busy', 'false');
   await expect(visitor.locator('main h1')).not.toHaveCSS(
     'color',
     'rgb(255, 0, 0)',

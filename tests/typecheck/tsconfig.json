@@ -1,5 +1,5 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "composite": false, "noEmit": true, "rootDir": "../.." },
-  "include": ["inertia.ts", "next.ts"]
+  "include": ["inertia.ts", "next.ts", "inspector.ts", "progress.ts"]
 }

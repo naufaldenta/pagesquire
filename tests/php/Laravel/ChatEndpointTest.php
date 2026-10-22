@@ -70,6 +70,29 @@ final class ChatEndpointTest extends TestCase
         $this->assertIsArray($this->storedState()['engine']);
     }
 
+    public function test_optional_app_context_survives_validated_input_without_widening_permissions(): void
+    {
+        $this->allow();
+        $provider = $this->provider([['text' => 'The control is unavailable.', 'emotion' => 'idle', 'finished' => true, 'toolCalls' => []]]);
+        $request = $this->request();
+        $request['appContext'] = ['schemaVersion' => 1, 'fields' => [['name' => 'view', 'value' => 'public-marker']], 'availability' => [['capabilityId' => 'accessibility.set_heading_color', 'status' => 'disabled']]];
+        $this->postJson(route('pagesquire.chat'), $request)->assertOk();
+        $this->assertSame([], $provider->received[0]['capabilities']);
+        $last = $provider->received[0]['messages'][array_key_last($provider->received[0]['messages'])];
+        $this->assertSame('public-marker', json_decode($last['content'], true, 64, JSON_THROW_ON_ERROR)['untrustedAppContext']['fields'][0]['value']);
+        $this->assertStringNotContainsString('public-marker', json_encode($this->storedState(), JSON_THROW_ON_ERROR));
+    }
+
+    public function test_invalid_app_context_is_rejected_before_provider_work(): void
+    {
+        $this->allow();
+        $provider = $this->provider([]);
+        $request = $this->request();
+        $request['appContext'] = ['schemaVersion' => 1, 'fields' => [['name' => 'private', 'value' => ['entireStore' => true]]], 'availability' => []];
+        $this->postJson(route('pagesquire.chat'), $request)->assertUnprocessable()->assertJsonPath('error.code', 'INVALID_PAYLOAD');
+        $this->assertSame(0, $provider->calls);
+    }
+
     public function test_capability_permissions_are_rechecked_before_a_continuation(): void
     {
         $this->allow();
@@ -207,11 +230,14 @@ final class ChatEndpointTest extends TestCase
         {
             public int $calls = 0;
 
+            public array $received = [];
+
             public function __construct(private array $replies, private $beforeReply) {}
 
             public function complete(array $messages, array $capabilities, int $maxOutputTokens): array
             {
                 $this->calls++;
+                $this->received[] = compact('messages', 'capabilities');
                 if ($this->beforeReply !== null) {
                     ($this->beforeReply)();
                 }

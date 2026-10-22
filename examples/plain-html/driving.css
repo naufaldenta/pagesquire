@@ -22,6 +22,9 @@ nav button {
 main {
   padding-top: 32px;
 }
+#capability-inspector:not(:empty) {
+  margin-top: 24px;
+}
 article {
   padding-top: 32px;
   max-width: 65ch;

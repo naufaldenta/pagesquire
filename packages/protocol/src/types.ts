@@ -10,6 +10,26 @@ export const EMOTIONS = [
 ] as const;
 
 export type Emotion = (typeof EMOTIONS)[number];
+
+export const CAPABILITY_AVAILABILITY_STATUSES = [
+  'available',
+  'needs_preparation',
+  'not_applicable',
+  'loading',
+  'requires_selection',
+  'disabled',
+  'check_failed',
+] as const;
+export type CapabilityAvailabilityStatus =
+  (typeof CAPABILITY_AVAILABILITY_STATUSES)[number];
+export interface AppContextSnapshot {
+  schemaVersion: 1;
+  fields: { name: string; value: string | number | boolean }[];
+  availability: {
+    capabilityId: string;
+    status: CapabilityAvailabilityStatus;
+  }[];
+}
 export type JsonValue =
   null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 export type JsonObject = { [key: string]: JsonValue };
@@ -92,6 +112,7 @@ export interface ChatRequest {
   result?: ActionResult;
   snapshot: PageSnapshot;
   capabilityIds: string[];
+  appContext?: AppContextSnapshot;
 }
 
 export interface ChatReply {

@@ -1,4 +1,8 @@
-import { EMOTIONS, PROTOCOL_VERSION } from './types.js';
+import {
+  CAPABILITY_AVAILABILITY_STATUSES,
+  EMOTIONS,
+  PROTOCOL_VERSION,
+} from './types.js';
 
 const identifier = {
   type: 'string',
@@ -191,6 +195,49 @@ export const actionResultSchema = {
   additionalProperties: false,
 };
 
+export const appContextSchema = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  $id: 'urn:pagesquire:app-context:1',
+  type: 'object',
+  required: ['schemaVersion', 'fields', 'availability'],
+  additionalProperties: false,
+  properties: {
+    schemaVersion: { const: 1 },
+    fields: {
+      type: 'array',
+      maxItems: 20,
+      items: {
+        type: 'object',
+        required: ['name', 'value'],
+        additionalProperties: false,
+        properties: {
+          name: { type: 'string', maxLength: 64, pattern: '^[a-z][a-z0-9_]*$' },
+          value: {
+            anyOf: [
+              { type: 'string', maxLength: 200 },
+              { type: 'number', minimum: -1e12, maximum: 1e12 },
+              { type: 'boolean' },
+            ],
+          },
+        },
+      },
+    },
+    availability: {
+      type: 'array',
+      maxItems: 100,
+      items: {
+        type: 'object',
+        required: ['capabilityId', 'status'],
+        additionalProperties: false,
+        properties: {
+          capabilityId,
+          status: { enum: [...CAPABILITY_AVAILABILITY_STATUSES] },
+        },
+      },
+    },
+  },
+};
+
 export const chatRequestSchema = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   $id: 'urn:pagesquire:chat-request:0.1',
@@ -203,6 +250,7 @@ export const chatRequestSchema = {
     message: { type: 'string', minLength: 1, maxLength: 4000, pattern: '\\S' },
     result: { $ref: actionResultSchema.$id },
     snapshot: { $ref: snapshotSchema.$id },
+    appContext: { $ref: appContextSchema.$id },
     capabilityIds: {
       type: 'array',
       maxItems: 100,
@@ -271,6 +319,7 @@ export const providerResponseSchema = {
 };
 
 export const protocolSchemas = {
+  appContext: appContextSchema,
   capability: capabilitySchema,
   manifest: manifestSchema,
   actionCall: actionCallSchema,

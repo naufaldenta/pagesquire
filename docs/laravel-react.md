@@ -1,5 +1,9 @@
 # Laravel 13 + React 19 + Inertia v3 alpha
 
+The shared widget/React wrapper includes [action progress](action-progress.md) from actual browser runtime events. Custom Inertia UI can render `state.actionProgress` using `describeActionProgress` in its existing persistent layout. C4 requires rebuilt matching assets but no backend route, provider or database change.
+
+For public semantic state and current feature availability, opt into [AppContext](app-context.md) in the host runtime. Read fresh public references, not an entire store. Deploy matching PHP/protocol/browser artifacts first; FormRequest preserves the optional field while raw protocol validation and Gates remain mandatory.
+
 For cursor/click feedback, reading/summary, full host-control inventory, tours and optional speech, see [assistant driving](assistant-driving.md). Mount helpers with the existing persistent layout/runtime, retain the Inertia navigation adapter and dispose them on teardown. No JDIH route, mascot or accessibility library is required.
 
 This guide connects existing site capabilities; it does not train a model or scan source code. F3 will add onboarding automation. The JDIH pilot application, routes, credentials, and artwork are not part of this distribution and are not modified by this guide.

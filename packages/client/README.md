@@ -1,8 +1,14 @@
 # @pagesquire/client
 
+C4 adds immutable `state.actionProgress` (latest 20 local attempts), `describeActionProgress` and a shared-widget timeline driven by actual runtime events. Navigation suspension/cache replay are not labelled as fresh success. Fixed failure guidance never renders private adapter errors or automatically retries. Busy state is exposed as widget `data-busy`, with `aria-busy` scoped to messages. See [action progress](../../docs/action-progress.md) for custom UI, lifecycle, privacy and rollout limits.
+
 Optional `GuidedTour` and `SpeechOutput` reuse the external widget stylesheet. Tours use host-authored targets and keyboard cancellation; speech starts disabled/local-only. See [assistant driving](../../docs/assistant-driving.md) for lifecycle, speech-queue/privacy limits and six-state Rive mapping. No mascot, microphone or paid speech endpoint is included.
 
 Framework-independent conversation client and accessible DOM widget. Requires the PageSquire protocol/core packages. No API key, framework import, Markdown renderer, or dynamic evaluation is included.
+
+When its runtime has an explicit `AppContext`, the client sends a fresh bounded public projection per round without dropping registered IDs needed for pending results. It checks cancellation after collection, emits safe unavailable feedback and never retries inference automatically. Opted-in fields require matching server schemas; see [app context](../../docs/app-context.md).
+
+`mountInspector(container, inspector)` optionally mounts a separate developer/admin capability inspector using the same external stylesheet. It provides search/status filters, schema disclosures, explicit target refresh and metadata-only JSON for deliberate copying. It runs no actions or AI requests and returns cleanup; no production widget/plugin mount is enabled automatically. Protect the host surface and review [inspection/privacy limits](../../docs/capability-inspector.md).
 
 ```ts
 import {

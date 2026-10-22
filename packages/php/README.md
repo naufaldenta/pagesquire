@@ -1,5 +1,7 @@
 # pagesquire/server
 
+Optional [public app context/availability](../../docs/app-context.md) is structurally and semantically validated, passed to the provider only as current untrusted data, and used to reduce future proposals without dropping pending-result authorization. Use matching generated schemas/browser packages. No default state collection, framework dependency or permission grant is added.
+
 Provider presets use the same server-only `PAGESQUIRE_PROVIDER`, `PAGESQUIRE_API_KEY`, and `PAGESQUIRE_MODEL` settings as Node/Laravel. Custom/regional gateways additionally require `PAGESQUIRE_PROVIDER_URL`. Use `Http\OpenAiCompatibleProvider::fromEnvironment(new ProtocolValidator, getenv())`; PHP does not load dotenv files automatically. See the [provider matrix and PHP tutorial](https://github.com/naufaldenta/pagesquire/blob/main/docs/providers.md#standalone-php). Existing explicit-endpoint construction remains compatible; no model ID is hardcoded or universally certified.
 
 PHP 8.3 conversation engine independent of Laravel. F4 includes a native HTTPS provider, bounded standalone endpoint and injectable atomic file storage. See [standalone PHP integration](../../docs/standalone-php.md).

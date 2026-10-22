@@ -292,8 +292,18 @@ test('Node provider is server-only HTTPS, bounded, redirect-free, timed and has 
 test('Node endpoint times out an uncooperative provider while retaining its charged attempt', async (t) => {
   const directory = await temporary(t);
   const store = new FileConversationStore(directory);
+  const deadlines = [];
+  // Expire after provider entry, not during unrelated durable disk setup under load.
+  t.mock.method(AbortSignal, 'timeout', (milliseconds) => {
+    assert.equal(milliseconds, 2000);
+    const deadline = new AbortController();
+    deadlines.push(deadline);
+    return deadline.signal;
+  });
   let providerCalls = 0;
   let resolveLate;
+  let enteredProvider;
+  const providerEntered = new Promise((resolve) => (enteredProvider = resolve));
   const handler = createChatHandler({
     origin,
     store,
@@ -304,6 +314,7 @@ test('Node endpoint times out an uncooperative provider while retaining its char
       provider: {
         complete: () => {
           providerCalls++;
+          enteredProvider();
           return providerCalls === 1
             ? new Promise((resolve) => (resolveLate = resolve))
             : Promise.resolve(fixture.drafts.final);
@@ -311,7 +322,13 @@ test('Node endpoint times out an uncooperative provider while retaining its char
       },
     }),
   });
-  const response = await handler(request());
+  const responsePending = handler(request());
+  await providerEntered;
+  assert.equal(deadlines.length, 1);
+  deadlines[0].abort(
+    new DOMException('Fixture deadline expired.', 'TimeoutError'),
+  );
+  const response = await responsePending;
   assert.equal(providerCalls, 1);
   assert.equal(response.status, 502);
   let conversationId;
@@ -339,4 +356,5 @@ test('Node endpoint times out an uncooperative provider while retaining its char
     assert.equal(stored.state.lastReply.response.finished, true);
   });
   assert.equal(providerCalls, 2);
+  assert.equal(deadlines.length, 2);
 });

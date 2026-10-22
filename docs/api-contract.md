@@ -4,6 +4,12 @@ R1 starts with an inventory and a drift guard, **not an API freeze or a stable r
 
 ## Integration surfaces
 
+C4 adds core progress event/stage/code/listener types and optional runtime/per-invocation callbacks, required `ChatState.actionProgress`/`ActionTimelineEntry` and client `describeActionProgress`. Matching assets are needed; hand-built typed states must supply an empty list. The widget busy DOM selector changes to `data-busy` while message `aria-busy` no longer suppresses the adjacent status. Protocol/storage/permissions remain unchanged. These are reviewed alpha additions, not a freeze; see [progress boundaries](action-progress.md).
+
+C3 adds core `AppContext`/field options, `RuntimeOptions.appContext`, `readAppContext()`, protocol context/status types/schema and `validateAppContext`. `ChatRequest.appContext` is optional; JS/PHP semantic validators enforce uniqueness/byte limits beyond structural checks. Laravel preserves validated context. Old requests remain valid, but old closed-schema servers reject opted-in payloads: coordinated deployment is required. This is an intentional wire extension, not only a local helper addition. Persistence formats and authorization remain unchanged; see [context boundaries](app-context.md).
+
+C2 adds optional `CapabilityInspector`/inspection types in core and `mountInspector` in client. These are additive local development diagnostics: existing constructors, protocol/storage formats, runtime permissions and provider policy are unchanged. Inspector diagnostics schema `1` is not a wire-protocol change. The new declarations are intentionally reviewed in the baseline; see [capability inspector](capability-inspector.md).
+
 D1 adds optional core presentation/control/reading helpers, `ExecutionContext.present`, `PageObserver.readContent`, and client tour/speech helpers. Real runtime contexts receive `present` automatically; hand-built typed contexts/mocks must add it. These additions and the new optional WordPress built-ins require deliberate baseline review. Protocol `0.1` fields, storage envelopes, action permissions and provider retry policy are unchanged. See [assistant driving](assistant-driving.md).
 
 Use package entrypoints and the corresponding integration guides, not private build paths. Current exported types are the authoritative signatures; the table describes the intended review boundary rather than promising every class or option is stable.

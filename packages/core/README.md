@@ -1,6 +1,12 @@
 # @pagesquire/core
 
+Optional `RuntimeOptions.onActionProgress`, `execute(..., {onActionProgress})` and `resumeNavigation({onActionProgress})` expose immutable operational metadata at real handler/verifier boundaries. Fixed stages/codes distinguish failed checks, cache replay, pending navigation, cancellation/timeouts and actual verification; they never grant permission or expose parameters/evidence. See [action progress](../../docs/action-progress.md).
+
 Private development preview of the PageSquire browser foundation.
+
+`AppContext` optionally registers explicit public primitive/enum state and fixed-enum availability checks. Pass it as `BrowserRuntime({ ..., appContext })` with the same registry. Clients read it per round and runtime rechecks before handlers; it never grants permission. See [context/privacy and coordinated rollout](../../docs/app-context.md).
+
+Optional `CapabilityInspector` reads an already valid registry, expected feature IDs and explicit synchronous host target probes. It never invokes actions/verifiers/preparation or grants permission. `exportDiagnostics()` whitelists metadata from the last check. See [capability inspection and privacy limits](../../docs/capability-inspector.md).
 
 Optional `BrowserDriver`, `createControlBindings`, `createPageCapabilities`, `createPageBindings` and `PageObserver.readContent` provide presentation, verified host controls and bounded public reading. See [assistant driving](../../docs/assistant-driving.md). A presenter never clicks or authorizes; handlers still need real postcondition checks.
 

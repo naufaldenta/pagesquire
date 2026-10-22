@@ -26,6 +26,7 @@ This repository implements the F0/F1 foundation, F2 Laravel/React alpha, F3 hybr
 
 Implemented:
 
+- Truthful local [action progress and recovery guidance](docs/action-progress.md): checking/executing/verifying, verified/unverified outcomes, cancellation/timeouts, explicit cache replay and pending destination verification. The shared widget includes a bounded timeline; custom UIs can use the client state/helper without changing providers or backend schemas.
 - Versioned JSON Schema contracts and TypeScript types.
 - Build-time compiled validation without browser-side schema compilation or unsafe-eval.
 - A shared capability registry with explicit execution and verification bindings.
@@ -43,7 +44,7 @@ Implemented:
 
 - A self-contained WordPress plugin with guided setup, filtered context exports, configuration-only mapping import and verified basic adapters.
 
-Not implemented yet: speech and a bundled Rive renderer. Connect your own licensed avatar using the emotion callback. No live-provider accuracy or production security certification is claimed.
+Optional local-first speech is available; a bundled Rive renderer/artwork and hosted speech service are not included. Connect your own licensed avatar using the emotion callback. No live-provider accuracy or production security certification is claimed.
 
 The development repository is [naufaldenta/pagesquire](https://github.com/naufaldenta/pagesquire). F6 adds GitHub-first release preparation; no tagged release or registry package has been published. Package names remain provisional, private and unreserved on npm/Packagist. See [tested compatibility](docs/compatibility.md), [release/download instructions](docs/releasing.md), [changelog](CHANGELOG.md) and [contributing](CONTRIBUTING.md).
 
@@ -54,6 +55,10 @@ R1 local foundations add an [API inventory and drift baseline](docs/api-contract
 ## Run the foundation demo
 
 Optional assistant driving now includes an animated cursor/target outline, nested scrolling, private-aware scoped reading, desired-state control bindings, guided tours and opt-in local-first speech. See [assistant driving and feature parity](docs/assistant-driving.md) and the `/driving.html` offline example. No reference-site content, third-party accessibility UI or licensed Rive/TTS assets are bundled.
+
+For integration debugging, the opt-in [capability inspector](docs/capability-inspector.md) compares expected features to the registered catalog, diagnoses host-selected targets, and exposes schemas plus metadata-only diagnostics without running actions or AI requests. Try **Open capability inspector** in `/driving.html`. Keep it on a host-protected developer/admin surface; target readiness is not server authorization or a verified action. See the [competitor source review and next priorities](docs/competitor-review.md) for C2/C3/C4 scope.
+
+Optional [public app context and contextual availability](docs/app-context.md) lets hosts share explicitly selected typed public state on each round and suppress actions that are not currently applicable. The browser rechecks before executing; server permissions, pending-result handling and verification remain authoritative. Deploy matching browser/server schemas before enabling it; no whole-store upload, model training or extra provider call is required.
 
 For the independent art playground, see [OFFBEAT](examples/brutalist-demo/README.md). Run `npm run demo:build` then `npm run demo:serve` for a static local preview with guided actions. Root `vercel.json` deploys its static frontend **and** the dedicated `/api/session` and `/api/chat` Node function; other local example servers are not deployed.
 

@@ -108,6 +108,16 @@ export class PageObserver {
       current;
       current = current.parentElement
     ) {
+      if (
+        current.tagName === 'DETAILS' &&
+        !(current as HTMLDetailsElement).open &&
+        current !== element
+      ) {
+        const summary = [...current.children].find(
+          (child) => child.tagName === 'SUMMARY',
+        );
+        if (!summary?.contains(element)) return false;
+      }
       const style = this.document.defaultView!.getComputedStyle(current);
       if (
         style.display === 'none' ||

@@ -20,7 +20,7 @@ for (const port of [4174, 4175]) {
     ]) {
       await widget.getByRole('textbox').fill(message);
       await widget.getByRole('button', { name: 'Send', exact: true }).click();
-      await expect(widget).toHaveAttribute('aria-busy', 'false', {
+      await expect(widget).toHaveAttribute('data-busy', 'false', {
         timeout: 15000,
       });
       await expect(widget.getByRole('log')).not.toContainText(
@@ -73,6 +73,18 @@ for (const port of [4174, 4175]) {
     expect(payloads[1].result.status).toBe('success');
     expect(payloads[1].conversationId).toBe(payloads[2].conversationId);
     expect(payloads[1].snapshot.url).toContain('/next.html');
+    const destinationProgress = await page.evaluate(
+      () => window.pagesquireChat.client.state.actionProgress,
+    );
+    expect(destinationProgress[0].capabilityId).toBe('browser.navigate');
+    expect(destinationProgress[0].stages).toEqual([
+      'checking',
+      'verifying',
+      'verified',
+    ]);
+    expect(
+      payloads.every((payload) => !Object.hasOwn(payload, 'actionProgress')),
+    ).toBe(true);
     expect(
       await page.evaluate(() =>
         Object.keys(sessionStorage).filter((key) =>
