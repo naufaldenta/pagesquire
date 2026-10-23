@@ -37,9 +37,9 @@ export async function run(
         validate:
           '[--compile] Inspect contracts/exports without executing project modules.',
       },
-      version: '0.1.0-alpha.0',
+      version: '0.1.0-beta.0',
     };
-  if (values.version) return { version: '0.1.0-alpha.0' };
+  if (values.version) return { version: '0.1.0-beta.0' };
   const [command] = positionals;
   if (
     positionals.length !== 1 ||

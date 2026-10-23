@@ -1,6 +1,6 @@
 {
   "name": "@pagesquire/core",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-beta.0",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -16,7 +16,7 @@
     }
   },
   "dependencies": {
-    "@pagesquire/protocol": "0.1.0-alpha.0"
+    "@pagesquire/protocol": "0.1.0-beta.0"
   },
   "engines": {
     "node": ">=24"

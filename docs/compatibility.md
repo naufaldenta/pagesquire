@@ -1,6 +1,6 @@
 # Compatibility and evidence
 
-PageSquire **0.1.0-alpha.0** is a development preview, not stable 1.0. A dependency range is not a claim that every matching version has been tested. The [machine-readable matrix](compatibility.json) is checked against the lockfiles by `npm run release:check`.
+PageSquire **0.1.0-beta.0** is a development preview, not stable 1.0. A dependency range is not a claim that every matching version has been tested. The [machine-readable matrix](compatibility.json) is checked against the lockfiles by `npm run release:check`.
 
 ## Locally verified targets
 

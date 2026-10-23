@@ -1,6 +1,6 @@
 # Public API review baseline
 
-R1 starts with an inventory and a drift guard, **not an API freeze or a stable release**. PageSquire remains `0.1.0-alpha.0`; all current contracts may still change with a documented prerelease. Independent beta acceptance, an approved frozen support/API scope and release-candidate/stable policy are outstanding. See [beta gates](beta.md) and [maintenance policy](maintenance.md).
+R1 starts with an inventory and a drift guard, **not an API freeze or a stable release**. PageSquire remains `0.1.0-beta.0`; all current contracts may still change with a documented prerelease. Independent beta acceptance, an approved frozen support/API scope and release-candidate/stable policy are outstanding. See [beta gates](beta.md) and [maintenance policy](maintenance.md).
 
 ## Integration surfaces
 

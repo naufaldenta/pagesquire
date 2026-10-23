@@ -7,7 +7,7 @@ test('WordPress ZIP is installation-ready, isolated, licensed and includes edita
   const files = unzipSync(
     await readFile(
       new URL(
-        '../../packages/wordpress/dist/pagesquire-0.1.0-alpha.0.zip',
+        '../../packages/wordpress/dist/pagesquire-0.1.0-beta.0.zip',
         import.meta.url,
       ),
     ),

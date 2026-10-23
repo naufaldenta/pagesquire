@@ -2,7 +2,7 @@
 
 The owner authorized the public development repository [naufaldenta/pagesquire](https://github.com/naufaldenta/pagesquire). Account access, repository creation and enabled private vulnerability reporting were verified on 2026-10-20. npm, Packagist and WordPress.org are explicitly deferred. The local release tooling does not create credentials, repositories, tags or releases; repository setup was a separate owner-authorized action.
 
-The current version is **0.1.0-alpha.0**, not 1.0. Package namespaces are provisional. Never remove `private: true` merely to share GitHub downloads; [npm documents this as a publication guard](https://docs.npmjs.com/cli/v11/configuring-npm/package-json/#private).
+The current version is **0.1.0-beta.0**, not 1.0. Package namespaces are provisional. Never remove `private: true` merely to share GitHub downloads; [npm documents this as a publication guard](https://docs.npmjs.com/cli/v11/configuring-npm/package-json/#private).
 
 ## Local candidate workflow
 
@@ -34,21 +34,21 @@ New manifests record `channel` and beta readiness alongside source/gates. The ve
 
 ### WordPress
 
-Upload only `pagesquire-0.1.0-alpha.0.zip` in **Plugins → Add New → Upload Plugin**. No user-side build is required. Follow the [WordPress guide](../packages/wordpress/README.md). Keep bundled GPL/MIT/Apache notices and `corresponding-source.zip`; do not replace it with an unrelated GitHub auto-generated archive. [WordPress's guidelines](https://developer.wordpress.org/plugins/wordpress-org/detailed-plugin-guidelines/) require compatible licensing and access to readable sources/build tools. Directory submission is a separate future workflow, not a side effect of a GitHub release.
+Upload only `pagesquire-0.1.0-beta.0.zip` in **Plugins → Add New → Upload Plugin**. No user-side build is required. Follow the [WordPress guide](../packages/wordpress/README.md). Keep bundled GPL/MIT/Apache notices and `corresponding-source.zip`; do not replace it with an unrelated GitHub auto-generated archive. [WordPress's guidelines](https://developer.wordpress.org/plugins/wordpress-org/detailed-plugin-guidelines/) require compatible licensing and access to readable sources/build tools. Directory submission is a separate future workflow, not a side effect of a GitHub release.
 
 ### JavaScript/TypeScript
 
 Download the candidate's tarballs into a directory, then install required PageSquire dependencies together using local file paths. For example, a browser client needs these three tarballs:
 
 ```sh
-npm install ./pagesquire-protocol-0.1.0-alpha.0.tgz ./pagesquire-core-0.1.0-alpha.0.tgz ./pagesquire-client-0.1.0-alpha.0.tgz
+npm install ./pagesquire-protocol-0.1.0-beta.0.tgz ./pagesquire-core-0.1.0-beta.0.tgz ./pagesquire-client-0.1.0-beta.0.tgz
 ```
 
 React additionally needs the React tarball and a compatible React peer. The CLI needs its tarball plus core/protocol; Node server needs its tarball plus protocol. Install all six together when following the complete demo. These are file installs, not `npm install @pagesquire/...` registry availability claims. Normal third-party dependencies may require internet/cache. Follow the [runtime](runtime.md), [onboarding](onboarding.md) and [Node/Next.js](node-next.md) guides.
 
 ### Standalone PHP and Laravel
 
-Extract `pagesquire-server-0.1.0-alpha.0.zip` and, for Laravel, `pagesquire-laravel-0.1.0-alpha.0.zip` outside the web root. They contain directories `pagesquire-server` and `pagesquire-laravel`. Merge the supplied `composer-repositories.json` fragment into the **host application's root** `composer.json`; adjust the relative paths to these extracted directories. For standalone PHP use only the server repository/require entry. Preserve your application's existing entries; do not replace its entire file.
+Extract `pagesquire-server-0.1.0-beta.0.zip` and, for Laravel, `pagesquire-laravel-0.1.0-beta.0.zip` outside the web root. They contain directories `pagesquire-server` and `pagesquire-laravel`. Merge the supplied `composer-repositories.json` fragment into the **host application's root** `composer.json`; adjust the relative paths to these extracted directories. For standalone PHP use only the server repository/require entry. Preserve your application's existing entries; do not replace its entire file.
 
 The fragment supplies explicit path-package versions and disables symlinks. Source manifests retain the local alpha's `@dev` internal constraint; do not mistake this for a tagged Packagist release. Run the host's normal Composer update/install and follow [standalone PHP](standalone-php.md) or [Laravel](laravel-react.md). [Composer documents root-only repositories and versioned path packages](https://getcomposer.org/doc/05-repositories.md#path). The monorepo root is a development workspace, not the server/adapter package; do not submit it as one package to Packagist.
 

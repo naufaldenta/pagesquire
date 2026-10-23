@@ -2,7 +2,11 @@
 
 All canonical release notes are English. PageSquire uses SemVer for packages and separately versioned protocol contracts. Nothing listed here implies that an artifact has been published.
 
-## Unreleased — 0.1.0-alpha.0 candidate
+## Unreleased — 0.1.0-beta.0 candidate
+
+### Changed
+
+- Owner-approved beta-candidate version after a successful owner-run Kabarin integration report. Package, lockfile, CLI and WordPress versions are synchronized without changing protocol or storage formats, dependencies, permissions or publication guards. The separate quota-protected Kabarin demo is linked. Independent onboarding, candidate-specific reviews and final-commit checks remain gates; no beta tag/download, stable API or registry publication is claimed.
 
 ### Added
 

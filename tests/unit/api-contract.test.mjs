@@ -80,7 +80,12 @@ test('API review matches the explicit current baseline without claiming a frozen
   assert.equal(result.status, 'review-baseline-not-frozen');
   assert.ok(result.entries > 50);
   const baseline = await captureApi();
-  assert.equal(baseline.packageVersion, '0.1.0-alpha.0');
+  assert.equal(
+    baseline.packageVersion,
+    JSON.parse(
+      await readFile(new URL('../../package.json', import.meta.url), 'utf8'),
+    ).version,
+  );
   assert.ok(baseline.files['packages/server/dist/privacy.d.ts']);
 });
 

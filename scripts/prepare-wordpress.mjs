@@ -107,7 +107,7 @@ for (const theme of ['pagesquire-fixture', 'pagesquire-ambiguous'])
   );
 const plugin = path.join(
   root,
-  'packages/wordpress/dist/pagesquire-0.1.0-alpha.0.zip',
+  'packages/wordpress/dist/pagesquire-0.1.0-beta.0.zip',
 );
 await wpcli(['plugin', 'install', plugin, '--force', '--activate']);
 await wpcli(['eval-file', path.join(root, 'examples/wordpress/seed.php')]);

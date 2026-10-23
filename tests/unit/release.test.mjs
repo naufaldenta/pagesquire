@@ -251,10 +251,19 @@ test('demo build creates absent output directories on a clean checkout and remai
 });
 async function fixture(t) {
   const root = await temporary(t);
+  const version = JSON.parse(
+    await readFile(path.join(projectRoot, 'package.json'), 'utf8'),
+  ).version;
   for (const [name, bytes] of await collectDistributionSources(projectRoot)) {
     await mkdir(path.dirname(path.join(root, name)), { recursive: true });
-    await writeFile(path.join(root, name), bytes);
+    const data = /\.(json|md|php|txt)$/.test(name)
+      ? Buffer.from(bytes.toString('utf8').replaceAll(version, '0.1.0-alpha.0'))
+      : bytes;
+    await writeFile(path.join(root, name), data);
   }
+  await mutateJson(root, 'release.config.json', (item) => {
+    item.channel = 'github-alpha';
+  });
   return root;
 }
 async function mutateJson(root, name, mutate) {
@@ -532,7 +541,7 @@ test('beta version cannot disguise itself as the alpha channel or assert evidenc
   assert.ok(result.gates.includes('beta.externalOnboarding'));
 });
 
-test('beta readiness CLI is read-only, offline and fails while current alpha gates remain open', async () => {
+test('beta readiness CLI is read-only, offline and fails while current candidate gates remain open', async () => {
   const before = await readFile(path.join(projectRoot, 'release.config.json'));
   const result = spawnSync(
     process.execPath,
@@ -544,7 +553,10 @@ test('beta readiness CLI is read-only, offline and fails while current alpha gat
   assert.equal(report.valid, true);
   assert.equal(report.beta.ready, false);
   assert.ok(report.beta.gates.includes('beta.externalOnboarding'));
-  assert.ok(report.beta.gates.includes('betaVersionRequired'));
+  assert.equal(
+    report.beta.gates.includes('betaVersionRequired'),
+    !report.version.includes('-beta.'),
+  );
   assert.deepEqual(
     await readFile(path.join(projectRoot, 'release.config.json')),
     before,

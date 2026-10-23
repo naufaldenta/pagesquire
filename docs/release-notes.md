@@ -1,6 +1,6 @@
-# PageSquire 0.1.0-alpha.0 — local release candidate
+# PageSquire 0.1.0-beta.0 — development beta candidate
 
-This is a GitHub-first alpha candidate, not a published release or stable 1.0. The owner-authorized development repository is [naufaldenta/pagesquire](https://github.com/naufaldenta/pagesquire). Private vulnerability reporting is enabled there. Source publication is distinct from a tagged release or registry publication.
+This is an owner-approved GitHub-first beta source candidate, not a tagged/published beta release or stable 1.0. The owner-assisted Kabarin trial succeeded, but independent onboarding and final-candidate reviews remain pending; see [beta evidence and gates](beta.md). The owner-authorized development repository is [naufaldenta/pagesquire](https://github.com/naufaldenta/pagesquire). Private vulnerability reporting is enabled there. Source publication is distinct from a tagged release or registry publication.
 
 ## Included
 

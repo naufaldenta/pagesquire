@@ -12,7 +12,7 @@ An opt-in assistant for a small, owner-approved set of public pages. This alpha 
 
 - WordPress 7.1+, PHP 8.3+, JSON, mbstring and sodium for dashboard key storage.
 - HTTPS in production; an OpenAI-compatible HTTPS JSON chat provider.
-- Install `pagesquire-0.1.0-alpha.0.zip` through **Plugins → Add Plugin → Upload Plugin**, activate it, then open **PageSquire**.
+- Install `pagesquire-0.1.0-beta.0.zip` through **Plugins → Add Plugin → Upload Plugin**, activate it, then open **PageSquire**.
 - Configure provider-side spending limits. Public access is disabled by default.
 
 ## Five-step onboarding
