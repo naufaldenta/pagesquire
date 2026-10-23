@@ -4,6 +4,8 @@
 
 PageSquire is an open-source foundation for assistants that help people navigate and use websites through registered, verified capabilities.
 
+**Current version: `0.1.0-beta.0` — beta testing.**
+
 ## Live demos
 
 Try PageSquire on two live websites. Visitors never need to enter a provider API key.
@@ -34,7 +36,7 @@ B2 adds [reproducible model evaluation](docs/model-evaluation.md): the owner's c
 
 ## Current status
 
-This repository implements the F0/F1 foundation, F2 Laravel/React alpha, F3 hybrid onboarding, F4 standalone PHP/Node/Next.js integration, and F5 WordPress plugin. It is an early development preview, not a production-ready autonomous assistant.
+PageSquire **0.1.0-beta.0** is in beta testing, not a production-ready autonomous assistant. This repository implements the F0/F1 foundation, F2 Laravel/React integration, F3 hybrid onboarding, F4 standalone PHP/Node/Next.js integration, and F5 WordPress plugin.
 
 Implemented:
 
@@ -60,7 +62,7 @@ Optional local-first speech is available; a bundled Rive renderer/artwork and ho
 
 The development repository is [naufaldenta/pagesquire](https://github.com/naufaldenta/pagesquire). F6 adds GitHub-first release preparation; no tagged release or registry package has been published. Package names remain provisional, private and unreserved on npm/Packagist. See [tested compatibility](docs/compatibility.md), [release/download instructions](docs/releasing.md), [changelog](CHANGELOG.md) and [contributing](CONTRIBUTING.md).
 
-B5 adds [guarded public-beta preparation](docs/beta.md), alpha/beta-aware candidate tooling and an [independent tester feedback template](.github/ISSUE_TEMPLATE/beta_feedback.md). The owner-approved development version is now **0.1.0-beta.0**, a **beta candidate for testing**, not a published/tagged beta release. The owner reports successful AI-assisted Kabarin integration; independent-user acceptance remains pending. Run `npm run release:check -- --beta` to inspect the remaining gates: it must still fail until actual reviews and final-candidate evidence are complete. No API freeze, stable support or registry availability is implied.
+B5 adds [guarded public-beta preparation](docs/beta.md), prerelease-aware candidate tooling and an [independent tester feedback template](.github/ISSUE_TEMPLATE/beta_feedback.md). The owner-approved development version is now **0.1.0-beta.0**, a **beta candidate for testing**, not a published/tagged beta release. The owner reports successful AI-assisted Kabarin integration; independent-user acceptance remains pending. Run `npm run release:check -- --beta` to inspect the remaining gates: it must still fail until actual reviews and final-candidate evidence are complete. No API freeze, stable support or registry availability is implied.
 
 R1 local foundations add an [API inventory and drift baseline](docs/api-contract.md), [upgrade/recovery guidance](docs/upgrading.md) and [maintenance policy](docs/maintenance.md). `npm run api:check` requires a build and flags changes for review; it does not freeze the API, prove historical-release upgrades or enable RC/stable publication.
 
@@ -110,7 +112,7 @@ Review the installed guidance and invoke `$assistant-setup` in Codex or `/assist
 
 ## Verification commands
 
-Before exposing inference publicly, review the [security and operations runbook](docs/operations.md): incident containment, safe lock recovery, durable budgets and server-only transcript erasure. These alpha procedures do not certify production hosting or live-model prompt-injection resistance.
+Before exposing inference publicly, review the [security and operations runbook](docs/operations.md): incident containment, safe lock recovery, durable budgets and server-only transcript erasure. These procedures do not certify production hosting or live-model prompt-injection resistance.
 
 ```sh
 npm exec -- playwright install chromium
@@ -167,7 +169,7 @@ Conversation history lives in widget memory and server storage with a fixed expi
 
 Canonical documentation, setup guidance, source comments, examples, and generated integration reports are written in English. Future runtime interfaces and assistant conversations remain localizable.
 
-## WordPress alpha
+## WordPress beta
 
 Build with `npm run build` after installing workspace dependencies, then upload `packages/wordpress/dist/pagesquire-0.1.0-beta.0.zip`. Hosting users need only WordPress 7.1+, PHP 8.3+ and production HTTPS, not Node.js or Composer. The disabled-by-default dashboard guides provider configuration, selected public pages, actual frontend adapter checks, optional `$assistant-setup` / `/assistant-setup` handoff and explicit access/consent approval. Imports accept only closed built-in adapter configuration. Read the [WordPress guide](packages/wordpress/README.md) before enabling; no universal theme/plugin compatibility is claimed.
 
