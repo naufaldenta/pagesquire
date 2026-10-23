@@ -4,7 +4,7 @@ Tags: assistant, accessibility, ai
 Requires at least: 7.1
 Tested up to: 7.1
 Requires PHP: 8.3
-Stable tag: 0.1.0-alpha.0
+Stable tag: 0.1.0-beta.0
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -34,5 +34,5 @@ No. Only a closed JSON mapping for the current origin and built-in adapter IDs i
 
 == Changelog ==
 
-= 0.1.0-alpha.0 =
+= 0.1.0-beta.0 =
 Initial local F5 implementation. Not yet published to the WordPress.org directory.

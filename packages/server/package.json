@@ -1,6 +1,6 @@
 {
   "name": "@pagesquire/server",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-beta.0",
   "private": true,
   "description": "Server-owned PageSquire conversations and secure Node Web Request integration.",
   "type": "module",
@@ -19,7 +19,7 @@
     }
   },
   "dependencies": {
-    "@pagesquire/protocol": "0.1.0-alpha.0",
+    "@pagesquire/protocol": "0.1.0-beta.0",
     "ajv": "8.20.0"
   }
 }

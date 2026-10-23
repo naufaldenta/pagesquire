@@ -1,6 +1,6 @@
 {
   "name": "@pagesquire/client",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-beta.0",
   "private": true,
   "description": "PageSquire conversation client and accessible chat widget.",
   "type": "module",
@@ -17,7 +17,7 @@
     "./widget.css": "./dist/widget.css"
   },
   "dependencies": {
-    "@pagesquire/core": "0.1.0-alpha.0",
-    "@pagesquire/protocol": "0.1.0-alpha.0"
+    "@pagesquire/core": "0.1.0-beta.0",
+    "@pagesquire/protocol": "0.1.0-beta.0"
   }
 }

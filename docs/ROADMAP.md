@@ -2,6 +2,10 @@
 
 PageSquire is the selected project name. This repository begins the roadmap designed with the JDIH pilot as an architectural reference. All canonical guides are English; runtime localization remains configurable.
 
+## Current development status — 2026-10-24
+
+The owner approved `0.1.0-beta.0` as a source/testing candidate after an owner-assisted Kabarin integration. The separate [public Kabarin demo](https://pagesquire-kabarin-demo.vercel.app/) records its own upstream revision and applies shared daily AI quotas. See [the acceptance record](beta.md): this is not independent B3 acceptance, a published/tagged beta release, stable support or broad provider certification. Beta/publication gates remain enforced. Milestone notes below describe the historical alpha work and do not override the current readiness report.
+
 | Stage | Scope                                                                                  | Current status                                                                                                        |
 | ----- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | F0    | Local identity, independent source, MIT foundation, workspace, contract fixtures       | Implemented locally; public namespaces and release registration remain pending                                        |

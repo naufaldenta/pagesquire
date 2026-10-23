@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "channel": "github-alpha",
+  "channel": "github-beta",
   "repository": { "owner": "naufaldenta", "name": "pagesquire" },
   "publication": {
     "repositoryCreated": true,
@@ -10,7 +10,7 @@
     "ownerApprovedRelease": false
   },
   "beta": {
-    "externalOnboarding": { "approved": false, "evidence": [] },
+    "externalOnboarding": { "approved": false, "evidence": ["docs/beta.md"] },
     "supportScopeReviewed": {
       "approved": false,
       "evidence": ["docs/compatibility.md", "docs/model-evaluation.md"]

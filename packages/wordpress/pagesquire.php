@@ -3,7 +3,7 @@
 /**
  * Plugin Name: PageSquire — AI Website Assistant
  * Description: Guided, verified website actions with explicit scope, private context export and server-owned conversations.
- * Version: 0.1.0-alpha.0
+ * Version: 0.1.0-beta.0
  * Requires at least: 7.1
  * Requires PHP: 8.3
  * License: GPL-3.0-or-later

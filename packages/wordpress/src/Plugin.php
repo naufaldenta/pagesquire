@@ -23,8 +23,8 @@ final class Plugin
         });
         add_action('admin_enqueue_scripts', function (string $hook): void {
             if ($hook === 'toplevel_page_pagesquire' && current_user_can('manage_options')) {
-                wp_enqueue_style('pagesquire-admin', plugins_url('assets/plugin.css', $this->file), [], '0.1.0-alpha.0');
-                wp_enqueue_script('pagesquire-admin', plugins_url('assets/admin.js', $this->file), [], '0.1.0-alpha.0', true);
+                wp_enqueue_style('pagesquire-admin', plugins_url('assets/plugin.css', $this->file), [], '0.1.0-beta.0');
+                wp_enqueue_script('pagesquire-admin', plugins_url('assets/admin.js', $this->file), [], '0.1.0-beta.0', true);
             }
         });
         add_action('wp_enqueue_scripts', $this->frontend(...));
@@ -221,9 +221,9 @@ final class Plugin
         if (! $inspect && (! $settings['enabled'] || ! $settings['consent'] || ! Settings::canUse($settings) || Settings::key() === '' || Context::gaps($settings) !== [])) {
             return;
         }
-        wp_enqueue_style('pagesquire-widget', plugins_url('assets/widget.css', $this->file), [], '0.1.0-alpha.0');
-        wp_enqueue_style('pagesquire-site', plugins_url('assets/plugin.css', $this->file), ['pagesquire-widget'], '0.1.0-alpha.0');
-        wp_enqueue_script('pagesquire-site', plugins_url('assets/frontend.js', $this->file), [], '0.1.0-alpha.0', true);
+        wp_enqueue_style('pagesquire-widget', plugins_url('assets/widget.css', $this->file), [], '0.1.0-beta.0');
+        wp_enqueue_style('pagesquire-site', plugins_url('assets/plugin.css', $this->file), ['pagesquire-widget'], '0.1.0-beta.0');
+        wp_enqueue_script('pagesquire-site', plugins_url('assets/frontend.js', $this->file), [], '0.1.0-beta.0', true);
         $config = ['rest' => rest_url('pagesquire/v1/'), 'nonce' => is_user_logged_in() ? wp_create_nonce('wp_rest') : '', 'origin' => Settings::origin(), 'inspect' => $inspect, 'pageId' => $pageId, 'pages' => Context::pages($settings), 'mapping' => $settings['mapping'], 'fingerprint' => Context::fingerprint($settings), 'assistantName' => $settings['assistantName']];
         add_action('wp_footer', function () use ($config): void {
             echo '<div id="pagesquire-widget" data-pagesquire-root></div>';

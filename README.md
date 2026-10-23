@@ -48,7 +48,9 @@ Optional local-first speech is available; a bundled Rive renderer/artwork and ho
 
 The development repository is [naufaldenta/pagesquire](https://github.com/naufaldenta/pagesquire). F6 adds GitHub-first release preparation; no tagged release or registry package has been published. Package names remain provisional, private and unreserved on npm/Packagist. See [tested compatibility](docs/compatibility.md), [release/download instructions](docs/releasing.md), [changelog](CHANGELOG.md) and [contributing](CONTRIBUTING.md).
 
-B5 adds [guarded public-beta preparation](docs/beta.md), alpha/beta-aware candidate tooling and an [independent tester feedback template](.github/ISSUE_TEMPLATE/beta_feedback.md). Run `npm run release:check -- --beta` to see the remaining gates; it deliberately fails while readiness is incomplete. The current version remains **0.1.0-alpha.0**. Local archives and a beta-capable tool do not mean a public beta exists.
+B5 adds [guarded public-beta preparation](docs/beta.md), alpha/beta-aware candidate tooling and an [independent tester feedback template](.github/ISSUE_TEMPLATE/beta_feedback.md). The owner-approved development version is now **0.1.0-beta.0**, a **beta candidate for testing**, not a published/tagged beta release. The owner reports successful AI-assisted Kabarin integration; independent-user acceptance remains pending. Run `npm run release:check -- --beta` to inspect the remaining gates: it must still fail until actual reviews and final-candidate evidence are complete. No API freeze, stable support or registry availability is implied.
+
+Try the separate [Kabarin integration demo](https://pagesquire-kabarin-demo.vercel.app/) ([source](https://github.com/naufaldenta/pagesquire-kabarin-demo)). Its no-password public AI uses shared PostgreSQL daily network/site quotas. Private windows do not reset the network allowance; shared networks share it and VPN/network changes remain a limitation. The demo's recorded upstream commit is authoritative: changing PageSquire's version does not silently upgrade a deployed host.
 
 R1 local foundations add an [API inventory and drift baseline](docs/api-contract.md), [upgrade/recovery guidance](docs/upgrading.md) and [maintenance policy](docs/maintenance.md). `npm run api:check` requires a build and flags changes for review; it does not freeze the API, prove historical-release upgrades or enable RC/stable publication.
 
@@ -157,7 +159,7 @@ Canonical documentation, setup guidance, source comments, examples, and generate
 
 ## WordPress alpha
 
-Build with `npm run build` after installing workspace dependencies, then upload `packages/wordpress/dist/pagesquire-0.1.0-alpha.0.zip`. Hosting users need only WordPress 7.1+, PHP 8.3+ and production HTTPS, not Node.js or Composer. The disabled-by-default dashboard guides provider configuration, selected public pages, actual frontend adapter checks, optional `$assistant-setup` / `/assistant-setup` handoff and explicit access/consent approval. Imports accept only closed built-in adapter configuration. Read the [WordPress guide](packages/wordpress/README.md) before enabling; no universal theme/plugin compatibility is claimed.
+Build with `npm run build` after installing workspace dependencies, then upload `packages/wordpress/dist/pagesquire-0.1.0-beta.0.zip`. Hosting users need only WordPress 7.1+, PHP 8.3+ and production HTTPS, not Node.js or Composer. The disabled-by-default dashboard guides provider configuration, selected public pages, actual frontend adapter checks, optional `$assistant-setup` / `/assistant-setup` handoff and explicit access/consent approval. Imports accept only closed built-in adapter configuration. Read the [WordPress guide](packages/wordpress/README.md) before enabling; no universal theme/plugin compatibility is claimed.
 
 ## Contributing and license
 

@@ -22,7 +22,7 @@ Conversation files contain plaintext server-side transcripts/results. Keep them 
 
 Report vulnerabilities privately through [GitHub private vulnerability reporting](https://github.com/naufaldenta/pagesquire/security/advisories/new). Repository creation and enabled reporting were verified through GitHub's API on 2026-10-20; no fake report was submitted. Include affected version/commit, a minimal synthetic reproduction, impact and suggested mitigation if available. Never post exploit details, live credentials or visitor data in public issues. If GitHub reporting is unavailable, open only a neutral request for a private contact, without sensitive details; no fallback email is configured.
 
-No published release currently has a security-support commitment. The only candidate is `0.1.0-alpha.0`; other versions and production deployments are unsupported/unverified. Review the [compatibility matrix](docs/compatibility.md). Security fixes will be documented in English release notes with affected/fixed versions once a reporting and release process is operational; no response-time or backport guarantee is established.
+No published release currently has a security-support commitment. The only candidate is `0.1.0-beta.0`; other versions and production deployments are unsupported/unverified. Review the [compatibility matrix](docs/compatibility.md). Security fixes will be documented in English release notes with affected/fixed versions once a reporting and release process is operational; no response-time or backport guarantee is established.
 
 ## WordPress alpha
 

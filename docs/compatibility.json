@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "release": "0.1.0-alpha.0",
+  "release": "0.1.0-beta.0",
   "evidenceDate": "2026-10-20",
   "environment": {
     "os": "Windows",

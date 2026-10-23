@@ -1,6 +1,12 @@
 # Public beta preparation
 
-PageSquire is still **0.1.0-alpha.0**. B5 tooling can validate future `0.x.y-beta.n` candidates, but no beta tag, download or public-beta certification is claimed. Independent B3 acceptance and final-candidate CI/reviews are pending. Installing the development branch is not installing a published beta.
+The owner approved **0.1.0-beta.0 as a development beta candidate** on 2026-10-24 after reporting a successful Kabarin integration. This is a source/testing status, not a published beta tag, download, independent acceptance or stable-support certification. Independent B3 acceptance and final-candidate CI/reviews remain pending. Installing the development branch is not installing a published beta release.
+
+## Owner-assisted acceptance record (2026-10-24)
+
+The owner explicitly confirmed that the successful trial was performed by the owner with a coding agent, not an independent website owner. The separate [Kabarin source](https://github.com/naufaldenta/pagesquire-kabarin-demo) records upstream commit `2e91675605156c73c0a5f553086fec5996573d82`, five selected packages and thirteen registered capabilities. The host integrates cursor driving, scoped reading, action progress, public context and a Node/Vercel/PostgreSQL adapter; it also retains a local PHP path. This is one owner-assisted integration report, not acceptance of all framework/model combinations or a no-core-edit independent trial. No private project exports, keys or raw transcripts are included here.
+
+The [public demo](https://pagesquire-kabarin-demo.vercel.app/) applies a host-owned network quota of five new messages/day and separate site/provider caps. This does not turn an anonymous IP into a verified user or certify production security. The demo provenance remains at its recorded upstream revision until explicitly upgraded/tested. `beta.externalOnboarding.approved` intentionally remains false. Support/security/publication approvals are not inferred from the owner's successful trial, a running demo or this version change. No tag/release/assets/registries are published by updating these files.
 
 ## What beta will mean
 

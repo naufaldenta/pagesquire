@@ -1,6 +1,6 @@
 {
   "name": "@pagesquire/cli",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-beta.0",
   "private": true,
   "description": "Local hybrid onboarding and explicit discovery for PageSquire.",
   "type": "module",
@@ -22,8 +22,8 @@
     }
   },
   "dependencies": {
-    "@pagesquire/protocol": "0.1.0-alpha.0",
-    "@pagesquire/core": "0.1.0-alpha.0",
+    "@pagesquire/protocol": "0.1.0-beta.0",
+    "@pagesquire/core": "0.1.0-beta.0",
     "ajv": "8.20.0",
     "esbuild": "0.28.2",
     "@babel/parser": "8.0.7"
