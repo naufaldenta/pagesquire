@@ -38,7 +38,7 @@ Defaults: 12 server rounds, 60-second conversation timeout, 4,000-character mess
 
 The client accepts one action per unfinished response, binds it to the current snapshot, and uses `BrowserRuntime.execute`. Tool-proposal narration is never shown as completed work. Failed/unverified results cannot trigger another browser action. The HTTP transport enforces same-origin POST, credentials, CSRF, redirect refusal, sanitized failures, and a 192-KiB response cap. Chat/page text uses `textContent`, never HTML.
 
-The widget has a labeled input, live conversation log, status, keyboard cancellation with Escape, explicit Stop/New conversation controls, and focus restoration. The supplied CSS is external for restrictive CSPs and is scoped to `.pagesquire-widget`. Screen-reader testing remains a release gate. Localize custom UI via the client API; built-in control labels are English in this alpha.
+The widget has a labeled input, live conversation log, status, keyboard cancellation with Escape, explicit Stop/New conversation controls, and focus restoration. The supplied CSS is external for restrictive CSPs and is scoped to `.pagesquire-widget`. Screen-reader testing remains a release gate. Localize custom UI via the client API; built-in control labels are English in this beta.
 
 Browser abort does not guarantee that remote inference has stopped. Do not share a runtime between simultaneous clients. Do not store sensitive transcripts in localStorage.
 

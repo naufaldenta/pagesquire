@@ -1,6 +1,6 @@
 # @pagesquire/server
 
-Node.js 24 server-only PageSquire conversations, native HTTPS JSON provider transport, and Web Request/Response integration. Do not import this package into a browser/Client Component. The local alpha is private and unpublished.
+Node.js 24 server-only PageSquire conversations, native HTTPS JSON provider transport, and Web Request/Response integration. Do not import this package into a browser/Client Component. The beta package remains private and unpublished to npm.
 
 Use `new OpenAiCompatibleProvider(providerConfigurationFromEnv(process.env))` with server-only `PAGESQUIRE_PROVIDER`, `PAGESQUIRE_API_KEY` and `PAGESQUIRE_MODEL`; add `PAGESQUIRE_PROVIDER_URL` for custom/regional gateways. `listProviderPresets()` exposes public preset metadata for trusted setup interfaces. The existing explicit endpoint constructor remains compatible. See the [support matrix and Node/Next.js tutorial](https://github.com/naufaldenta/pagesquire/blob/main/docs/providers.md#node-and-nextjs) for all presets and explicit dialect controls. A transport preset is not live-model certification.
 

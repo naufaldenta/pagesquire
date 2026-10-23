@@ -1,6 +1,6 @@
 # @pagesquire/cli
 
-Local PageSquire F3 onboarding for Node.js 24+. Static commands need no model, cloud account, API key or project-code execution. They do not install website dependencies or publish anything. The package is an unpublished alpha; use the checkout or local tarballs, not a public npm download command.
+Local PageSquire F3 onboarding for Node.js 24+. Static commands need no model, cloud account, API key or project-code execution. They do not install website dependencies or publish anything. The package is an unpublished beta candidate; use the checkout or local tarballs, not a public npm download command.
 
 From the PageSquire checkout:
 
@@ -41,7 +41,7 @@ Only control metadata, stable selector hints, ambiguity counts and heading count
 
 Init creates `pagesquire.config.json`, `pagesquire/capabilities.json`, `pagesquire/bindings.json`, and `pagesquire/adapter.mjs`. The manifest is empty by default. Scans/reports live in `.pagesquire/`; generated browser files live under `pagesquire/generated/` by default. Skill installation touches only the selected project's `.agents/skills/assistant-setup/` and/or `.claude/skills/assistant-setup/`. Existing instructions, application files, dependencies and secrets remain untouched.
 
-Conflicting files and project symlinks/junctions are refused; there is no force-overwrite switch. Identical installations are idempotent. Reports and generated files can replace only positively identified PageSquire artifacts. Filesystem changes are bounded, but simultaneous hostile filesystem edits are outside this alpha's threat model; use a trusted local checkout.
+Conflicting files and project symlinks/junctions are refused; there is no force-overwrite switch. Identical installations are idempotent. Reports and generated files can replace only positively identified PageSquire artifacts. Filesystem changes are bounded, but simultaneous hostile filesystem edits are outside this prerelease's threat model; use a trusted local checkout.
 
 Static scans cap source inputs at 500 files, 256 KiB/file, 8 MiB total, 3,000 directory entries and 1,000 candidates. Standard dependency/build/private/config/storage/upload/backup/hidden locations and sensitive filename patterns are excluded. A source file containing PageSquire private/ignore/root annotations is conservatively omitted from candidate extraction. Scripts, route commands and package hooks are never run. Static candidates can be false positives; disabled/hidden branches cannot be fully understood from source alone.
 

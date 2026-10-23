@@ -43,7 +43,7 @@ Gate::define('pagesquire.capability', fn (?User $user, string $id): bool => in_a
 ], true));
 ```
 
-Adapt the principal type and conditions to the host application. Authenticated workflows should use the application's own policies. Consequential capabilities are blocked by the alpha engine even if a gate approves them. Browser action evidence is untrusted client telemetry; it is not authorization for business mutations.
+Adapt the principal type and conditions to the host application. Authenticated workflows should use the application's own policies. Consequential capabilities are blocked by the engine even if a gate approves them. Browser action evidence is untrusted client telemetry; it is not authorization for business mutations.
 
 ## Endpoint and browser integration
 

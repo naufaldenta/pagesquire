@@ -6,7 +6,7 @@ The shared rebuilt engine accepts optional [public app context](../../docs/app-c
 
 The built-in adapter now presents registered actions using an optional-motion cursor/outline. Three additional opt-in capabilities (`page.read`, `page.scroll_to`, `page.highlight`) target only the approved content root with scope `content`. Defaults still enable only the original three accessibility controls. Select new capabilities, rerun inspection on every selected public page, review consent and explicitly enable. Inspection uploads counts and verified IDs, not article text. See [assistant driving and custom-control boundaries](../../docs/assistant-driving.md); third-party accessibility UI, Rive assets and cloud TTS are not bundled.
 
-An opt-in assistant for a small, owner-approved set of public pages. This alpha plugin ships prebuilt JavaScript, compiled validators and isolated PHP dependencies. Hosting users do not need Node.js or Composer. It does not train a model or understand every theme/plugin automatically.
+An opt-in assistant for a small, owner-approved set of public pages. This beta plugin ships prebuilt JavaScript, compiled validators and isolated PHP dependencies. Hosting users do not need Node.js or Composer. It does not train a model or understand every theme/plugin automatically.
 
 ## Requirements and installation
 
@@ -54,4 +54,4 @@ Lock ownership uses prepared `INSERT IGNORE` against WordPress's unique option-n
 
 From the PageSquire repository root: `npm ci`, `composer install`, `npm run build`, `npm run build:wordpress`. The build downloads a pinned, SHA-256-verified PHP-Scoper tool into ignored `.cache/`; bundled dependencies are namespace-isolated from other plugins. Plugin sources, shared library sources, generated source maps and license notices are available in the repository/distribution. Run `npm run test:wordpress` for the isolated WordPress/SQLite fixture. It downloads official, pinned WordPress 7.1.3, SQLite Database Integration 3.1.0 and verified WP-CLI 2.12.0, installs the real ZIP, and uses synthetic accounts/content only. Never deploy `examples/wordpress` or the test fixture.
 
-The WordPress package is GPL-3.0-or-later. Shared PageSquire packages remain MIT. The nested `corresponding-source.zip` contains the editable project and build/test sources; extract it outside the web root to rebuild. See `THIRD-PARTY.md` and the accompanying licenses. This local alpha has not been published to WordPress.org or certified against a live AI provider.
+The WordPress package is GPL-3.0-or-later. Shared PageSquire packages remain MIT. The nested `corresponding-source.zip` contains the editable project and build/test sources; extract it outside the web root to rebuild. See `THIRD-PARTY.md` and the accompanying licenses. This beta candidate has not been published to WordPress.org or certified against a live AI provider.
