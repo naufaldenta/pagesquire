@@ -4,7 +4,19 @@
 
 PageSquire is an open-source foundation for assistants that help people navigate and use websites through registered, verified capabilities.
 
-## Live demo
+## Live demos
+
+Try PageSquire on two live websites. Visitors never need to enter a provider API key.
+
+### Kabarin — news portal
+
+[Open Kabarin](https://pagesquire-kabarin-demo.vercel.app/) · [Source and setup](https://github.com/naufaldenta/pagesquire-kabarin-demo)
+
+Explore an Indonesian news portal with assistant-driven navigation, article reading/summaries, search, bookmarks, reading preferences, an animated cursor, guided tours and factual action progress. **No password is required. Public AI allows up to 5 new messages per IP/network per day**, resetting at 00:00 UTC / 07:00 WIB, with separate site-wide and model-call limits. Local guided shortcuts do not use paid AI.
+
+Quotas are enforced server-side in Supabase PostgreSQL using keyed network hashes. Private windows and new conversations do not reset the same network's allowance; shared networks share it, and VPN/network changes remain a limitation. Kabarin is a separately maintained, owner-assisted integration example: its recorded upstream commit identifies the installed PageSquire revision, not necessarily this repository's latest version.
+
+### OFFBEAT — art and culture playground
 
 [Try OFFBEAT — the PageSquire playground](https://pagesquire-offbeat-demo.vercel.app/)
 
@@ -49,8 +61,6 @@ Optional local-first speech is available; a bundled Rive renderer/artwork and ho
 The development repository is [naufaldenta/pagesquire](https://github.com/naufaldenta/pagesquire). F6 adds GitHub-first release preparation; no tagged release or registry package has been published. Package names remain provisional, private and unreserved on npm/Packagist. See [tested compatibility](docs/compatibility.md), [release/download instructions](docs/releasing.md), [changelog](CHANGELOG.md) and [contributing](CONTRIBUTING.md).
 
 B5 adds [guarded public-beta preparation](docs/beta.md), alpha/beta-aware candidate tooling and an [independent tester feedback template](.github/ISSUE_TEMPLATE/beta_feedback.md). The owner-approved development version is now **0.1.0-beta.0**, a **beta candidate for testing**, not a published/tagged beta release. The owner reports successful AI-assisted Kabarin integration; independent-user acceptance remains pending. Run `npm run release:check -- --beta` to inspect the remaining gates: it must still fail until actual reviews and final-candidate evidence are complete. No API freeze, stable support or registry availability is implied.
-
-Try the separate [Kabarin integration demo](https://pagesquire-kabarin-demo.vercel.app/) ([source](https://github.com/naufaldenta/pagesquire-kabarin-demo)). Its no-password public AI uses shared PostgreSQL daily network/site quotas. Private windows do not reset the network allowance; shared networks share it and VPN/network changes remain a limitation. The demo's recorded upstream commit is authoritative: changing PageSquire's version does not silently upgrade a deployed host.
 
 R1 local foundations add an [API inventory and drift baseline](docs/api-contract.md), [upgrade/recovery guidance](docs/upgrading.md) and [maintenance policy](docs/maintenance.md). `npm run api:check` requires a build and flags changes for review; it does not freeze the API, prove historical-release upgrades or enable RC/stable publication.
 
