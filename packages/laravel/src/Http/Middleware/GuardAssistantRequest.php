@@ -33,7 +33,11 @@ final class GuardAssistantRequest
         }
 
         try {
-            return $next($request)->header('Cache-Control', 'no-store');
+            $response = $next($request);
+            // headers->set also covers streamed responses, which lack header().
+            $response->headers->set('Cache-Control', 'no-store');
+
+            return $response;
         } catch (HttpResponseException $exception) {
             return $exception->getResponse();
         } catch (Throwable) {

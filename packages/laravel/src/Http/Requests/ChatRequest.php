@@ -54,6 +54,18 @@ final class ChatRequest extends FormRequest
         }];
     }
 
+    /**
+     * The contract-validated JSON body. Global input middleware such as
+     * TrimStrings and ConvertEmptyStringsToNull rewrites validated() data,
+     * which would break empty titles, unlabeled targets and exact messages.
+     *
+     * @return array<string, mixed>
+     */
+    public function payload(): array
+    {
+        return json_decode($this->getContent(), true, 64, JSON_THROW_ON_ERROR);
+    }
+
     protected function failedValidation(Validator $validator): void
     {
         throw new HttpResponseException(response()->json(['error' => ['code' => 'INVALID_PAYLOAD', 'message' => 'The request does not match the PageSquire contract.']], 422)->header('Cache-Control', 'no-store'));

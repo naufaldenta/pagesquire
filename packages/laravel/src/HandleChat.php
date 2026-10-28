@@ -23,9 +23,10 @@ final class HandleChat
 
     /**
      * @param  array<string, mixed>  $input
+     * @param  (callable(string): void)|null  $onProgress  fixed server stages for a streamed response
      * @return array<string, mixed>
      */
-    public function handle(Request $request, array $input): array
+    public function handle(Request $request, array $input, ?callable $onProgress = null): array
     {
         $user = $request->user();
         $principal = $user === null ? 'guest' : hash('sha256', get_class($user).':'.(string) $user->getAuthIdentifier());
@@ -42,7 +43,7 @@ final class HandleChat
         $allowedIds = [];
 
         foreach ($this->catalog->manifest()['capabilities'] as $capability) {
-            if ($capability['risk'] !== 'consequential' && $this->gate->allows('pagesquire.capability', $capability['id'])) {
+            if (($capability['risk'] !== 'consequential' || (bool) $this->config->get('pagesquire.allow_consequential', false)) && $this->gate->allows('pagesquire.capability', $capability['id'])) {
                 $allowedIds[] = $capability['id'];
             }
         }
@@ -52,7 +53,10 @@ final class HandleChat
                 throw new AssistantException('STATE_STORAGE_UNAVAILABLE', 'The conversation could not be saved.', 503);
             }
         };
-        $outcome = $this->engine->handle($input, $state, $allowedIds, $checkpoint);
+        if ($onProgress !== null) {
+            $onProgress('accepted');
+        }
+        $outcome = $this->engine->handle($input, $state, $allowedIds, $checkpoint, $onProgress);
         $checkpoint($outcome['state']);
 
         return $outcome['reply'];

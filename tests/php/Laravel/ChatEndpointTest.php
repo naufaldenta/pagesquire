@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Gate;
 use Orchestra\Testbench\TestCase;
 use PageSquire\Laravel\HandleChat;
 use PageSquire\Laravel\PageSquireServiceProvider;
+use PageSquire\Server\ConversationEngine;
 use PageSquire\Server\Provider;
 
 final class ChatEndpointTest extends TestCase
@@ -42,6 +43,8 @@ final class ChatEndpointTest extends TestCase
         $this->assertContains('throttle:pagesquire', $route->gatherMiddleware());
         $this->assertGreaterThan(20, $route->locksFor());
         $this->postJson(route('pagesquire.chat'), $this->request())->assertForbidden()->assertJsonPath('error.code', 'ASSISTANT_DENIED')->assertHeader('Cache-Control', 'no-store, private');
+        // Without a signing key there is no site declaration for the companion extension.
+        $this->get('/.well-known/pagesquire.json')->assertNotFound();
     }
 
     public function test_a_verified_tool_loop_retains_server_state_and_rejects_a_wrong_call(): void
@@ -68,6 +71,92 @@ final class ChatEndpointTest extends TestCase
         $this->postJson(route('pagesquire.chat'), $continuation)->assertOk()->assertJsonPath('response.finished', true)->assertJsonPath('response.emotion', 'happy');
         $this->assertSame(2, $provider->calls);
         $this->assertIsArray($this->storedState()['engine']);
+    }
+
+    public function test_streamed_progress_is_opt_in_and_the_reply_arrives_after_validation(): void
+    {
+        $this->allow();
+        $this->provider([
+            ['text' => 'Unvalidated claim', 'emotion' => 'happy', 'finished' => false, 'toolCalls' => [['capabilityId' => 'accessibility.set_heading_color', 'parameters' => ['color' => '#ff0000']]]],
+        ]);
+        $response = $this->postJson(route('pagesquire.chat'), $this->request(), ['Accept' => 'application/x-ndjson, application/json;q=0.9'])->assertOk();
+        $this->assertStringStartsWith('application/x-ndjson', (string) $response->headers->get('Content-Type'));
+        $lines = array_map(static fn (string $line): array => json_decode($line, true, 64, JSON_THROW_ON_ERROR), explode('
+', trim($response->streamedContent())));
+        $this->assertSame(['accepted', 'thinking'], array_column(array_slice($lines, 0, 2), 'stage'));
+        $this->assertSame('reply', $lines[2]['type']);
+        $this->assertFalse($lines[2]['reply']['response']['finished']);
+        $this->assertStringNotContainsString('Unvalidated claim', $response->streamedContent());
+        $this->assertCount(3, $lines);
+    }
+
+    public function test_global_input_middleware_cannot_rewrite_the_contract_payload(): void
+    {
+        $this->allow();
+        $provider = $this->provider([['text' => 'Done.', 'emotion' => 'happy', 'finished' => true, 'toolCalls' => []]]);
+        $request = $this->request();
+        $request['message'] = '  Make the heading red.  ';
+        $request['snapshot']['title'] = '';
+        $request['snapshot']['text'] = '';
+        $request['snapshot']['targets'] = [['id' => 'icon-button', 'tag' => 'button', 'name' => '', 'role' => '', 'disabled' => false, 'actionable' => true]];
+        $this->postJson(route('pagesquire.chat'), $request)->assertOk()->assertJsonPath('response.finished', true);
+        $this->assertSame(1, $provider->calls);
+        $messages = $provider->received[0]['messages'];
+        $this->assertSame('  Make the heading red.  ', $messages[1]['content']);
+        $page = json_decode($messages[array_key_last($messages)]['content'], true, 64, JSON_THROW_ON_ERROR)['untrustedPage'];
+        $this->assertSame('', $page['title']);
+        $this->assertSame('', $page['targets'][0]['name']);
+    }
+
+    public function test_consequential_capabilities_need_the_explicit_config_flag_and_gate(): void
+    {
+        $this->allow();
+        Gate::define('pagesquire.capability', fn (?Authenticatable $user, string $id): bool => true);
+        $manifest = $this->manifest();
+        $dangerous = $manifest['capabilities'][0];
+        $dangerous['id'] = 'account.delete';
+        $dangerous['risk'] = 'consequential';
+        $manifest['capabilities'][] = $dangerous;
+        config()->set('pagesquire.manifest', $manifest);
+        $request = $this->request();
+        $request['capabilityIds'] = ['accessibility.set_heading_color', 'account.delete'];
+        $final = ['text' => 'Done.', 'emotion' => 'happy', 'finished' => true, 'toolCalls' => []];
+        $provider = $this->provider([$final, $final]);
+        $this->postJson(route('pagesquire.chat'), $request)->assertOk();
+        $this->assertSame(['accessibility.set_heading_color'], array_column($provider->received[0]['capabilities'], 'id'));
+        config()->set('pagesquire.allow_consequential', true);
+        $this->app->forgetInstance(ConversationEngine::class);
+        $request['requestId'] = 'second';
+        $this->withSession([]);
+        $this->postJson(route('pagesquire.chat'), $request)->assertOk();
+        $this->assertSame(['accessibility.set_heading_color', 'account.delete'], array_column($provider->received[1]['capabilities'], 'id'));
+    }
+
+    public function test_trajectory_cache_replays_a_verified_turn_for_a_new_session_without_the_provider(): void
+    {
+        $this->allow();
+        config()->set('pagesquire.trajectory_cache', ['enabled' => true, 'store' => 'array', 'ttl_seconds' => 60]);
+        $this->app->forgetInstance(ConversationEngine::class);
+        $provider = $this->provider([
+            ['text' => 'Checking.', 'emotion' => 'thinking', 'finished' => false, 'toolCalls' => [['capabilityId' => 'accessibility.set_heading_color', 'parameters' => ['color' => '#ff0000']]]],
+            ['text' => 'Headings are #ff0000 now.', 'emotion' => 'happy', 'finished' => true, 'toolCalls' => []],
+        ]);
+        $request = $this->request();
+        $request['message'] = 'Make the heading #ff0000.';
+        $first = $this->postJson(route('pagesquire.chat'), $request)->assertOk();
+        $this->withCookie(config('session.cookie'), $first->getCookie(config('session.cookie'))->getValue());
+        $continuation = $this->request('next');
+        unset($continuation['message']);
+        $continuation['conversationId'] = $first->json('conversationId');
+        $continuation['result'] = $this->browserResult($first->json('response.toolCalls.0'));
+        $this->postJson(route('pagesquire.chat'), $continuation)->assertOk()->assertJsonPath('response.finished', true);
+        $this->assertSame(2, $provider->calls);
+        $this->flushSession();
+        $this->withCookie(config('session.cookie'), 'fresh-session');
+        $request['requestId'] = 'second-visitor';
+        $replayed = $this->postJson(route('pagesquire.chat'), $request)->assertOk();
+        $this->assertSame('accessibility.set_heading_color', $replayed->json('response.toolCalls.0.capabilityId'));
+        $this->assertSame(2, $provider->calls);
     }
 
     public function test_optional_app_context_survives_validated_input_without_widening_permissions(): void

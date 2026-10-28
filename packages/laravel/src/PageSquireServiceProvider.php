@@ -3,10 +3,13 @@
 namespace PageSquire\Laravel;
 
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Contracts\Cache\Factory as CacheFactory;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use PageSquire\Server\ActionSigner;
 use PageSquire\Server\ConversationEngine;
 use PageSquire\Server\ProtocolValidator;
 use PageSquire\Server\Provider;
@@ -18,6 +21,14 @@ final class PageSquireServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__.'/../config/pagesquire.php', 'pagesquire');
         $this->app->singleton(ProtocolValidator::class);
         $this->app->singleton(CapabilityCatalog::class);
+        $this->app->singleton(ActionSigner::class, function ($app): ActionSigner {
+            $config = $app['config'];
+
+            return new ActionSigner(
+                (string) $config->get('pagesquire.companion.signing_key'),
+                (string) ($config->get('pagesquire.companion.origin') ?: ActionSigner::origin((string) $config->get('app.url'))),
+            );
+        });
         $this->app->bind(Provider::class, function ($app): Provider {
             $config = $app['config']->get('pagesquire.provider');
 
@@ -36,6 +47,7 @@ final class PageSquireServiceProvider extends ServiceProvider
                     'systemRole' => $config['system_role'] ?? null,
                     'thinking' => $config['thinking'] ?? null,
                 ], static fn (mixed $value): bool => $value !== null && $value !== ''),
+                $app->make(Dispatcher::class),
             );
         });
         $this->app->bind(ConversationEngine::class, function ($app): ConversationEngine {
@@ -49,6 +61,20 @@ final class PageSquireServiceProvider extends ServiceProvider
                 $limits['max_attempts'],
                 $limits['max_output_tokens'],
                 $limits['ttl_seconds'],
+                (bool) $app['config']->get('pagesquire.allow_consequential', false),
+                (int) ($limits['max_recoveries'] ?? 0),
+                (bool) ($limits['validate_completion'] ?? false),
+                $app['config']->get('pagesquire.trajectory_cache.enabled')
+                    ? new CacheTrajectoryCache(
+                        $app->make(CacheFactory::class)->store($app['config']->get('pagesquire.trajectory_cache.store')),
+                        (int) $app['config']->get('pagesquire.trajectory_cache.ttl_seconds', 86400),
+                    )
+                    : null,
+                (string) $app['config']->get('pagesquire.locale', 'en'),
+                (bool) ($limits['plan'] ?? false),
+                (bool) ($limits['check_actions'] ?? false),
+                $app['config']->get('pagesquire.companion.signing_key') ? $app->make(ActionSigner::class) : null,
+                (bool) $app['config']->get('pagesquire.companion.screenshots', false),
             );
         });
     }

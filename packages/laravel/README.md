@@ -43,7 +43,7 @@ Gate::define('pagesquire.capability', fn (?User $user, string $id): bool => in_a
 ], true));
 ```
 
-Adapt the principal type and conditions to the host application. Authenticated workflows should use the application's own policies. Consequential capabilities are blocked by the engine even if a gate approves them. Browser action evidence is untrusted client telemetry; it is not authorization for business mutations.
+Adapt the principal type and conditions to the host application. Authenticated workflows should use the application's own policies. Consequential capabilities are blocked by the engine even if a gate approves them, unless `PAGESQUIRE_ALLOW_CONSEQUENTIAL=true`; the browser runtime then still needs an approval prompt and a person's approval per call. Browser action evidence is untrusted client telemetry; it is not authorization for business mutations.
 
 ## Endpoint and browser integration
 
@@ -64,6 +64,14 @@ Configuration bounds request size, conversation lifetime, action steps, inferenc
 The provider supports explicit JSON-object or prompt-only JSON mode and either output-token field, without guessing from model names. The response must still pass strict validation; a preset is not live certification of every model. HTTP timeouts are explicit; redirects, insecure TLS and automatic retries are not enabled. Header and progress callbacks abort oversized responses; the transport requests identity encoding and rejects compressed responses to keep decompression from bypassing the byte limit. Aborting a browser request does not guarantee cancellation of an already-running provider request.
 
 Bind your own `PageSquire\Server\Provider` implementation in the host container to support another API. There is no required model vendor, remote PageSquire service, telemetry or live-provider call in the tests.
+
+## Language
+
+Set `PAGESQUIRE_LOCALE=id` for Indonesian fixed engine replies (default `en`). Browser text follows `<html lang>` or the `locale` option; see [languages](../../docs/i18n.md).
+
+## Companion extension
+
+Set `PAGESQUIRE_SIGNING_KEY` to a key from `npx pagesquire signing-key` to sign every action call for the [companion extension](../../docs/companion-extension.md#signed-action-calls). The package then also serves the public key at `/.well-known/pagesquire.json`. Calls are signed for the origin of `APP_URL`; set `PAGESQUIRE_SITE_ORIGIN` if the public origin differs. Keep the key secret, like the provider key. `PAGESQUIRE_SCREENSHOTS=true` also declares redacted screenshots and forwards them once to the model, which must read images; visitors still allow them in the extension.
 
 ## Verification
 

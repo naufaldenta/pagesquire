@@ -5,8 +5,10 @@ namespace PageSquire\Tests\Laravel;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Orchestra\Testbench\TestCase;
+use PageSquire\Laravel\Events\ProviderCalled;
 use PageSquire\Laravel\OpenAiCompatibleProvider;
 use PageSquire\Laravel\PageSquireServiceProvider;
 use PageSquire\Server\AssistantException;
@@ -152,6 +154,36 @@ final class ProviderTest extends TestCase
         $this->assertSame('Hello', $reply['text']);
         Http::assertSent(fn (Request $request): bool => $request->url() === 'https://api.groq.com/openai/v1/chat/completions' && $request['model'] === 'owner-model' && $request['max_completion_tokens'] === 500 && ! isset($request['max_tokens']) && ! isset($request['response_format']) && $request['messages'][0]['role'] === 'developer');
         Http::assertSentCount(1);
+    }
+
+    public function test_service_binding_supports_native_tools_and_dispatches_metadata_only_diagnostics(): void
+    {
+        Event::fake([ProviderCalled::class]);
+        $this->app->register(PageSquireServiceProvider::class);
+        config()->set('pagesquire.provider', ['name' => 'openai', 'endpoint' => null, 'key' => 'synthetic-secret-key', 'model' => 'owner-model', 'timeout_seconds' => 20, 'connect_timeout_seconds' => 5, 'response_mode' => 'tools']);
+        $capability = ['id' => 'accessibility.set_heading_color', 'description' => 'Change heading color only.', 'execution' => 'browser', 'handler' => 'headings', 'verification' => ['handler' => 'verifyHeadings'], 'risk' => 'reversible', 'inputSchema' => ['type' => 'object', 'properties' => ['color' => ['type' => 'string']], 'required' => ['color'], 'additionalProperties' => false]];
+        Http::fakeSequence('api.openai.com/*')
+            ->push(['choices' => [['finish_reason' => 'tool_calls', 'message' => ['content' => null, 'tool_calls' => [['type' => 'function', 'function' => ['name' => 'accessibility_set_heading_color', 'arguments' => '{"color":"#ff0000"}']]]]]], 'usage' => ['prompt_tokens' => 9, 'completion_tokens' => 2, 'total_tokens' => 11]])
+            ->push('synthetic-secret-key upstream debug', 503);
+        $draft = $this->app->make(Provider::class)->complete([['role' => 'user', 'content' => 'prompt-marker']], [$capability], 500);
+        $this->assertSame('accessibility.set_heading_color', $draft['toolCalls'][0]['capabilityId']);
+        Http::assertSent(fn (Request $request): bool => $request['tools'][0]['function']['name'] === 'accessibility_set_heading_color' && ! isset($request['response_format']));
+        try {
+            $this->app->make(Provider::class)->complete([], [$capability], 500);
+            $this->fail('A provider error must fail.');
+        } catch (AssistantException $exception) {
+            $this->assertSame('PROVIDER_UNAVAILABLE', $exception->errorCode);
+        }
+        $events = [];
+        Event::assertDispatched(ProviderCalled::class, function (ProviderCalled $event) use (&$events): bool {
+            $events[] = array_diff_key($event->diagnostic, ['latencyMs' => true]);
+            $this->assertIsInt($event->diagnostic['latencyMs']);
+
+            return true;
+        });
+        $this->assertSame([['outcome' => 'ok', 'status' => 200, 'usage' => ['inputTokens' => 9, 'outputTokens' => 2, 'totalTokens' => 11]], ['outcome' => 'http_error', 'status' => 503]], $events);
+        $this->assertStringNotContainsString('marker', json_encode($events));
+        $this->assertStringNotContainsString('secret', json_encode($events));
     }
 
     private function provider(string $endpoint = 'https://provider.test/v1/chat/completions'): OpenAiCompatibleProvider
