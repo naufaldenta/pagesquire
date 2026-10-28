@@ -289,6 +289,54 @@ test('timeout and cancellation settle once and ignore late uncooperative handler
   }
 });
 
+test('a timed-out handler that ignores its signal blocks new actions until it settles', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const entered = deferred(),
+    late = deferred();
+  const f = fixture({
+    execute: () => {
+      entered.resolve();
+      return late.promise;
+    },
+    runtime: { timeoutMs: 15 },
+  });
+  const pending = f.runtime.execute(call);
+  await entered.promise;
+  t.mock.timers.tick(15);
+  assert.equal((await pending).code, 'TIMEOUT');
+  const blocked = await f.runtime.execute({ ...call, callId: 'second' });
+  assert.equal(blocked.code, 'BUSY');
+  assert.equal(f.executions(), 1);
+  late.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
+  const next = await f.runtime.execute({ ...call, callId: 'third' });
+  assert.equal(next.code, 'VERIFIED');
+  assert.equal(f.executions(), 2);
+});
+
+test('resetSession starts a fresh action budget without lifting the active-action guard', async () => {
+  const f = fixture({ runtime: { maxActions: 1 } });
+  assert.equal((await f.runtime.execute(call)).code, 'VERIFIED');
+  const limited = await f.runtime.execute({ ...call, callId: 'second' });
+  assert.equal(limited.code, 'ACTION_LIMIT');
+  f.runtime.resetSession();
+  const fresh = await f.runtime.execute({ ...call, callId: 'third' });
+  assert.equal(fresh.code, 'VERIFIED');
+  const entered = deferred(),
+    release = deferred();
+  const busy = fixture({
+    execute: () => {
+      entered.resolve();
+      return release.promise;
+    },
+  });
+  const pending = busy.runtime.execute(call);
+  await entered.promise;
+  assert.throws(() => busy.runtime.resetSession(), { code: 'BUSY' });
+  release.resolve();
+  assert.equal((await pending).code, 'VERIFIED');
+});
+
 function assistant(runtime, transport, options = {}) {
   return new AssistantClient({ runtime, transport, ...options });
 }
@@ -566,6 +614,7 @@ test('client ignores mismatched/regressing/late progress and projects no arbitra
   const runtime = {
     registry: { list: () => [definition] },
     observe: () => structuredClone(snapshot),
+    resetSession() {},
     execute: async (input, options) => {
       late = options.onActionProgress;
       const base = { callId: input.callId, capabilityId: input.capabilityId };
@@ -630,5 +679,37 @@ test('a host error using a reserved code cannot invent successful navigation or 
       client.state.messages.at(-1).text,
       /Navigation started/,
     );
+  }
+});
+
+test('a failed action ends the turn unless the client opts into server-led recovery', async () => {
+  for (const allowRecovery of [false, true]) {
+    let verifications = 0;
+    const f = fixture({
+      verify: () => ({ verified: ++verifications > 1 }),
+    });
+    const requests = [];
+    const client = assistant(
+      f.runtime,
+      async (request) => {
+        requests.push(request);
+        // The server proposes another action after the failed one, then finishes.
+        return reply(request, requests.length === 3);
+      },
+      allowRecovery ? { allowRecovery } : {},
+    );
+    await client.send('Set panel');
+    const results = requests.filter((request) => request.result);
+    if (allowRecovery) {
+      assert.deepEqual(
+        results.map((request) => request.result.status),
+        ['unverified', 'success'],
+      );
+      assert.equal(client.state.messages.at(-1).text, 'Done');
+    } else {
+      assert.equal(results.length, 1);
+      assert.equal(f.executions(), 1);
+      assert.match(client.state.messages.at(-1).text, /could not verify/i);
+    }
   }
 });

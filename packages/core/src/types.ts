@@ -1,4 +1,4 @@
-import type { ActionCall, JsonObject } from '@pagesquire/protocol';
+import type { ActionCall, JsonObject, Screenshot } from '@pagesquire/protocol';
 import type { PageObserver } from './observer.js';
 import type { PresentationKind } from './driving.js';
 
@@ -20,6 +20,8 @@ export const ACTION_PROGRESS_CODES = Object.freeze([
   'UNKNOWN_CAPABILITY',
   'INVALID_PARAMETERS',
   'CONFIRMATION_REQUIRED',
+  'APPROVAL_DENIED',
+  'APPROVAL_TIMEOUT',
   'CAPABILITY_UNAVAILABLE',
   'STALE_SNAPSHOT',
   'STALE_TARGET',
@@ -40,6 +42,16 @@ export const ACTION_PROGRESS_CODES = Object.freeze([
   'TIMEOUT',
   'HANDLER_FAILED',
   'ACTION_FAILED',
+  'TARGET_HIDDEN',
+  'TARGET_DISABLED',
+  'TARGET_UNSTABLE',
+  'TARGET_COVERED',
+  'LINK_NAVIGATION',
+  'UNSUPPORTED_TARGET',
+  'OPTION_MISSING',
+  'VISITOR_DECLINED',
+  'VISITOR_TIMEOUT',
+  'VISITOR_UNAVAILABLE',
 ] as const);
 export type ActionProgressCode = (typeof ACTION_PROGRESS_CODES)[number];
 /** Local operational metadata only; never parameters, evidence or error messages. */
@@ -53,6 +65,11 @@ export type ActionProgressListener = (
   event: Readonly<ActionProgressEvent>,
 ) => void;
 
+/** A question or a hand-off shown to the visitor while an action waits. */
+export type VisitorPrompt =
+  | { kind: 'choice'; question: string; options: readonly string[] }
+  | { kind: 'handoff'; instruction: string };
+
 export interface ExecutionContext {
   document: Document;
   observer: PageObserver;
@@ -61,6 +78,19 @@ export interface ExecutionContext {
   navigate: (url: string) => Promise<void>;
   waitFor: (predicate: () => boolean | Promise<boolean>) => Promise<void>;
   present: (target: Element, kind?: PresentationKind) => Promise<void>;
+  /**
+   * Asks a person to approve a risky step found while handling the call.
+   * Rejects with CONFIRMATION_REQUIRED when no prompt is configured and with
+   * APPROVAL_DENIED/APPROVAL_TIMEOUT otherwise; the action timer pauses meanwhile.
+   */
+  requestApproval?: (description: string) => Promise<void>;
+  /**
+   * Asks the visitor to choose one option, or to finish a step themselves.
+   * Resolves with the chosen option, or 'done' after a hand-off. Rejects with
+   * VISITOR_UNAVAILABLE without a configured prompt and with VISITOR_DECLINED
+   * or VISITOR_TIMEOUT otherwise; the action timer pauses meanwhile.
+   */
+  askVisitor?: (prompt: VisitorPrompt) => Promise<string>;
 }
 
 export type CapabilityHandler = (
@@ -71,6 +101,8 @@ export type CapabilityHandler = (
 export interface Verification {
   verified: boolean;
   evidence?: JsonObject;
+  /** A redacted screenshot to return with the result (ui.screenshot). */
+  screenshot?: Screenshot;
 }
 
 export type VerificationHandler = (

@@ -1,4 +1,8 @@
-import { PROTOCOL_VERSION, validateActionCall } from '@pagesquire/protocol';
+import {
+  PROTOCOL_VERSION,
+  validateActionCall,
+  validateActionResult,
+} from '@pagesquire/protocol';
 import type {
   ActionCall,
   ActionResult,
@@ -18,6 +22,7 @@ import type {
   ActionProgressEvent,
   ActionProgressListener,
   ActionProgressCode,
+  VisitorPrompt,
 } from './types.js';
 import type { ActionPresentation } from './driving.js';
 import type { AppContext } from './app-context.js';
@@ -33,6 +38,33 @@ export interface RuntimeOptions {
   onActionProgress?: ActionProgressListener;
   presentation?: ActionPresentation;
   appContext?: AppContext;
+  /**
+   * Enables consequential capabilities: each call waits for this host prompt
+   * (for example `createApprovalPrompt` from the client package) and runs only
+   * when it resolves to `true`. Without it, consequential calls stay blocked.
+   */
+  approve?: (request: ApprovalRequest) => boolean | Promise<boolean>;
+  /** How long a person may take to answer the approval prompt. */
+  approvalTimeoutMs?: number;
+  /**
+   * Shows ui.ask questions and ui.hand_off requests to the visitor (for
+   * example `createVisitorPrompt` from the client package). Resolve with the
+   * chosen option, with 'done' after a hand-off, or with null to decline.
+   */
+  visitor?: (request: VisitorRequest) => string | null | Promise<string | null>;
+  /** How long the visitor may take, including signing in (default 5 minutes). */
+  visitorTimeoutMs?: number;
+}
+
+/** A visitor prompt plus the signal that withdraws it. */
+export type VisitorRequest = VisitorPrompt & { signal: AbortSignal };
+
+/** What a person is asked to approve; parameters are a frozen copy. */
+export interface ApprovalRequest {
+  capabilityId: string;
+  description: string;
+  parameters: Readonly<JsonObject>;
+  signal: AbortSignal;
 }
 
 interface CallRecord {
@@ -66,6 +98,8 @@ export class BrowserRuntime {
   private readonly navigationStore: NavigationStore | undefined;
   private readonly calls = new Map<string, CallRecord>();
   private active: AbortController | undefined;
+  /** An aborted handler/verifier that has not settled yet; it may still mutate the page. */
+  private draining: Promise<void> | undefined;
   private activityValue: 'thinking' | 'idle' = 'idle';
 
   constructor(options: RuntimeOptions) {
@@ -95,6 +129,28 @@ export class BrowserRuntime {
       }
     }
     if (
+      !Number.isInteger(options.approvalTimeoutMs ?? 120000) ||
+      (options.approvalTimeoutMs ?? 120000) < 1 ||
+      (options.approvalTimeoutMs ?? 120000) > 600000 ||
+      (options.approve !== undefined && typeof options.approve !== 'function')
+    ) {
+      throw new PageSquireError(
+        'INVALID_OPTIONS',
+        'Approval needs a prompt function and a bounded timeout.',
+      );
+    }
+    if (
+      !Number.isInteger(options.visitorTimeoutMs ?? 300000) ||
+      (options.visitorTimeoutMs ?? 300000) < 1 ||
+      (options.visitorTimeoutMs ?? 300000) > 900000 ||
+      (options.visitor !== undefined && typeof options.visitor !== 'function')
+    ) {
+      throw new PageSquireError(
+        'INVALID_OPTIONS',
+        'The visitor prompt needs a function and a bounded timeout.',
+      );
+    }
+    if (
       !Number.isInteger(options.timeoutMs ?? 5000) ||
       (options.timeoutMs ?? 5000) < 1 ||
       (options.timeoutMs ?? 5000) > 60000 ||
@@ -107,6 +163,11 @@ export class BrowserRuntime {
         'Timeout and action limits must be bounded positive integers.',
       );
     }
+  }
+
+  /** True when consequential capabilities can run after a person approves them. */
+  get approvalEnabled(): boolean {
+    return typeof this.options.approve === 'function';
   }
 
   get activity(): 'thinking' | 'idle' {
@@ -187,6 +248,19 @@ export class BrowserRuntime {
         'Do not replace the active action snapshot.',
       );
     return this.observer.observe();
+  }
+
+  /**
+   * Starts a fresh action budget and replay cache, e.g. for a new conversation.
+   * A still-draining earlier handler keeps blocking new actions until it settles.
+   */
+  resetSession(): void {
+    if (this.active)
+      throw new PageSquireError(
+        'BUSY',
+        'Wait for the current action to finish.',
+      );
+    this.calls.clear();
   }
 
   readAppContext(): AppContextSnapshot | undefined {
@@ -287,13 +361,15 @@ export class BrowserRuntime {
             options.onActionProgress,
           );
     }
-    if (this.active)
+    if (this.active || this.draining)
       return this.completeProgress(
         this.result(
           call,
           'failed',
           'BUSY',
-          'Wait for the current action to finish.',
+          this.active
+            ? 'Wait for the current action to finish.'
+            : 'The previous action is still finishing.',
           {},
           false,
         ),
@@ -341,14 +417,30 @@ export class BrowserRuntime {
       );
     externalSignal?.addEventListener('abort', abort, { once: true });
     if (externalSignal?.aborted) abort();
-    const timer = setTimeout(
-      () =>
-        controller.abort(
-          new PageSquireError('TIMEOUT', 'The action exceeded its time limit.'),
-        ),
-      Math.min(this.options.timeoutMs ?? 5000, 60000),
-    );
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    // The action time limit covers execution and verification, not a person reading an approval prompt.
+    const startTimer = () => {
+      timer = setTimeout(
+        () =>
+          controller.abort(
+            new PageSquireError(
+              'TIMEOUT',
+              'The action exceeded its time limit.',
+            ),
+          ),
+        Math.min(this.options.timeoutMs ?? 5000, 60000),
+      );
+    };
     this.setActivity('thinking');
+    let unsettled: Promise<unknown> | undefined;
+    const track = <T>(work: Promise<T>): Promise<T> => {
+      unsettled = work;
+      const settle = () => {
+        if (unsettled === work) unsettled = undefined;
+      };
+      work.then(settle, settle);
+      return work;
+    };
     try {
       this.emitProgress(
         {
@@ -362,45 +454,72 @@ export class BrowserRuntime {
       this.observer.requireSnapshot(call.snapshotId);
       const entry = this.registry.resolve(call.capabilityId, call.parameters);
       if (entry.definition.risk === 'consequential') {
-        throw new PageSquireError(
-          'CONFIRMATION_REQUIRED',
-          'Consequential actions are not enabled in the foundation runtime.',
-        );
+        await this.requestApproval(call, entry.definition.description, signal);
+        signal.throwIfAborted();
+        this.observer.requireSnapshot(call.snapshotId);
       }
-      const context = this.context(call, signal, onBeforeNavigate);
+      startTimer();
+      signal.throwIfAborted();
+      const context = this.context(
+        call,
+        signal,
+        onBeforeNavigate,
+        async (description) => {
+          // A person reading the prompt does not consume the action time limit.
+          clearTimeout(timer);
+          try {
+            await this.requestApproval(call, description, signal);
+          } finally {
+            startTimer();
+          }
+        },
+        async (prompt) => {
+          // Neither does the visitor answering a question or signing in.
+          clearTimeout(timer);
+          try {
+            return await this.askVisitor(prompt, signal);
+          } finally {
+            startTimer();
+          }
+        },
+      );
       await withAbort(
-        Promise.resolve().then(() => {
-          signal.throwIfAborted();
-          this.options.appContext?.assertAvailable(call.capabilityId);
-          signal.throwIfAborted();
-          this.emitProgress(
-            {
-              callId: call.callId,
-              capabilityId: call.capabilityId,
-              stage: 'executing',
-            },
-            onActionProgress,
-          );
-          signal.throwIfAborted();
-          return entry.execute(call.parameters, context);
-        }),
+        track(
+          Promise.resolve().then(() => {
+            signal.throwIfAborted();
+            this.options.appContext?.assertAvailable(call.capabilityId);
+            signal.throwIfAborted();
+            this.emitProgress(
+              {
+                callId: call.callId,
+                capabilityId: call.capabilityId,
+                stage: 'executing',
+              },
+              onActionProgress,
+            );
+            signal.throwIfAborted();
+            return entry.execute(call.parameters, context);
+          }),
+        ),
         signal,
       );
       signal.throwIfAborted();
       const verification = await withAbort(
-        Promise.resolve().then(() => {
-          signal.throwIfAborted();
-          this.emitProgress(
-            {
-              callId: call.callId,
-              capabilityId: call.capabilityId,
-              stage: 'verifying',
-            },
-            onActionProgress,
-          );
-          signal.throwIfAborted();
-          return entry.verify(call.parameters, context);
-        }),
+        track(
+          Promise.resolve().then(() => {
+            signal.throwIfAborted();
+            this.emitProgress(
+              {
+                callId: call.callId,
+                capabilityId: call.capabilityId,
+                stage: 'verifying',
+              },
+              onActionProgress,
+            );
+            signal.throwIfAborted();
+            return entry.verify(call.parameters, context);
+          }),
+        ),
         signal,
       );
       signal.throwIfAborted();
@@ -420,7 +539,7 @@ export class BrowserRuntime {
       const evidence = JSON.parse(
         canonicalJson(verification.evidence ?? {}),
       ) as JsonObject;
-      return this.result(
+      const result = this.result(
         call,
         verification.verified ? 'success' : 'unverified',
         verification.verified ? 'VERIFIED' : 'POSTCONDITION_FAILED',
@@ -429,6 +548,13 @@ export class BrowserRuntime {
           : 'The requested state could not be verified.',
         evidence,
       );
+      const screenshot = verification.screenshot;
+      // Only a well-formed image travels with a verified result.
+      return verification.verified &&
+        screenshot &&
+        validateActionResult({ ...result, screenshot }).valid
+        ? immutableCopy({ ...result, screenshot })
+        : result;
     } catch (error: unknown) {
       if (error instanceof NavigationStarted) {
         return this.result(
@@ -443,7 +569,9 @@ export class BrowserRuntime {
       if (reason instanceof PageSquireError) {
         return this.result(
           call,
-          reason.code === 'CANCELLED' ? 'cancelled' : 'failed',
+          reason.code === 'CANCELLED' || reason.code === 'APPROVAL_DENIED'
+            ? 'cancelled'
+            : 'failed',
           reason.code,
           reason.message,
         );
@@ -457,6 +585,7 @@ export class BrowserRuntime {
     } finally {
       clearTimeout(timer);
       externalSignal?.removeEventListener('abort', abort);
+      if (unsettled) this.drain(unsettled);
       this.active = undefined;
       this.setActivity('idle');
       try {
@@ -467,12 +596,159 @@ export class BrowserRuntime {
     }
   }
 
+  private async requestApproval(
+    call: ActionCall,
+    description: string,
+    signal: AbortSignal,
+  ): Promise<void> {
+    const approve = this.options.approve;
+    if (!approve)
+      throw new PageSquireError(
+        'CONFIRMATION_REQUIRED',
+        'Consequential actions need a configured approval prompt.',
+      );
+    const prompt = new AbortController();
+    const stop = () => prompt.abort(signal.reason);
+    signal.addEventListener('abort', stop, { once: true });
+    const limit = setTimeout(
+      () =>
+        prompt.abort(
+          new PageSquireError(
+            'APPROVAL_TIMEOUT',
+            'Nobody approved the action in time.',
+          ),
+        ),
+      this.options.approvalTimeoutMs ?? 120000,
+    );
+    try {
+      const approved = await withAbort(
+        Promise.resolve().then(() =>
+          approve({
+            capabilityId: call.capabilityId,
+            description,
+            parameters: immutableCopy(call.parameters),
+            signal: prompt.signal,
+          }),
+        ),
+        prompt.signal,
+      );
+      if (approved !== true)
+        throw new PageSquireError(
+          'APPROVAL_DENIED',
+          'The person declined this action.',
+        );
+    } catch (error) {
+      if (error instanceof PageSquireError) throw error;
+      throw new PageSquireError(
+        'APPROVAL_DENIED',
+        'The action was not approved.',
+      );
+    } finally {
+      clearTimeout(limit);
+      signal.removeEventListener('abort', stop);
+      prompt.abort();
+    }
+  }
+
+  private async askVisitor(
+    prompt: VisitorPrompt,
+    signal: AbortSignal,
+  ): Promise<string> {
+    const visitor = this.options.visitor;
+    if (!visitor)
+      throw new PageSquireError(
+        'VISITOR_UNAVAILABLE',
+        'No visitor prompt is configured on this page.',
+      );
+    const asking = new AbortController();
+    const stop = () => asking.abort(signal.reason);
+    signal.addEventListener('abort', stop, { once: true });
+    const limit = setTimeout(
+      () =>
+        asking.abort(
+          new PageSquireError(
+            'VISITOR_TIMEOUT',
+            'The visitor did not answer in time.',
+          ),
+        ),
+      this.options.visitorTimeoutMs ?? 300000,
+    );
+    try {
+      const request: VisitorRequest =
+        prompt.kind === 'choice'
+          ? {
+              kind: 'choice',
+              question: prompt.question,
+              options: Object.freeze([...prompt.options]),
+              signal: asking.signal,
+            }
+          : {
+              kind: 'handoff',
+              instruction: prompt.instruction,
+              signal: asking.signal,
+            };
+      const answer = await withAbort(
+        Promise.resolve().then(() => visitor(Object.freeze(request))),
+        asking.signal,
+      );
+      // Only one of the offered options, or 'done' after a hand-off, counts.
+      if (
+        typeof answer !== 'string' ||
+        (prompt.kind === 'choice'
+          ? !prompt.options.includes(answer)
+          : answer !== 'done')
+      )
+        throw new PageSquireError('VISITOR_DECLINED', 'The visitor declined.');
+      return answer;
+    } catch (error) {
+      if (error instanceof PageSquireError) throw error;
+      throw new PageSquireError(
+        'VISITOR_DECLINED',
+        'The visitor did not answer.',
+      );
+    } finally {
+      clearTimeout(limit);
+      signal.removeEventListener('abort', stop);
+      asking.abort();
+    }
+  }
+
+  /**
+   * Abort cannot stop a handler that ignores its signal. Refuse new actions
+   * until it settles, so its late mutation cannot be credited to another
+   * verifier. A second timeout window bounds the wait.
+   */
+  private drain(work: Promise<unknown>): void {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const limit = new Promise<void>((resolve) => {
+      timer = setTimeout(
+        resolve,
+        Math.min(this.options.timeoutMs ?? 5000, 60000),
+      );
+    });
+    const drained: Promise<void> = Promise.race([
+      work.then(
+        () => {},
+        () => {},
+      ),
+      limit,
+    ]).then(() => {
+      clearTimeout(timer);
+      if (this.draining === drained) this.draining = undefined;
+    });
+    this.draining = drained;
+  }
+
   private context(
     call: ActionCall,
     signal: AbortSignal,
     onBeforeNavigate?: (call: ActionCall, destination: URL) => void,
+    requestApproval?: (description: string) => Promise<void>,
+    askVisitor?: (prompt: VisitorPrompt) => Promise<string>,
   ): ExecutionContext {
     return {
+      ...(requestApproval ? { requestApproval } : {}),
+      ...(askVisitor ? { askVisitor } : {}),
       document: this.observer.document,
       present: async (target, kind) => {
         signal.throwIfAborted();
@@ -502,7 +778,13 @@ export class BrowserRuntime {
       navigate: async (value) => {
         signal.throwIfAborted();
         const destination = this.observer.allowedUrl(value);
-        if (this.navigation.mode === 'document') {
+        // A fragment-only change never unloads the document, so it is verified
+        // in place instead of waiting for a destination page that never loads.
+        const sameDocument =
+          destination.hash !== '' &&
+          destination.href.split('#')[0] ===
+            this.observer.document.URL.split('#')[0];
+        if (this.navigation.mode === 'document' && !sameDocument) {
           const definition = this.registry.resolve(
             call.capabilityId,
             call.parameters,

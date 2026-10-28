@@ -218,7 +218,7 @@ export class CapabilityInspector {
     let scope: CapabilityInspectionReport['scope'] = 'not_checked';
     if (check) {
       try {
-        this.options.observer.allowedUrl(this.document.URL);
+        this.options.observer.observableUrl(this.document.URL);
         scope = 'allowed';
       } catch {
         scope = 'denied';

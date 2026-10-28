@@ -118,6 +118,56 @@ test('observation reports truncation and defaults to denying interactions', asyn
   );
 });
 
+test('observation scope is separate from navigation scope and the snapshot URL can be redacted', async ({
+  page,
+}) => {
+  await page.goto('/?email=reader%40example.test');
+  await page.waitForFunction(() => Boolean(window.pagesquireDemo));
+  const outcome = await page.evaluate(() => {
+    const Observer = window.pagesquireDemo.observer.constructor;
+    const attempt = (run) => {
+      try {
+        return run();
+      } catch (error) {
+        return error.code;
+      }
+    };
+    const observer = new Observer({
+      document,
+      allowUrl: (url) => url.pathname === '/next.html',
+      observeUrl: (url) => url.pathname === '/',
+      redactUrl: (url) => url.origin + url.pathname,
+    });
+    const snapshot = observer.observe();
+    return {
+      url: snapshot.url,
+      fresh: attempt(() => observer.requireSnapshot(snapshot.id).id),
+      navigation: attempt(() => observer.allowedUrl('/').href),
+      destination: attempt(() => observer.allowedUrl('/next.html').pathname),
+      signed: attempt(() => observer.allowedUrl('/next.html?signature=x')),
+      foreign: attempt(() =>
+        new Observer({
+          document,
+          redactUrl: () => 'https://attacker.test/',
+        }).observe(),
+      ),
+      denied: attempt(
+        () => new Observer({ document, observeUrl: () => false }),
+      ),
+    };
+  });
+  expect(outcome).toEqual({
+    url: 'http://127.0.0.1:4173/',
+    fresh: outcome.fresh,
+    navigation: 'URL_NOT_ALLOWED',
+    destination: '/next.html',
+    signed: 'URL_NOT_ALLOWED',
+    foreign: 'INVALID_OPTIONS',
+    denied: 'PAGE_NOT_OBSERVABLE',
+  });
+  expect(outcome.fresh).toMatch(/^snapshot-/);
+});
+
 test('a permitted click produces an observable event and replay executes only once', async ({
   page,
 }) => {

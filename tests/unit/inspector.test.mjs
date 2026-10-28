@@ -25,6 +25,9 @@ function fixture(options = {}) {
   const observer = {
     document,
     allowedUrl() {},
+    observableUrl(value) {
+      return this.allowedUrl(value);
+    },
     isExcluded: (target) => target.private === true,
     isVisible: (target) => target.visible !== false,
     canInteract: (target) => target.permitted === true,

@@ -433,22 +433,25 @@ test('driving: mobile tours do not overflow or intercept ordinary website contro
 test('driving: a control detached during cursor movement is missing and its replacement is not written', async ({
   page,
 }) => {
+  // Detach in-page as soon as the cursor overlay appears, before the first
+  // animation frame, so a slow machine cannot finish the movement first.
   await page.evaluate(() => {
+    window.detachedWhilePresenting = false;
+    const observer = new MutationObserver(() => {
+      const old = document.querySelector('#driver-heading-color');
+      if (!window.pagesquireDriving.driver.isPresenting(old)) return;
+      observer.disconnect();
+      old.replaceWith(old.cloneNode(true));
+      window.detachedWhilePresenting = true;
+    });
+    observer.observe(document.body, { childList: true });
     window.pendingControl = window.pagesquireDriving.call(
       'accessibility.set_heading_color',
       { color: '#c52b28' },
     );
   });
-  await page.waitForFunction(() =>
-    window.pagesquireDriving.driver.isPresenting(
-      document.querySelector('#driver-heading-color'),
-    ),
-  );
-  await page.evaluate(() => {
-    const old = document.querySelector('#driver-heading-color');
-    old.replaceWith(old.cloneNode(true));
-  });
   const result = await page.evaluate(() => window.pendingControl);
+  expect(await page.evaluate(() => window.detachedWhilePresenting)).toBe(true);
   expect(result.code).toBe('TARGET_MISSING');
   await expect(page.locator('#guide h2')).not.toHaveCSS(
     'color',

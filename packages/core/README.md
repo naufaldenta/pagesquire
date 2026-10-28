@@ -14,6 +14,6 @@ Exports `CapabilityRegistry`, `PageObserver`, `BrowserRuntime`, navigation helpe
 
 The module can be imported in a server environment without touching a global document. Construct the observer/runtime only with an attached HTTP(S) browser document.
 
-Handlers and verifiers are installed by the website owner. Generic target interaction is denied unless `canInteract` explicitly permits it. Consequential capabilities are blocked in this preview.
+Handlers and verifiers are installed by the website owner. Generic target interaction is denied unless `canInteract` explicitly permits it. Consequential capabilities are blocked unless the runtime has an `approve` prompt and a person approves each call. `exposeToWebMcp` registers capabilities as WebMCP tools when the browser supports them. See [WebMCP, approvals and WordPress Abilities](../../docs/webmcp-and-approval.md).
 
 No package has been published. See the workspace runtime guide for cancellation, navigation, permissions, and current limitations. Foundation code is MIT licensed.

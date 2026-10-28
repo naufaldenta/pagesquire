@@ -62,6 +62,67 @@ function fixture(verify, options = {}, execute = () => {}) {
   return { runtime, navigationStore };
 }
 
+test('fragment-only document navigation is verified in place without a checkpoint', async () => {
+  const memory = new Map();
+  const storage = {
+    getItem: (key) => memory.get(key) ?? null,
+    setItem: (key, value) => memory.set(key, value),
+    removeItem: (key) => memory.delete(key),
+  };
+  const target = `${url}#details`;
+  const document = {
+    URL: url,
+    defaultView: {
+      sessionStorage: storage,
+      location: { assign: (href) => (document.URL = href) },
+    },
+  };
+  const registry = new CapabilityRegistry(
+    { schemaVersion: '0.1', capabilities: [navigationCapability] },
+    {
+      handlers: {
+        'browser.navigate': (args, context) => context.navigate(args.url),
+      },
+      verifiers: {
+        'browser.verifyNavigation': (args) => ({
+          verified: document.URL === args.url,
+        }),
+      },
+      parameters: {
+        'browser.navigate': {
+          schema: navigationCapability.inputSchema,
+          validate: (input) => input?.url === target,
+        },
+      },
+    },
+  );
+  const snapshot = {
+    protocolVersion: '0.1',
+    id: 'snapshot-1',
+    url,
+    title: 'Example',
+    text: '',
+    targets: [],
+    truncated: { text: false, targets: false },
+  };
+  const runtime = new BrowserRuntime({
+    registry,
+    observer: {
+      document,
+      observe: () => structuredClone(snapshot),
+      requireSnapshot: () => snapshot,
+      allowedUrl: (value) => new URL(value),
+    },
+  });
+  const result = await runtime.execute({
+    ...call,
+    parameters: { url: target },
+  });
+  assert.equal(result.code, 'VERIFIED');
+  assert.equal(document.URL, target);
+  assert.equal(memory.size, 0);
+});
+
 test('malformed verifier results never become successful actions', async () => {
   for (const verification of [
     null,

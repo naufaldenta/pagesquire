@@ -10,3 +10,6 @@ export * from './bindings.js';
 export * from './inspector.js';
 export * from './app-context.js';
 export * from './json.js';
+export * from './webmcp.js';
+export * from './generic.js';
+export * from './companion.js';
