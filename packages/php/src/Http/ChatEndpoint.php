@@ -17,9 +17,11 @@ final class ChatEndpoint
         private readonly ConversationStore $store,
         private readonly string $origin,
         private readonly int $requestsPerMinute = 20,
+        /** Provider attempts per trusted session per hour, counted across conversations. */
+        private readonly int $attemptsPerHour = 60,
     ) {
         $url = parse_url($origin);
-        if (! is_array($url) || ! in_array($url['scheme'] ?? '', ['https', 'http'], true) || empty($url['host']) || isset($url['path']) || isset($url['query']) || isset($url['fragment']) || isset($url['user']) || isset($url['pass']) || $requestsPerMinute < 1 || $requestsPerMinute > 100) {
+        if (! is_array($url) || ! in_array($url['scheme'] ?? '', ['https', 'http'], true) || empty($url['host']) || isset($url['path']) || isset($url['query']) || isset($url['fragment']) || isset($url['user']) || isset($url['pass']) || $requestsPerMinute < 1 || $requestsPerMinute > 100 || $attemptsPerHour < 1 || $attemptsPerHour > 1000) {
             throw new AssistantException('INVALID_OPTIONS', 'Invalid endpoint limits or origin.', 500);
         }
     }
@@ -29,9 +31,10 @@ final class ChatEndpoint
      *
      * @param  array<string, string>  $headers
      * @param  array{key: string, principal: string, csrfToken: string, capabilityIds: list<string>}|null  $session
+     * @param  (callable(string): void)|null  $onProgress  fixed server stages, starting with "accepted" once the request passed every check
      * @return array{status: int, body: array<string, mixed>}
      */
-    public function handle(string $method, array $headers, string $body, ?array $session): array
+    public function handle(string $method, array $headers, string $body, ?array $session, ?callable $onProgress = null): array
     {
         try {
             $headers = array_change_key_case($headers, CASE_LOWER);
@@ -56,19 +59,34 @@ final class ChatEndpoint
             }
             $this->validator->validate('chatRequest', json_decode($body, false, 64, JSON_THROW_ON_ERROR));
             $request = json_decode($body, true, 64, JSON_THROW_ON_ERROR);
-            $reply = $this->store->transaction($session['key'], function (?array $stored, callable $save) use ($session, $request): array {
+            $reply = $this->store->transaction($session['key'], function (?array $stored, callable $save) use ($session, $request, $onProgress): array {
+                if ($onProgress !== null) {
+                    $onProgress('accepted');
+                }
                 $now = time();
                 $rate = isset($stored['rate']) && $now - $stored['rate']['since'] < 60 ? $stored['rate'] : ['since' => $now, 'count' => 0];
                 if ($rate['count'] >= $this->requestsPerMinute) {
                     throw new AssistantException('RATE_LIMITED', 'Too many assistant requests. Try again later.', 429);
                 }
                 $rate['count']++;
-                $current = ['principal' => $session['principal'], 'state' => ($stored['principal'] ?? null) === $session['principal'] ? $stored['state'] : null, 'rate' => $rate];
+                // Starting a new conversation resets the engine's per-conversation
+                // attempts, so the session also keeps an hourly provider budget.
+                $budget = isset($stored['budget']) && $now - $stored['budget']['since'] < 3600 ? $stored['budget'] : ['since' => $now, 'count' => 0];
+                $current = ['principal' => $session['principal'], 'state' => ($stored['principal'] ?? null) === $session['principal'] ? $stored['state'] : null, 'rate' => $rate, 'budget' => $budget];
                 $save($current);
-                $result = $this->engine->handle($request, $current['state'], $session['capabilityIds'], function (array $state) use (&$current, $save): void {
+                $charged = $current['state'] === null ? null : ['id' => $current['state']['id'], 'attempts' => $current['state']['attempts']];
+                $result = $this->engine->handle($request, $current['state'], $session['capabilityIds'], function (array $state) use (&$current, &$charged, $save): void {
+                    $added = $state['attempts'] - (($charged['id'] ?? null) === $state['id'] ? $charged['attempts'] : 0);
+                    if ($added > 0) {
+                        if ($current['budget']['count'] + $added > $this->attemptsPerHour) {
+                            throw new AssistantException('BUDGET_EXHAUSTED', 'The assistant usage limit was reached. Try again later.', 429);
+                        }
+                        $current['budget']['count'] += $added;
+                    }
+                    $charged = ['id' => $state['id'], 'attempts' => $state['attempts']];
                     $current['state'] = $state;
                     $save($current);
-                });
+                }, $onProgress);
 
                 return $result['reply'];
             });
@@ -83,10 +101,64 @@ final class ChatEndpoint
         }
     }
 
+    /**
+     * NDJSON streaming: fixed progress stages, then one reply or error line.
+     * Model text is never streamed before validation. Returns the ordinary
+     * response instead, without emitting anything, when the request fails
+     * before it is accepted (origin, CSRF, authorization, payload, busy).
+     *
+     * @param  array<string, string>  $headers
+     * @param  array{key: string, principal: string, csrfToken: string, capabilityIds: list<string>}|null  $session
+     * @param  callable(string): void  $emit  receives each NDJSON line, newline included
+     * @return array{status: int, body: array<string, mixed>}|null
+     */
+    public function stream(string $method, array $headers, string $body, ?array $session, callable $emit): ?array
+    {
+        $started = false;
+        $line = static fn (array $event): string => json_encode($event, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n";
+        $result = $this->handle($method, $headers, $body, $session, static function (string $stage) use (&$started, $emit, $line): void {
+            $started = true;
+            $emit($line(['type' => 'progress', 'stage' => $stage]));
+        });
+        if (! $started) {
+            return $result;
+        }
+        $emit($line($result['status'] === 200
+            ? ['type' => 'reply', 'reply' => $result['body']]
+            : ['type' => 'error', 'status' => $result['status'], 'error' => $result['body']['error']]));
+
+        return null;
+    }
+
     /** @param array{key: string, principal: string, csrfToken: string, capabilityIds: list<string>}|null $session */
     public function serve(?array $session): void
     {
-        $result = $this->handle($_SERVER['REQUEST_METHOD'] ?? '', getallheaders(), file_get_contents('php://input', false, null, 0, 196609), $session);
+        $method = $_SERVER['REQUEST_METHOD'] ?? '';
+        $headers = getallheaders();
+        $input = file_get_contents('php://input', false, null, 0, 196609);
+        if (str_contains(strtolower((string) (array_change_key_case($headers, CASE_LOWER)['accept'] ?? '')), 'application/x-ndjson')) {
+            $sent = false;
+            $result = $this->stream($method, $headers, $input, $session, static function (string $line) use (&$sent): void {
+                if (! $sent) {
+                    $sent = true;
+                    http_response_code(200);
+                    header('Content-Type: application/x-ndjson; charset=utf-8');
+                    header('Cache-Control: no-store, private');
+                    header('X-Content-Type-Options: nosniff');
+                    header('X-Accel-Buffering: no');
+                }
+                echo $line;
+                if (ob_get_level() > 0) {
+                    ob_flush();
+                }
+                flush();
+            });
+            if ($result === null) {
+                return;
+            }
+        } else {
+            $result = $this->handle($method, $headers, $input, $session);
+        }
         http_response_code($result['status']);
         header('Content-Type: application/json');
         header('Cache-Control: no-store, private');

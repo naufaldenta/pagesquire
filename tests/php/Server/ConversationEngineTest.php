@@ -44,6 +44,20 @@ final class ConversationEngineTest extends TestCase
         $this->assertStringContainsString('verified article text', json_encode($provider->received[2]['messages'], JSON_THROW_ON_ERROR));
     }
 
+    public function test_an_oversized_context_finishes_without_charging_an_attempt(): void
+    {
+        $provider = $this->provider([['text' => 'Hello.', 'emotion' => 'happy', 'finished' => true, 'toolCalls' => []]]);
+        $engine = new ConversationEngine($provider, new ProtocolValidator, $this->manifest());
+        $request = ['protocolVersion' => '0.1', 'requestId' => 'size-1', 'message' => 'Hello.', 'snapshot' => $this->snapshot(), 'capabilityIds' => []];
+        $first = $engine->handle($request, null, []);
+        $state = $first['state'];
+        $state['messages'][] = ['role' => 'user', 'content' => str_repeat('x', 262144)];
+        $next = $engine->handle(['requestId' => 'size-2', 'conversationId' => $state['id']] + $request, $state, []);
+        $this->assertSame('The conversation context limit was reached. Start a new conversation.', $next['reply']['response']['text']);
+        $this->assertSame(1, $provider->calls);
+        $this->assertSame(1, $next['state']['attempts']);
+    }
+
     private function manifest(): array
     {
         return ['schemaVersion' => '0.1', 'capabilities' => [[
@@ -300,5 +314,43 @@ final class ConversationEngineTest extends TestCase
         $this->assertStringContainsString('limit', $next['reply']['response']['text']);
         $this->assertCount(1, $provider->received[0]['capabilities']);
         $this->assertSame(1, $provider->calls);
+    }
+
+    public function test_consequential_capabilities_are_offered_only_when_the_host_opts_in(): void
+    {
+        $manifest = $this->manifest();
+        $dangerous = $manifest['capabilities'][0];
+        $dangerous['id'] = 'account.delete';
+        $dangerous['risk'] = 'consequential';
+        $manifest['capabilities'][] = $dangerous;
+        $ids = ['accessibility.set_heading_color', 'account.delete'];
+        $request = $this->request();
+        $request['capabilityIds'] = $ids;
+        $proposal = ['text' => 'Checking…', 'emotion' => 'thinking', 'finished' => false, 'toolCalls' => [['capabilityId' => 'account.delete', 'parameters' => (object) ['color' => '#ff0000']]]];
+        $blocked = $this->provider([$proposal]);
+        try {
+            (new ConversationEngine($blocked, new ProtocolValidator, $manifest))->handle($request, null, $ids);
+            $this->fail('A consequential proposal was accepted without opt-in.');
+        } catch (AssistantException $error) {
+            $this->assertSame('CAPABILITY_DENIED', $error->errorCode);
+        }
+        $this->assertSame(['accessibility.set_heading_color'], array_column($blocked->received[0]['capabilities'], 'id'));
+        $allowed = $this->provider([$proposal]);
+        $reply = (new ConversationEngine($allowed, new ProtocolValidator, $manifest, allowConsequential: true))->handle($request, null, $ids);
+        $this->assertSame('account.delete', $reply['reply']['response']['toolCalls'][0]['capabilityId']);
+        $this->assertSame($ids, array_column($allowed->received[0]['capabilities'], 'id'));
+        $this->assertStringContainsString('explicit approval by the visitor', $allowed->received[0]['messages'][0]['content']);
+        $this->assertStringNotContainsString('explicit approval by the visitor', $blocked->received[0]['messages'][0]['content']);
+    }
+
+    public function test_fixed_replies_follow_the_engine_locale(): void
+    {
+        $engine = new ConversationEngine($this->provider([$this->finalReply()]), new ProtocolValidator, $this->manifest(), maxAttempts: 1, locale: 'id');
+        $first = $engine->handle($this->request(), null, ['accessibility.set_heading_color']);
+        $next = $engine->handle(['conversationId' => $first['state']['id']] + $this->request('request-2'), $first['state'], ['accessibility.set_heading_color']);
+        $this->assertSame(ConversationEngine::TEXT['id']['limit'], $next['reply']['response']['text']);
+        $this->assertSame(array_keys(ConversationEngine::TEXT['en']), array_keys(ConversationEngine::TEXT['id']));
+        $this->expectException(AssistantException::class);
+        new ConversationEngine($this->provider([]), new ProtocolValidator, $this->manifest(), locale: 'fr');
     }
 }

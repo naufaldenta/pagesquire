@@ -52,8 +52,11 @@ final class CurlHttpClient implements HttpClient
         try {
             $success = curl_exec($handle);
             $status = curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
-            if ($success === false || $status < 200 || $status >= 300) {
-                throw new AssistantException('PROVIDER_UNAVAILABLE', 'The assistant provider is unavailable.', 502);
+            if ($success === false) {
+                throw new ProviderHttpException(curl_errno($handle) === CURLE_OPERATION_TIMEDOUT ? 'timeout' : 'network_error', $status > 0 ? $status : null);
+            }
+            if ($status < 200 || $status >= 300) {
+                throw new ProviderHttpException('http_error', $status);
             }
 
             return $response;

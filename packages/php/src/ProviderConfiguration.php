@@ -37,7 +37,7 @@ final class ProviderConfiguration
         $tokens = $input['tokenParameter'] ?? $preset['tokenParameter'];
         $role = $input['systemRole'] ?? 'system';
         $thinking = $input['thinking'] ?? 'default';
-        if (! in_array($mode, ['json_object', 'prompt'], true) || ! in_array($tokens, ['max_tokens', 'max_completion_tokens'], true) || ! in_array($role, ['system', 'developer'], true) || ! in_array($thinking, ['default', 'disabled'], true) || $thinking === 'disabled' && ! in_array($id, ['qwen', 'zai', 'glm', 'deepseek'], true)) {
+        if (! in_array($mode, ['json_object', 'prompt', 'tools'], true) || ! in_array($tokens, ['max_tokens', 'max_completion_tokens'], true) || ! in_array($role, ['system', 'developer'], true) || ! in_array($thinking, ['default', 'disabled'], true) || $thinking === 'disabled' && ! in_array($id, ['qwen', 'zai', 'glm', 'deepseek'], true)) {
             $invalid();
         }
 

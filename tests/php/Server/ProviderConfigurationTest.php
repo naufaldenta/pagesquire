@@ -83,4 +83,78 @@ final class ProviderConfigurationTest extends TestCase
             }
         }
     }
+
+    public function test_tools_mode_sends_native_functions_and_decodes_only_the_first_known_call(): void
+    {
+        $capabilities = [['id' => 'accessibility.set_heading_color', 'description' => 'Change heading color only.', 'execution' => 'browser', 'handler' => 'headings', 'verification' => ['handler' => 'verifyHeadings'], 'risk' => 'reversible', 'inputSchema' => ['type' => 'object', 'properties' => ['color' => ['type' => 'string']], 'required' => ['color'], 'additionalProperties' => false]]];
+        $config = ProviderConfiguration::resolve(['provider' => 'openai', 'apiKey' => 'key', 'model' => 'chosen', 'responseMode' => 'tools']);
+        $body = json_decode(json_encode(CompletionCodec::request($config, [['role' => 'system', 'content' => 'Trusted.'], ['role' => 'user', 'content' => 'Red headings.']], 500, $capabilities)), true);
+        $this->assertArrayNotHasKey('response_format', $body);
+        $this->assertSame('accessibility_set_heading_color', $body['tools'][0]['function']['name']);
+        $this->assertSame($capabilities[0]['inputSchema'], $body['tools'][0]['function']['parameters']);
+        $this->assertStringContainsString('Tool mode: to act, call exactly one', $body['messages'][0]['content']);
+        $this->assertArrayNotHasKey('tools', CompletionCodec::request($config, [], 500, []));
+        $call = static fn (string $name, string $arguments, array $extra = []): string => json_encode(['choices' => [['finish_reason' => 'tool_calls', 'message' => ['content' => null, 'tool_calls' => [['type' => 'function', 'function' => ['name' => $name, 'arguments' => $arguments]], ['type' => 'function', 'function' => ['name' => 'accessibility_set_heading_color', 'arguments' => '{"color":"#00ff00"}']]], ...$extra]]]]);
+        $validator = new ProtocolValidator;
+        $draft = CompletionCodec::decode($call('accessibility_set_heading_color', '{"color":"#ff0000"}'), $validator, $config, $capabilities);
+        $this->assertFalse($draft['finished']);
+        $this->assertCount(1, $draft['toolCalls']);
+        $this->assertSame('accessibility.set_heading_color', $draft['toolCalls'][0]['capabilityId']);
+        $this->assertSame('#ff0000', $draft['toolCalls'][0]['parameters']->color);
+        foreach ([$call('unknown_capability', '{}'), $call('accessibility_set_heading_color', '[1]'), $call('accessibility_set_heading_color', '{broken'), $call('accessibility_set_heading_color', '{}', ['refusal' => 'No.'])] as $invalid) {
+            try {
+                CompletionCodec::decode($invalid, $validator, $config, $capabilities);
+                $this->fail('Expected an invalid tool call.');
+            } catch (AssistantException $error) {
+                $this->assertSame('INVALID_PROVIDER_RESPONSE', $error->errorCode);
+            }
+        }
+        $plain = CompletionCodec::decode(json_encode(['choices' => [['finish_reason' => 'stop', 'message' => ['content' => 'Headings are already red.']]]]), $validator, $config, $capabilities);
+        $this->assertSame(['text' => 'Headings are already red.', 'emotion' => 'idle', 'finished' => true, 'toolCalls' => []], $plain);
+        $this->expectException(AssistantException::class);
+        CompletionCodec::decode(json_encode(['choices' => [['finish_reason' => 'stop', 'message' => ['content' => 'Plain text outside tools mode.']]]]), $validator);
+    }
+
+    public function test_provider_diagnostics_report_metadata_without_content_or_keys(): void
+    {
+        $events = [];
+        $make = static function (\Closure $reply) use (&$events): OpenAiCompatibleProvider {
+            $http = new class($reply) implements HttpClient
+            {
+                public function __construct(private \Closure $reply) {}
+
+                public function post(string $url, array $headers, string $body, int $timeoutSeconds, int $maxBytes): string
+                {
+                    return ($this->reply)();
+                }
+            };
+
+            return new OpenAiCompatibleProvider(new ProtocolValidator, 'https://provider.test/chat', 'secret-key-marker', 'chosen', $http, 20, [], static function (array $event) use (&$events): void {
+                $events[] = $event;
+                throw new \RuntimeException('A failing hook must not change the outcome');
+            });
+        };
+        $reply = $make(static fn (): string => json_encode(['choices' => [['finish_reason' => 'stop', 'message' => ['content' => '{"text":"Hello","emotion":"happy","finished":true,"toolCalls":[]}']]], 'usage' => ['prompt_tokens' => 12, 'completion_tokens' => 3, 'total_tokens' => 15]]))->complete([['role' => 'user', 'content' => 'prompt-marker']], [], 100);
+        $this->assertSame('Hello', $reply['text']);
+        foreach ([static fn (): string => throw new \PageSquire\Server\Http\ProviderHttpException('http_error', 429), static fn (): string => throw new \PageSquire\Server\Http\ProviderHttpException('timeout'), static fn (): string => throw new \RuntimeException('network-marker'), static fn (): string => 'not json'] as $failure) {
+            try {
+                $make($failure)->complete([], [], 100);
+                $this->fail('Expected a provider failure.');
+            } catch (AssistantException $error) {
+                $this->assertSame('PROVIDER_UNAVAILABLE', $error->errorCode);
+            }
+        }
+        foreach ($events as $event) {
+            $this->assertIsInt($event['latencyMs']);
+            $this->assertGreaterThanOrEqual(0, $event['latencyMs']);
+        }
+        $this->assertSame([
+            ['outcome' => 'ok', 'usage' => ['inputTokens' => 12, 'outputTokens' => 3, 'totalTokens' => 15]],
+            ['outcome' => 'http_error', 'status' => 429],
+            ['outcome' => 'timeout'],
+            ['outcome' => 'network_error'],
+            ['outcome' => 'invalid_response'],
+        ], array_map(static fn (array $event): array => array_diff_key($event, ['latencyMs' => true]), $events));
+        $this->assertStringNotContainsString('marker', json_encode($events));
+    }
 }

@@ -48,7 +48,7 @@ final class NativeHttpTest extends TestCase
         return ['Origin' => 'https://example.test', 'Content-Type' => 'application/json', 'X-CSRF-TOKEN' => $this->session()['csrfToken']];
     }
 
-    private function endpoint(bool $failure = false, int $limit = 20): ChatEndpoint
+    private function endpoint(bool $failure = false, int $limit = 20, int $attempts = 60): ChatEndpoint
     {
         $provider = new class($failure, $this->fixture['drafts']['action']) implements Provider
         {
@@ -65,7 +65,47 @@ final class NativeHttpTest extends TestCase
         };
         $validator = new ProtocolValidator;
 
-        return new ChatEndpoint(new ConversationEngine($provider, $validator, $this->fixture['manifest']), $validator, new FileConversationStore($this->directory), 'https://example.test', $limit);
+        return new ChatEndpoint(new ConversationEngine($provider, $validator, $this->fixture['manifest']), $validator, new FileConversationStore($this->directory), 'https://example.test', $limit, $attempts);
+    }
+
+    public function test_session_provider_budget_survives_new_conversations_and_identity_changes(): void
+    {
+        $request = $this->fixture['request'];
+        $this->assertSame(200, $this->endpoint(attempts: 2)->handle('POST', $this->headers(), json_encode(['requestId' => 'budget-1'] + $request), $this->session())['status']);
+        $session = $this->session();
+        $session['principal'] = 'other-user';
+        $this->assertSame(200, $this->endpoint(attempts: 2)->handle('POST', $this->headers(), json_encode(['requestId' => 'budget-2'] + $request), $session)['status']);
+        $exhausted = $this->endpoint(attempts: 2)->handle('POST', $this->headers(), json_encode(['requestId' => 'budget-3'] + $request), $session);
+        $this->assertSame(429, $exhausted['status']);
+        $this->assertSame('BUDGET_EXHAUSTED', $exhausted['body']['error']['code']);
+        (new FileConversationStore($this->directory))->transaction('trusted-session', function (?array $stored): void {
+            $this->assertSame(2, $stored['budget']['count']);
+        });
+        $this->expectException(AssistantException::class);
+        $this->endpoint(attempts: 0);
+    }
+
+    public function test_native_streaming_emits_fixed_stages_then_the_reply_only_after_checks(): void
+    {
+        $lines = [];
+        $emit = static function (string $line) use (&$lines): void {
+            $lines[] = json_decode($line, true, 64, JSON_THROW_ON_ERROR);
+        };
+        $body = json_encode($this->fixture['request'], JSON_THROW_ON_ERROR);
+        $headers = $this->headers();
+        $headers['Origin'] = 'https://attacker.test';
+        $denied = $this->endpoint()->stream('POST', $headers, $body, $this->session(), $emit);
+        $this->assertSame(403, $denied['status']);
+        $this->assertSame([], $lines);
+        $this->assertNull($this->endpoint()->stream('POST', $this->headers(), $body, $this->session(), $emit));
+        $this->assertSame(['accepted', 'thinking'], array_column(array_slice($lines, 0, 2), 'stage'));
+        $this->assertSame('reply', $lines[2]['type']);
+        $this->assertFalse($lines[2]['reply']['response']['finished']);
+        $lines = [];
+        $failed = json_encode(['requestId' => 'stream-2'] + $this->fixture['request'], JSON_THROW_ON_ERROR);
+        $this->assertNull($this->endpoint(true)->stream('POST', $this->headers(), $failed, $this->session(), $emit));
+        $this->assertSame(['type' => 'error', 'status' => 502, 'error' => ['code' => 'PROVIDER_UNAVAILABLE', 'message' => 'The assistant provider is unavailable. Start a new conversation or try again later.']], $lines[array_key_last($lines)]);
+        $this->assertStringNotContainsString('private-secret', json_encode($lines));
     }
 
     public function test_native_endpoint_requires_authority_origin_csrf_and_json(): void

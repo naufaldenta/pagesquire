@@ -13,7 +13,8 @@
     }
   },
   "suggest": {
-    "ext-curl": "Required by the native HTTPS provider transport."
+    "ext-curl": "Required by the native HTTPS provider transport.",
+    "ext-sodium": "Required to sign action calls for the companion extension."
   },
   "archive": {
     "exclude": [

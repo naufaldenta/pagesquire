@@ -6,6 +6,7 @@ namespace PageSquire\Tests\Server;
 
 use PageSquire\Server\AssistantException;
 use PageSquire\Server\ConversationEngine;
+use PageSquire\Server\MemoryTrajectoryCache;
 use PageSquire\Server\ProtocolValidator;
 use PageSquire\Server\Provider;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -33,7 +34,10 @@ final class ConformanceTest extends TestCase
 
             public function __construct(array $scenario, private array $fixture)
             {
-                $this->queue = array_values(array_column($scenario['turns'], 'draft'));
+                $this->queue = [];
+                foreach ($scenario['turns'] as $turn) {
+                    array_push($this->queue, ...($turn['drafts'] ?? (isset($turn['draft']) ? [$turn['draft']] : [])));
+                }
             }
 
             public function complete(array $messages, array $capabilities, int $maxOutputTokens): array
@@ -48,7 +52,7 @@ final class ConformanceTest extends TestCase
                 return $draft;
             }
         };
-        $engine = new ConversationEngine($provider, new ProtocolValidator, $fixture['manifest'], maxSteps: $scenario['maxSteps'] ?? 8, maxAttempts: $scenario['maxAttempts'] ?? 12);
+        $engine = new ConversationEngine($provider, new ProtocolValidator, $fixture['manifest'], maxSteps: $scenario['maxSteps'] ?? 8, maxAttempts: $scenario['maxAttempts'] ?? 12, maxRecoveries: $scenario['maxRecoveries'] ?? 0, validateCompletion: $scenario['validateCompletion'] ?? false, plan: $scenario['plan'] ?? false, checkActions: $scenario['checkActions'] ?? false, trajectoryCache: ($scenario['cache'] ?? false) ? new MemoryTrajectoryCache : null);
         $state = null;
         $lastRequest = null;
         foreach ($scenario['turns'] as $index => $turn) {
@@ -58,6 +62,8 @@ final class ConformanceTest extends TestCase
                 if ($turn['kind'] === 'conflict') {
                     $request['message'] = 'Changed';
                 }
+            } elseif ($turn['kind'] === 'fresh') {
+                $request['requestId'] = 'request-'.($index + 1);
             } elseif ($turn['kind'] !== 'initial') {
                 $request['requestId'] = 'request-'.($index + 1);
                 $request['conversationId'] = $state['id'];
@@ -67,6 +73,9 @@ final class ConformanceTest extends TestCase
                 if ($turn['kind'] === 'result') {
                     unset($request['message']);
                     $request['result'] = ['protocolVersion' => '0.1', 'callId' => ($turn['mismatch'] ?? false) ? 'wrong' : $state['pending']['callId'], 'capabilityId' => $state['pending']['capabilityId'], 'status' => $turn['resultStatus'] ?? 'success', 'code' => 'FIXTURE', 'message' => 'Fixture result', 'evidence' => (object) []];
+                    if ($turn['observation'] ?? false) {
+                        $request['result']['observation'] = ['text' => str_repeat('x', 32000)] + $fixture['request']['snapshot'];
+                    }
                 }
             }
             $lastRequest = $request;
@@ -75,7 +84,10 @@ final class ConformanceTest extends TestCase
                     $state = $value;
                 });
                 $state = $result['state'];
-                $outcome = ['code' => 'OK', 'status' => 200, 'emotion' => $result['reply']['response']['emotion'], 'finished' => $result['reply']['response']['finished']];
+                foreach ($state['messages'] as $message) {
+                    $this->assertStringNotContainsString('"observation"', $message['content']);
+                }
+                $outcome =['code' => 'OK', 'status' => 200, 'emotion' => $result['reply']['response']['emotion'], 'finished' => $result['reply']['response']['finished'], 'plan' => $result['reply']['response']['plan'] ?? null];
             } catch (AssistantException $error) {
                 $outcome = ['code' => $error->errorCode, 'status' => $error->httpStatus];
             }
