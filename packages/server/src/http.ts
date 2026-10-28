@@ -6,8 +6,13 @@ import {
   abortable,
 } from './engine.js';
 import { readBounded } from './provider.js';
-import type { ChatRequest } from '@pagesquire/protocol';
-import { validateChatRequest } from '@pagesquire/protocol';
+import type {
+  ChatReply,
+  ChatRequest,
+  ChatStreamEvent,
+  ServerProgressStage,
+} from '@pagesquire/protocol';
+import { CHAT_STREAM_TYPE, validateChatRequest } from '@pagesquire/protocol';
 import type { ConversationStore, StoredSession } from './store.js';
 
 export interface AuthorizedSession {
@@ -24,6 +29,8 @@ export interface HandlerOptions {
   origin: string;
   authorize: (request: Request) => Promise<AuthorizedSession | null>;
   requestsPerMinute?: number;
+  /** Provider attempts per trusted session per hour, counted across conversations. */
+  attemptsPerHour?: number;
   timeoutMs?: number;
 }
 
@@ -33,6 +40,7 @@ export function createChatHandler(
 ): (request: Request) => Promise<Response> {
   const origin = new URL(options.origin);
   const limit = options.requestsPerMinute ?? 20;
+  const attemptLimit = options.attemptsPerHour ?? 60;
   const timeout = options.timeoutMs ?? 30000;
   if (
     !['https:', 'http:'].includes(origin.protocol) ||
@@ -40,6 +48,9 @@ export function createChatHandler(
     !Number.isInteger(limit) ||
     limit < 1 ||
     limit > 100 ||
+    !Number.isInteger(attemptLimit) ||
+    attemptLimit < 1 ||
+    attemptLimit > 1000 ||
     !Number.isInteger(timeout) ||
     timeout < 1 ||
     timeout > 60000
@@ -100,9 +111,8 @@ export function createChatHandler(
           'INVALID_PAYLOAD',
           'The payload does not match the PageSquire contract.',
         );
-      const reply = await options.store.transaction(
-        session.key,
-        async (transaction) => {
+      const run = (onProgress?: (stage: ServerProgressStage) => void) =>
+        options.store.transaction(session.key, async (transaction) => {
           signal.throwIfAborted();
           let stored = await transaction.load();
           const now = Math.floor(Date.now() / 1000);
@@ -118,37 +128,58 @@ export function createChatHandler(
               429,
             );
           rate.count++;
+          // Starting a new conversation resets the engine's per-conversation
+          // attempts, so the session also keeps an hourly provider budget.
+          const budget =
+            stored?.budget && now - stored.budget.since < 3600
+              ? stored.budget
+              : { since: now, count: 0 };
           stored = {
             principal: session.principal,
             state:
               stored?.principal === session.principal ? stored.state : null,
             rate,
+            budget,
           };
           const current: StoredSession = stored;
           await transaction.save(current);
+          let charged = current.state && {
+            id: current.state.id,
+            attempts: current.state.attempts,
+          };
           const result = await options.engine.handle(
             raw as ChatRequest,
             current.state,
             session.capabilityIds,
             async (state) => {
+              const added =
+                state.attempts -
+                (charged?.id === state.id ? charged.attempts : 0);
+              if (added > 0) {
+                if (budget.count + added > attemptLimit)
+                  fail(
+                    'BUDGET_EXHAUSTED',
+                    'The assistant usage limit was reached. Try again later.',
+                    429,
+                  );
+                budget.count += added;
+              }
+              charged = { id: state.id, attempts: state.attempts };
               current.state = state;
               await transaction.save(current);
             },
             signal,
+            onProgress,
           );
           return result.reply;
-        },
-      );
-      return json(reply);
+        });
+      // Streaming starts only after origin, CSRF, authorization and payload
+      // checks passed; those failures stay ordinary JSON errors.
+      if ((request.headers.get('accept') ?? '').includes(CHAT_STREAM_TYPE))
+        return streamed(run);
+      return json(await run());
     } catch (error) {
-      const known =
-        error instanceof AssistantError
-          ? error
-          : new AssistantError(
-              'ASSISTANT_UNAVAILABLE',
-              'The assistant is unavailable. Try again later.',
-              503,
-            );
+      const known = toKnown(error);
       return json(
         { error: { code: known.code, message: known.message } },
         known.status,
@@ -156,6 +187,79 @@ export function createChatHandler(
     }
   };
 }
+function toKnown(error: unknown): AssistantError {
+  return error instanceof AssistantError
+    ? error
+    : new AssistantError(
+        'ASSISTANT_UNAVAILABLE',
+        'The assistant is unavailable. Try again later.',
+        503,
+      );
+}
+
+/**
+ * NDJSON: fixed progress stages while the server works (repeated every 10 s
+ * as a keep-alive), then exactly one validated reply or error line. Model
+ * text is never streamed before validation.
+ */
+function streamed(
+  run: (onProgress: (stage: ServerProgressStage) => void) => Promise<ChatReply>,
+): Response {
+  const encoder = new TextEncoder();
+  let timer: ReturnType<typeof setInterval> | undefined;
+  const body = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let open = true;
+      const send = (event: ChatStreamEvent) => {
+        if (!open) return;
+        try {
+          controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+        } catch {
+          open = false;
+        }
+      };
+      let last: ServerProgressStage = 'accepted';
+      const stage = (value: ServerProgressStage) => {
+        last = value;
+        send({ type: 'progress', stage: value });
+      };
+      stage('accepted');
+      timer = setInterval(() => send({ type: 'progress', stage: last }), 10000);
+      try {
+        send({ type: 'reply', reply: await run(stage) });
+      } catch (error) {
+        const known = toKnown(error);
+        send({
+          type: 'error',
+          status: known.status,
+          error: { code: known.code, message: known.message },
+        });
+      } finally {
+        clearInterval(timer);
+        open = false;
+        try {
+          controller.close();
+        } catch {
+          /* The visitor already went away. */
+        }
+      }
+    },
+    cancel() {
+      clearInterval(timer);
+    },
+  });
+  return new Response(body, {
+    status: 200,
+    headers: {
+      'Content-Type': `${CHAT_STREAM_TYPE}; charset=utf-8`,
+      'Cache-Control': 'no-store, private',
+      'X-Content-Type-Options': 'nosniff',
+      // Ask reverse proxies not to buffer the progress lines.
+      'X-Accel-Buffering': 'no',
+    },
+  });
+}
+
 function json(data: unknown, status = 200): Response {
   return Response.json(data, {
     status,

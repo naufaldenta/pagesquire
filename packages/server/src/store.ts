@@ -17,6 +17,8 @@ export interface StoredSession {
   principal: string;
   state: ConversationState | null;
   rate: { since: number; count: number };
+  /** Hourly provider attempts across conversations; absent in older stores. */
+  budget?: { since: number; count: number };
 }
 export interface StateTransaction {
   load(): Promise<StoredSession | null>;

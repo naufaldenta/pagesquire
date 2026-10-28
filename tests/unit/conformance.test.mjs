@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFile } from 'node:fs/promises';
-import { ConversationEngine, AssistantError } from '@pagesquire/server';
+import {
+  ConversationEngine,
+  AssistantError,
+  MemoryTrajectoryCache,
+} from '@pagesquire/server';
 import { validateProviderResponse } from '@pagesquire/protocol';
 
 const fixture = JSON.parse(
@@ -77,14 +81,40 @@ test('legacy assistant history is repaired before a separate follow-up without r
   assert.equal(third.reply.response.finished, true);
   assert.equal(calls, 3);
 });
+test('an oversized context finishes without charging an attempt', async () => {
+  let calls = 0;
+  const engine = new ConversationEngine({
+    manifest: fixture.manifest,
+    provider: {
+      async complete() {
+        calls++;
+        return structuredClone(fixture.drafts.final);
+      },
+    },
+  });
+  const first = await engine.handle(fixture.request, null, ['testing.set']);
+  const state = structuredClone(first.state);
+  state.messages.push({ role: 'user', content: 'x'.repeat(262144) });
+  const next = await engine.handle(
+    { ...fixture.request, requestId: 'size-2', conversationId: state.id },
+    state,
+    ['testing.set'],
+  );
+  assert.equal(
+    next.reply.response.text,
+    'The conversation context limit was reached. Start a new conversation.',
+  );
+  assert.equal(calls, 1);
+  assert.equal(next.state.attempts, 1);
+});
 for (const scenario of fixture.cases)
   test(`Node protocol conformance: ${scenario.name}`, async () => {
     let calls = 0;
     let state = null;
     let lastRequest;
-    const queue = scenario.turns
-      .filter((turn) => turn.draft)
-      .map((turn) => turn.draft);
+    const queue = scenario.turns.flatMap(
+      (turn) => turn.drafts ?? (turn.draft ? [turn.draft] : []),
+    );
     const provider = {
       async complete(messages, capabilities) {
         calls++;
@@ -112,12 +142,24 @@ for (const scenario of fixture.cases)
       manifest: fixture.manifest,
       ...(scenario.maxSteps ? { maxSteps: scenario.maxSteps } : {}),
       ...(scenario.maxAttempts ? { maxAttempts: scenario.maxAttempts } : {}),
+      ...(scenario.maxRecoveries
+        ? { maxRecoveries: scenario.maxRecoveries }
+        : {}),
+      ...(scenario.validateCompletion ? { validateCompletion: true } : {}),
+      ...(scenario.plan ? { plan: true } : {}),
+      ...(scenario.checkActions ? { checkActions: true } : {}),
+      ...(scenario.cache
+        ? { trajectoryCache: new MemoryTrajectoryCache() }
+        : {}),
     });
     for (const [index, turn] of scenario.turns.entries()) {
       let request = structuredClone(fixture.request);
       if (turn.kind === 'replay' || turn.kind === 'conflict') {
         request = structuredClone(lastRequest);
         if (turn.kind === 'conflict') request.message = 'Changed';
+      } else if (turn.kind === 'fresh') {
+        // A new conversation with the same message.
+        request.requestId = `request-${index + 1}`;
       } else if (turn.kind !== 'initial') {
         request.requestId = `request-${index + 1}`;
         request.conversationId = state.id;
@@ -133,6 +175,11 @@ for (const scenario of fixture.cases)
             message: 'Fixture result',
             evidence: {},
           };
+          if (turn.observation)
+            request.result.observation = {
+              ...fixture.request.snapshot,
+              text: 'x'.repeat(32000),
+            };
         }
       }
       lastRequest = request;
@@ -147,6 +194,8 @@ for (const scenario of fixture.cases)
           },
         );
         state = result.state;
+        for (const message of state.messages)
+          assert.doesNotMatch(message.content, /"observation"/);
         for (const message of state.messages.filter(
           (entry) => entry.role === 'assistant',
         ))
@@ -159,6 +208,7 @@ for (const scenario of fixture.cases)
           status: 200,
           emotion: result.reply.response.emotion,
           finished: result.reply.response.finished,
+          plan: result.reply.response.plan ?? null,
         };
         if (!outcome.finished)
           assert.equal(

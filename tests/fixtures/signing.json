@@ -1,0 +1,7 @@
+{
+  "comment": "Synthetic Ed25519 test vector shared by the Node, PHP and extension tests. Never use this key.",
+  "signingKey": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+  "publicKey": "ed25519:A6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=",
+  "claims": "{\"v\":1,\"origin\":\"http://shop.test\",\"callId\":\"0123456789abcdef0123456789abcdef\",\"capabilityId\":\"ui.type\",\"snapshotId\":\"snapshot-1\",\"parameters\":{\"target\":\"target-3\",\"text\":\"Halo, Ada — café/1\",\"clear\":true},\"iat\":1830000000,\"exp\":1830000060}",
+  "signature": "XCCng80Zv6DNoBT5WT/bcAHXK5weqIa9FX58Ub8QxOiTbS//3rmP8tOcm6nwdf48V9U4T2ilhTw1FeDIVmZ4Aw=="
+}

@@ -190,6 +190,48 @@ test('Node transaction serialization fails closed and rate limit survives identi
   assert.equal(response.status, 429);
   assert.equal(response.headers.get('retry-after'), '60');
 });
+test('Node session provider budget survives new conversations and identity changes', async (t) => {
+  const directory = await temporary(t);
+  let calls = 0;
+  let principal = session.principal;
+  const handler = createChatHandler({
+    origin,
+    store: new FileConversationStore(directory),
+    attemptsPerHour: 2,
+    authorize: async () => ({ ...session, principal }),
+    engine: new ConversationEngine({
+      manifest: fixture.manifest,
+      provider: {
+        async complete() {
+          calls++;
+          return fixture.drafts.final;
+        },
+      },
+    }),
+  });
+  const fresh = (id) => request({ ...fixture.request, requestId: id });
+  assert.equal((await handler(fresh('budget-1'))).status, 200);
+  principal = 'other';
+  assert.equal((await handler(fresh('budget-2'))).status, 200);
+  const exhausted = await handler(fresh('budget-3'));
+  assert.equal(exhausted.status, 429);
+  assert.equal((await exhausted.json()).error.code, 'BUDGET_EXHAUSTED');
+  assert.equal(calls, 2);
+  assert.throws(
+    () =>
+      createChatHandler({
+        origin,
+        store: new FileConversationStore(directory),
+        attemptsPerHour: 0,
+        authorize: async () => session,
+        engine: new ConversationEngine({
+          manifest: fixture.manifest,
+          provider: { async complete() {} },
+        }),
+      }),
+    { code: 'INVALID_OPTIONS' },
+  );
+});
 test('Node rejects oversized streamed input without trusting Content-Length', async () => {
   await assert.rejects(
     readBounded(

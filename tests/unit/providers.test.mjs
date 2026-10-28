@@ -208,3 +208,198 @@ test('response normalization accepts only complete JSON or a whole JSON fence, i
   );
   assert.equal(validateProviderResponse(unknown).valid, false);
 });
+const toolCapabilities = [
+  {
+    id: 'accessibility.set_heading_color',
+    description: 'Change heading color only.',
+    execution: 'browser',
+    handler: 'headings',
+    verification: { handler: 'verifyHeadings' },
+    risk: 'reversible',
+    inputSchema: {
+      type: 'object',
+      properties: { color: { type: 'string' } },
+      required: ['color'],
+      additionalProperties: false,
+    },
+  },
+];
+const toolConfig = resolveProviderConfiguration({
+  provider: 'openai',
+  apiKey: 'synthetic-key',
+  model: 'owner-selected-model',
+  responseMode: 'tools',
+});
+test('tools mode sends approved capabilities as native functions with dot-free names', () => {
+  const body = completionRequest(
+    toolConfig,
+    [
+      { role: 'system', content: 'Trusted instructions.' },
+      { role: 'user', content: 'Make headings red.' },
+    ],
+    500,
+    toolCapabilities,
+  );
+  assert.equal(body.response_format, undefined);
+  assert.deepEqual(body.tools, [
+    {
+      type: 'function',
+      function: {
+        name: 'accessibility_set_heading_color',
+        description: 'Change heading color only.',
+        parameters: toolCapabilities[0].inputSchema,
+      },
+    },
+  ]);
+  assert.match(body.messages[0].content, /Tool mode: to act, call exactly one/);
+  assert.equal(
+    completionRequest(toolConfig, [], 500, []).tools,
+    undefined,
+    'No tools are offered when nothing is approved',
+  );
+});
+test('tools mode decodes only the first known tool call and turns plain text into a tool-free final reply', () => {
+  const call = (name, args, extra = {}) => ({
+    choices: [
+      {
+        finish_reason: 'tool_calls',
+        message: {
+          content: null,
+          tool_calls: [
+            { type: 'function', function: { name, arguments: args } },
+            {
+              type: 'function',
+              function: {
+                name: 'accessibility_set_heading_color',
+                arguments: '{"color":"#00ff00"}',
+              },
+            },
+          ],
+          ...extra,
+        },
+      },
+    ],
+  });
+  const draft = decodeCompletion(
+    call('accessibility_set_heading_color', '{"color":"#ff0000"}'),
+    toolConfig,
+    toolCapabilities,
+  );
+  assert.deepEqual(draft.toolCalls, [
+    {
+      capabilityId: 'accessibility.set_heading_color',
+      parameters: { color: '#ff0000' },
+    },
+  ]);
+  assert.equal(draft.finished, false);
+  assert.equal(validateProviderResponse(draft).valid, true);
+  for (const invalid of [
+    call('unknown_capability', '{}'),
+    call('accessibility_set_heading_color', '[1]'),
+    call('accessibility_set_heading_color', '{broken'),
+    call('accessibility_set_heading_color', '{}', { refusal: 'No.' }),
+  ])
+    assert.throws(
+      () => decodeCompletion(invalid, toolConfig, toolCapabilities),
+      {
+        code: 'INVALID_PROVIDER_RESPONSE',
+      },
+    );
+  assert.deepEqual(
+    decodeCompletion(
+      wrap('Headings are already red.'),
+      toolConfig,
+      toolCapabilities,
+    ),
+    {
+      text: 'Headings are already red.',
+      emotion: 'idle',
+      finished: true,
+      toolCalls: [],
+    },
+  );
+  assert.deepEqual(
+    decodeCompletion(wrap(JSON.stringify(final)), toolConfig, toolCapabilities),
+    final,
+  );
+  assert.throws(
+    () =>
+      decodeCompletion(
+        { choices: [{ finish_reason: 'length', message: { content: 'Cut' } }] },
+        toolConfig,
+        toolCapabilities,
+      ),
+    { code: 'INVALID_PROVIDER_RESPONSE' },
+  );
+});
+test('provider diagnostics report outcome, status, latency and token usage without content or keys', async () => {
+  const events = [];
+  const respond = (status, body) => async () =>
+    new Response(typeof body === 'string' ? body : JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  const make = (fetch) =>
+    new OpenAiCompatibleProvider({
+      provider: 'openai',
+      apiKey: 'secret-key-marker',
+      model: 'owner-selected-model',
+      fetch,
+      onDiagnostic: (event) => {
+        events.push(event);
+        throw new Error('A failing hook must not change the outcome');
+      },
+    });
+  const reply = await make(
+    respond(200, {
+      ...wrap(JSON.stringify(final)),
+      usage: { prompt_tokens: 12, completion_tokens: 3, total_tokens: 15 },
+    }),
+  ).complete([{ role: 'user', content: 'prompt-marker' }], [], 100);
+  assert.deepEqual(reply, final);
+  await assert.rejects(
+    make(respond(429, { error: { message: 'body-marker' } })).complete(
+      [],
+      [],
+      100,
+    ),
+    { code: 'PROVIDER_UNAVAILABLE' },
+  );
+  await assert.rejects(
+    make(respond(200, wrap('not json'))).complete([], [], 100),
+    {
+      code: 'INVALID_PROVIDER_RESPONSE',
+    },
+  );
+  await assert.rejects(
+    make(async () => {
+      throw new TypeError('network-marker');
+    }).complete([], [], 100),
+  );
+  const controller = new AbortController();
+  controller.abort();
+  await assert.rejects(
+    make(() => new Promise(() => {})).complete([], [], 100, controller.signal),
+  );
+  assert.deepEqual(
+    events.map(({ latencyMs, ...event }) => {
+      assert.ok(Number.isInteger(latencyMs) && latencyMs >= 0);
+      return event;
+    }),
+    [
+      {
+        outcome: 'ok',
+        status: 200,
+        usage: { inputTokens: 12, outputTokens: 3, totalTokens: 15 },
+      },
+      { outcome: 'http_error', status: 429 },
+      { outcome: 'invalid_response', status: 200 },
+      { outcome: 'network_error' },
+      { outcome: 'cancelled' },
+    ],
+  );
+  assert.doesNotMatch(
+    JSON.stringify(events),
+    /secret-key-marker|prompt-marker|body-marker|network-marker/,
+  );
+});

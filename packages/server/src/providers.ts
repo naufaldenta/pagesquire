@@ -1,8 +1,29 @@
+import type { CapabilityDefinition } from '@pagesquire/protocol';
 import catalog from './provider-presets.js';
 import { fail } from './engine.js';
-import type { ProviderMessage } from './engine.js';
+import type { ProviderImageMessage, ProviderMessage } from './engine.js';
 
-export type ResponseMode = 'json_object' | 'prompt';
+/**
+ * `tools` sends approved capabilities as native function definitions and
+ * reads the first tool call back as the single proposed action.
+ */
+export type ResponseMode = 'json_object' | 'prompt' | 'tools';
+
+const toolInstruction =
+  'Tool mode: to act, call exactly one of the provided functions with its arguments and do not describe the call in text. When no action is needed, reply with ONLY a JSON object {"text": string, "emotion": idle|happy|sad|thinking|confused|hover, "finished": true, "toolCalls": []}.';
+
+/** Function names allow only [A-Za-z0-9_-]{1,64}; capability IDs may contain dots. */
+export function toolNames(
+  capabilities: readonly Pick<CapabilityDefinition, 'id'>[],
+): Map<string, string> {
+  const names = new Map<string, string>();
+  for (const [index, { id }] of capabilities.entries()) {
+    let name = id.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 64);
+    if (names.has(name)) name = `${name.slice(0, 56)}_${index}`;
+    names.set(name, id);
+  }
+  return names;
+}
 export type TokenParameter = 'max_tokens' | 'max_completion_tokens';
 export interface ProviderPreset {
   id: string;
@@ -87,7 +108,7 @@ export function resolveProviderConfiguration(
   const systemRole = input.systemRole ?? 'system';
   const thinking = input.thinking ?? 'default';
   if (
-    !['json_object', 'prompt'].includes(responseMode) ||
+    !['json_object', 'prompt', 'tools'].includes(responseMode) ||
     !['max_tokens', 'max_completion_tokens'].includes(tokenParameter) ||
     !['system', 'developer'].includes(systemRole) ||
     !['default', 'disabled'].includes(thinking) ||
@@ -141,8 +162,9 @@ export function providerConfigurationFromEnv(
 
 export function completionRequest(
   config: ResolvedProviderConfiguration,
-  messages: readonly ProviderMessage[],
+  messages: readonly (ProviderMessage | ProviderImageMessage)[],
   maximum: number,
+  capabilities: readonly CapabilityDefinition[] = [],
 ): Record<string, unknown> {
   if (!Number.isSafeInteger(maximum) || maximum < 1 || maximum > 4096)
     fail(
@@ -150,10 +172,13 @@ export function completionRequest(
       'Configure a bounded output-token limit.',
       500,
     );
-  const system = messages
-    .filter((message) => message.role === 'system')
-    .map((message) => message.content)
-    .join('\n\n');
+  const tools = config.responseMode === 'tools';
+  const system = [
+    ...messages
+      .filter((message) => message.role === 'system')
+      .map((message) => message.content),
+    ...(tools ? [toolInstruction] : []),
+  ].join('\n\n');
   const body: Record<string, unknown> = {
     model: config.model,
     messages: [
@@ -165,6 +190,17 @@ export function completionRequest(
   };
   if (config.responseMode === 'json_object')
     body.response_format = { type: 'json_object' };
+  if (tools && capabilities.length) {
+    const names = [...toolNames(capabilities).keys()];
+    body.tools = capabilities.map((capability, index) => ({
+      type: 'function',
+      function: {
+        name: names[index],
+        description: capability.description,
+        parameters: capability.inputSchema,
+      },
+    }));
+  }
   if (config.thinking === 'disabled') {
     if (config.provider === 'qwen') body.enable_thinking = false;
     else body.thinking = { type: 'disabled' };
@@ -172,13 +208,19 @@ export function completionRequest(
   return body;
 }
 
-export function decodeCompletion(data: unknown): unknown {
+export function decodeCompletion(
+  data: unknown,
+  config?: Pick<ResolvedProviderConfiguration, 'responseMode'>,
+  capabilities: readonly Pick<CapabilityDefinition, 'id'>[] = [],
+): unknown {
   const invalid = (): never =>
     fail(
       'INVALID_PROVIDER_RESPONSE',
       'The provider returned an invalid, refused or incomplete assistant response.',
       502,
     );
+  if (config?.responseMode === 'tools')
+    return decodeToolCompletion(data, capabilities, invalid);
   const envelope = data as {
     choices?: {
       finish_reason?: unknown;
@@ -233,4 +275,115 @@ export function decodeCompletion(data: unknown): unknown {
   } catch {
     return invalid();
   }
+}
+
+function decodeToolCompletion(
+  data: unknown,
+  capabilities: readonly Pick<CapabilityDefinition, 'id'>[],
+  invalid: () => never,
+): unknown {
+  const envelope = data as {
+    choices?: {
+      finish_reason?: unknown;
+      message?: {
+        content?: unknown;
+        refusal?: unknown;
+        tool_calls?: unknown;
+        function_call?: unknown;
+      };
+    }[];
+    error?: unknown;
+  } | null;
+  if (
+    !envelope ||
+    envelope.error != null ||
+    !Array.isArray(envelope.choices) ||
+    envelope.choices.length !== 1
+  )
+    return invalid();
+  const choice = envelope.choices[0]!;
+  const message = choice?.message;
+  const calls = message?.tool_calls;
+  if (
+    !message ||
+    (message.refusal != null && message.refusal !== '') ||
+    message.function_call != null ||
+    (calls != null && !Array.isArray(calls))
+  )
+    return invalid();
+  if (Array.isArray(calls) && calls.length) {
+    if (
+      choice.finish_reason != null &&
+      !['tool_calls', 'stop'].includes(choice.finish_reason as string)
+    )
+      return invalid();
+    // One action at a time: later calls are never executed or reported.
+    const call = calls[0] as {
+      type?: unknown;
+      function?: { name?: unknown; arguments?: unknown };
+    };
+    const capabilityId =
+      typeof call?.function?.name === 'string'
+        ? toolNames(capabilities).get(call.function.name)
+        : undefined;
+    const raw = call?.function?.arguments;
+    if (
+      (call?.type != null && call.type !== 'function') ||
+      !capabilityId ||
+      typeof raw !== 'string' ||
+      Buffer.byteLength(raw) > 65536
+    )
+      return invalid();
+    let parameters: unknown;
+    try {
+      parameters = JSON.parse(raw.trim() || '{}');
+    } catch {
+      return invalid();
+    }
+    if (
+      !parameters ||
+      typeof parameters !== 'object' ||
+      Array.isArray(parameters)
+    )
+      return invalid();
+    return {
+      text: 'Checking the requested action…',
+      emotion: 'thinking',
+      finished: false,
+      toolCalls: [{ capabilityId, parameters }],
+    };
+  }
+  if (choice.finish_reason != null && choice.finish_reason !== 'stop')
+    return invalid();
+  let content = message.content;
+  if (Array.isArray(content)) {
+    if (
+      !content.length ||
+      content.some(
+        (part) =>
+          !part || part.type !== 'text' || typeof part.text !== 'string',
+      )
+    )
+      return invalid();
+    content = content.map((part) => part.text).join('');
+  }
+  if (typeof content !== 'string' || Buffer.byteLength(content) > 65536)
+    return invalid();
+  const text = content.trim();
+  if (!text) return invalid();
+  const fenced = /^```(?:json)?\s*\n([\s\S]*?)\n```$/i.exec(text);
+  try {
+    const value: unknown = JSON.parse(fenced ? fenced[1]! : text);
+    if (value && typeof value === 'object' && !Array.isArray(value))
+      return value;
+  } catch {
+    /* A plain-text answer is a final reply without actions. */
+  }
+  // Text alone can never act: it becomes a finished, tool-free reply.
+  return {
+    text: [...text].slice(0, 8000).join(''),
+    emotion: 'idle',
+    finished: true,
+    toolCalls: [],
+  };
 }
