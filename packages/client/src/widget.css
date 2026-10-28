@@ -397,3 +397,52 @@
   outline: 3px solid #007c83;
   outline-offset: 3px;
 }
+
+.pagesquire-approval {
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  border: 2px solid currentColor;
+  border-radius: 0.5rem;
+}
+
+.pagesquire-approval-title {
+  font-weight: 700;
+}
+
+.pagesquire-approval-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pagesquire-visitor {
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  border: 2px solid currentColor;
+  border-radius: 0.5rem;
+}
+
+.pagesquire-visitor[data-kind='handoff'] {
+  border-style: dashed;
+}
+
+.pagesquire-visitor-title {
+  font-weight: 700;
+}
+
+.pagesquire-visitor-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pagesquire-trace-events {
+  max-height: 20rem;
+  overflow: auto;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+}
+
+.pagesquire-trace-events [data-problem='true'] {
+  font-weight: 700;
+}

@@ -6,3 +6,7 @@ export * from './tour.js';
 export * from './speech.js';
 export * from './inspector.js';
 export * from './progress.js';
+export * from './approval.js';
+export * from './visitor.js';
+export * from './trace.js';
+export * from './i18n.js';

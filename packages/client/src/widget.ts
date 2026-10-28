@@ -1,7 +1,9 @@
 import type { AssistantClient, ChatState } from './client.js';
 import { describeActionProgress } from './progress.js';
+import { format, resolveMessages } from './i18n.js';
+import type { LocaleOptions } from './i18n.js';
 
-export interface WidgetOptions {
+export interface WidgetOptions extends LocaleOptions {
   title?: string;
   placeholder?: string;
 }
@@ -12,12 +14,13 @@ export function mountWidget(
   options: WidgetOptions = {},
 ): () => void {
   const document = host.ownerDocument;
+  const t = resolveMessages(options, document);
   const widget = document.createElement('section');
   widget.className = 'pagesquire-widget';
   widget.setAttribute('data-pagesquire-root', '');
-  widget.setAttribute('aria-label', options.title ?? 'PageSquire assistant');
+  widget.setAttribute('aria-label', options.title ?? t['widget.label']);
   const heading = document.createElement('h2');
-  heading.textContent = options.title ?? 'PageSquire';
+  heading.textContent = options.title ?? t['widget.title'];
   const status = document.createElement('p');
   status.className = 'pagesquire-status';
   status.setAttribute('role', 'status');
@@ -26,21 +29,21 @@ export function mountWidget(
   const log = document.createElement('div');
   log.className = 'pagesquire-messages';
   log.setAttribute('role', 'log');
-  log.setAttribute('aria-label', 'Conversation');
+  log.setAttribute('aria-label', t['widget.conversation']);
   log.setAttribute('aria-live', 'polite');
   log.setAttribute('aria-relevant', 'additions');
   const progress = document.createElement('section');
   progress.className = 'pagesquire-action-progress';
-  progress.setAttribute('aria-label', 'Action progress');
+  progress.setAttribute('aria-label', t['widget.progress']);
   progress.hidden = true;
   const progressHeading = document.createElement('h3');
-  progressHeading.textContent = 'Action progress';
+  progressHeading.textContent = t['widget.progress'];
   const progressNote = document.createElement('p');
-  progressNote.textContent = 'Observed browser stages · recent 20 attempts';
+  progressNote.textContent = t['widget.progressNote'];
   progressNote.className = 'pagesquire-progress-note';
   const actions = document.createElement('ol');
   actions.className = 'pagesquire-action-list';
-  actions.setAttribute('aria-label', 'Recent actions');
+  actions.setAttribute('aria-label', t['widget.recentActions']);
   actions.tabIndex = 0;
   progress.append(progressHeading, progressNote, actions);
   const rows = new Map<
@@ -58,21 +61,21 @@ export function mountWidget(
   const input = document.createElement('textarea');
   const inputId = `pagesquire-${crypto.randomUUID()}`;
   label.htmlFor = inputId;
-  label.textContent = 'How can I help with this page?';
+  label.textContent = t['widget.inputLabel'];
   input.id = inputId;
   input.rows = 2;
   input.maxLength = 4000;
-  input.placeholder = options.placeholder ?? 'Try “Make headings red”';
+  input.placeholder = options.placeholder ?? t['widget.placeholder'];
   input.required = true;
   const send = document.createElement('button');
   send.type = 'submit';
-  send.textContent = 'Send';
+  send.textContent = t['widget.send'];
   const cancel = document.createElement('button');
   cancel.type = 'button';
-  cancel.textContent = 'Stop';
+  cancel.textContent = t['widget.stop'];
   const reset = document.createElement('button');
   reset.type = 'button';
-  reset.textContent = 'New conversation';
+  reset.textContent = t['widget.newConversation'];
   const controls = document.createElement('div');
   controls.className = 'pagesquire-controls';
   controls.append(send, cancel, reset);
@@ -91,9 +94,16 @@ export function mountWidget(
       latest && ['checking', 'executing', 'verifying'].includes(latest.stage);
     status.textContent = state.busy
       ? active
-        ? `${describeActionProgress(latest).label}: ${latest.capabilityId}. You can stop at any time.`
-        : 'Thinking… You can stop at any time.'
-      : `Ready · ${state.emotion}`;
+        ? format(t['widget.statusActing'], {
+            stage: describeActionProgress(latest, t).label,
+            capability: latest.capabilityId,
+          })
+        : state.serverStage
+          ? format(t['widget.statusServer'], {
+              stage: t[`server.${state.serverStage}`],
+            })
+          : t['widget.statusThinking']
+      : format(t['widget.statusReady'], { emotion: state.emotion });
     progress.hidden = !state.actionProgress.length;
     const ids = new Set(state.actionProgress.map((entry) => entry.id));
     for (const [id, value] of rows) {
@@ -113,7 +123,7 @@ export function mountWidget(
         label.className = 'pagesquire-action-outcome';
         const stages = document.createElement('ol');
         stages.className = 'pagesquire-action-stages';
-        stages.setAttribute('aria-label', 'Observed stages');
+        stages.setAttribute('aria-label', t['widget.observedStages']);
         const recovery = document.createElement('p');
         recovery.className = 'pagesquire-action-guidance';
         row.append(name, label, stages, recovery);
@@ -122,12 +132,12 @@ export function mountWidget(
         rows.set(entry.id, value);
       }
       value.row.dataset.stage = entry.stage;
-      const description = describeActionProgress(entry);
+      const description = describeActionProgress(entry, t);
       value.label.textContent = description.label;
       value.recovery.textContent = description.message;
       for (const stage of entry.stages.slice(value.count)) {
         const step = document.createElement('li');
-        step.textContent = describeActionProgress({ stage }).label;
+        step.textContent = describeActionProgress({ stage }, t).label;
         value.stages.append(step);
       }
       value.count = entry.stages.length;
@@ -144,7 +154,9 @@ export function mountWidget(
       const entry = document.createElement('p');
       entry.className = `pagesquire-message pagesquire-${message.role}`;
       entry.textContent =
-        message.role === 'user' ? `You: ${message.text}` : message.text;
+        message.role === 'user'
+          ? format(t['widget.you'], { text: message.text })
+          : message.text;
       if (message.status) entry.dataset.status = message.status;
       if (message.emotion) entry.dataset.emotion = message.emotion;
       log.append(entry);

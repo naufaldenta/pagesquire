@@ -1,4 +1,6 @@
 import { BrowserDriver, PageObserver, PageSquireError } from '@pagesquire/core';
+import { resolveMessages } from './i18n.js';
+import type { LocaleOptions } from './i18n.js';
 
 export interface TourStep {
   target: () => Element;
@@ -13,7 +15,10 @@ export class GuidedTour {
   private root: HTMLElement | undefined;
 
   constructor(
-    private readonly options: { observer: PageObserver; driver: BrowserDriver },
+    private readonly options: {
+      observer: PageObserver;
+      driver: BrowserDriver;
+    } & LocaleOptions,
   ) {}
 
   async start(
@@ -47,21 +52,22 @@ export class GuidedTour {
     current.throwIfAborted();
     this.active = controller;
     const doc = this.options.observer.document;
+    const t = resolveMessages(this.options, doc);
     const previous = doc.activeElement;
     const root = doc.createElement('section');
     root.className = 'pagesquire-tour';
     root.setAttribute('data-pagesquire-root', '');
     root.setAttribute('role', 'region');
-    root.setAttribute('aria-label', 'PageSquire guided tour');
+    root.setAttribute('aria-label', t['tour.label']);
     const label = doc.createElement('p');
     label.setAttribute('aria-live', 'polite');
     const back = doc.createElement('button'),
       next = doc.createElement('button'),
       stop = doc.createElement('button');
     for (const button of [back, next, stop]) button.type = 'button';
-    back.textContent = 'Previous';
-    next.textContent = 'Next';
-    stop.textContent = 'Stop tour';
+    back.textContent = t['tour.previous'];
+    next.textContent = t['tour.next'];
+    stop.textContent = t['tour.stop'];
     root.append(label, back, next, stop);
     doc.body.append(root);
     this.root = root;
@@ -75,7 +81,7 @@ export class GuidedTour {
       let index = 0;
       while (index < steps.length) {
         current.throwIfAborted();
-        this.options.observer.allowedUrl(doc.URL);
+        this.options.observer.observableUrl(doc.URL);
         const step = steps[index]!;
         back.disabled = true;
         next.disabled = true;
@@ -105,7 +111,8 @@ export class GuidedTour {
         label.textContent = `${index + 1} / ${steps.length} — ${step.text}`;
         back.disabled = index === 0;
         next.disabled = false;
-        next.textContent = index === steps.length - 1 ? 'Finish' : 'Next';
+        next.textContent =
+          index === steps.length - 1 ? t['tour.finish'] : t['tour.next'];
         next.focus({ preventScroll: true });
         const direction = await new Promise<number>((resolve, reject) => {
           const cleanup = () => {

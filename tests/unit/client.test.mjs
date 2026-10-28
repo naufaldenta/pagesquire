@@ -26,7 +26,11 @@ const final = {
   },
 };
 function client(transport, options = {}) {
-  const runtime = { observe: () => snapshot, registry: { list: () => [] } };
+  const runtime = {
+    observe: () => snapshot,
+    registry: { list: () => [] },
+    resetSession() {},
+  };
   return new AssistantClient({ runtime, transport, ...options });
 }
 
@@ -91,7 +95,7 @@ test('a known provider failure preserves completed conversation context for the 
 
 test('HTTP errors distinguish limits, session expiry and provider failures without exposing response bodies', async () => {
   for (const [status, message] of [
-    [403, /unlock/],
+    [403, /access is unavailable/],
     [409, /expired/],
     [419, /session expired/],
     [429, /usage limit/],
