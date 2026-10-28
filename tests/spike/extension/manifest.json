@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "PageSquire companion spike",
+  "version": "0.0.1",
+  "description": "Phase 4D-0 spike harness. Not a product build: no grants, no signatures, loopback hosts only.",
+  "permissions": ["debugger", "scripting", "tabs"],
+  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"],
+  "background": { "service_worker": "worker.js", "type": "module" },
+  "content_scripts": [
+    {
+      "matches": ["http://127.0.0.1/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ]
+}
