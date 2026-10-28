@@ -9,7 +9,11 @@ import {
 import { manifest } from './capabilities.mjs';
 import { parameters } from '../dist/generated/bindings.mjs';
 
-export function createRuntime(config, document) {
+/** Ability output above this size is withheld from evidence and reported as truncated. */
+const ABILITY_EVIDENCE_BYTES = 8000;
+
+export function createRuntime(config, document, { runAbility } = {}) {
+  const abilityResults = new Map();
   const visible = (element) =>
     observer.isVisible(element) && !observer.isExcluded(element);
   const root = () => observer.findUnique(config.mapping.contentRoot);
@@ -74,9 +78,33 @@ export function createRuntime(config, document) {
       await context.navigate(destination.href);
     },
     ...pageBindings.handlers,
+    'wordpress.run_ability': async (args, context) => {
+      context.signal.throwIfAborted();
+      if (!runAbility) throw Error('Abilities are unavailable here.');
+      abilityResults.set(
+        context.call.callId,
+        await runAbility(args.name, args.input, context.signal),
+      );
+    },
   };
   const verifiers = {
     ...pageBindings.verifiers,
+    'wordpress.run_ability.verify': (args, context) => {
+      if (!abilityResults.has(context.call.callId)) return { verified: false };
+      const output = abilityResults.get(context.call.callId);
+      abilityResults.delete(context.call.callId);
+      const truncated =
+        new TextEncoder().encode(JSON.stringify(output ?? null)).byteLength >
+        ABILITY_EVIDENCE_BYTES;
+      return {
+        verified: true,
+        evidence: {
+          ability: args.name,
+          truncated,
+          ...(truncated ? {} : { output: output ?? null }),
+        },
+      };
+    },
     'accessibility.set_heading_color.verify': (args) => ({
       verified:
         headings().length > 0 &&

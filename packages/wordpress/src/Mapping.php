@@ -10,7 +10,7 @@ final class Mapping
 {
     public const ROOTS = ['main', '#content', '#primary', '.wp-site-blocks', '[data-pagesquire-content]'];
 
-    public const CAPABILITIES = ['accessibility.set_heading_color', 'accessibility.set_link_highlight', 'accessibility.set_font_weight', 'browser.navigate', 'page.read', 'page.scroll_to', 'page.highlight'];
+    public const CAPABILITIES = ['accessibility.set_heading_color', 'accessibility.set_link_highlight', 'accessibility.set_font_weight', 'browser.navigate', 'page.read', 'page.scroll_to', 'page.highlight', Abilities::CAPABILITY];
 
     /** @return array<string, mixed> */
     public static function defaults(string $origin): array

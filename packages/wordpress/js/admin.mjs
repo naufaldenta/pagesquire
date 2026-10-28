@@ -94,6 +94,7 @@ if (element) {
           endpoint: data.get('endpoint'),
           model: data.get('model'),
           pageIds: data.getAll('pageIds').map(Number),
+          abilities: data.getAll('abilities'),
           dailyAttempts: Number(data.get('dailyAttempts')),
           apiKey: data.get('apiKey'),
           removeKey: data.has('removeKey'),

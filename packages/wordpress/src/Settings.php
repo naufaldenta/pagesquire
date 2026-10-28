@@ -23,7 +23,7 @@ final class Settings
             'enabled' => false, 'consent' => false, 'access' => 'administrators',
             'assistantName' => 'PageSquire', 'language' => 'auto', 'endpoint' => '', 'model' => '',
             'provider' => 'custom', 'responseMode' => 'preset', 'tokenParameter' => 'preset', 'systemRole' => 'system', 'thinking' => 'default',
-            'pageIds' => [], 'dailyAttempts' => 100, 'revision' => 1,
+            'pageIds' => [], 'dailyAttempts' => 100, 'revision' => 1, 'abilities' => [],
             'mapping' => Mapping::defaults(self::origin()),
         ], get_option('pagesquire_settings', []));
     }
@@ -63,14 +63,14 @@ final class Settings
     /** @param array<string, mixed> $input @return array<string, mixed> */
     public static function save(array $input): array
     {
-        $allowed = ['enabled', 'consent', 'access', 'assistantName', 'language', 'provider', 'endpoint', 'model', 'responseMode', 'tokenParameter', 'systemRole', 'thinking', 'pageIds', 'dailyAttempts', 'apiKey', 'removeKey'];
+        $allowed = ['enabled', 'consent', 'access', 'assistantName', 'language', 'provider', 'endpoint', 'model', 'responseMode', 'tokenParameter', 'systemRole', 'thinking', 'pageIds', 'dailyAttempts', 'abilities', 'apiKey', 'removeKey'];
         if (array_diff(array_keys($input), $allowed) !== []) {
             throw new AssistantException('INVALID_SETTINGS', 'Unknown settings cannot be saved.');
         }
         $previous = self::get();
         $next = array_replace($previous, array_diff_key($input, ['apiKey' => true, 'removeKey' => true]));
         $presets = array_column(ProviderConfiguration::presets(), null, 'id');
-        if (! is_string($next['provider']) || ! isset($presets[$next['provider']]) || ! in_array($next['responseMode'], ['preset', 'json_object', 'prompt'], true) || ! in_array($next['tokenParameter'], ['preset', 'max_tokens', 'max_completion_tokens'], true) || ! in_array($next['systemRole'], ['system', 'developer'], true) || ! in_array($next['thinking'], ['default', 'disabled'], true)) {
+        if (! is_string($next['provider']) || ! isset($presets[$next['provider']]) || ! in_array($next['responseMode'], ['preset', 'json_object', 'prompt', 'tools'], true) || ! in_array($next['tokenParameter'], ['preset', 'max_tokens', 'max_completion_tokens'], true) || ! in_array($next['systemRole'], ['system', 'developer'], true) || ! in_array($next['thinking'], ['default', 'disabled'], true)) {
             throw new AssistantException('INVALID_PROVIDER', 'Select a supported provider and compatibility settings.');
         }
         if ($next['endpoint'] === '' && $presets[$next['provider']]['endpoint'] !== null) {
@@ -94,6 +94,7 @@ final class Settings
         if ($next['endpoint'] !== '') {
             ProviderConfiguration::resolve([...self::providerOptions($next), 'endpoint' => $next['endpoint'], 'apiKey' => 'configuration-check-only', 'model' => $next['model'] !== '' ? $next['model'] : 'configuration-check-only']);
         }
+        $next['abilities'] = Abilities::validateSelection($next['abilities']);
         foreach ($next['pageIds'] as $id) {
             if (! is_int($id) || $id < 1 || ! Context::permitted(get_post($id))) {
                 throw new AssistantException('PRIVATE_PAGE', 'Only published, unprotected public pages or posts may be selected.');

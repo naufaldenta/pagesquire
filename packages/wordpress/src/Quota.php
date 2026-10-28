@@ -8,46 +8,67 @@ use PageSquireWPVendor\PageSquire\Server\AssistantException;
 
 final class Quota
 {
-    public function __construct(private readonly OptionsStore $store) {}
+    private readonly DatabaseCounter $counter;
+
+    public function __construct(private readonly OptionsStore $store, ?DatabaseCounter $counter = null)
+    {
+        global $wpdb;
+        $this->counter = $counter ?? new DatabaseCounter($wpdb);
+    }
 
     public function request(string $ipHash, ?string $sessionKey = null, ?int $expiresAt = null): void
     {
-        $this->store->transaction('site-request-budget', static function (?array $state, callable $save) use ($ipHash, $sessionKey, $expiresAt): void {
+        $minute = self::minute();
+        // The IP bucket is checked first so an exhausted IP cannot spend the site-wide bucket.
+        if (! $this->counter->consume('ip', $minute, 30, $ipHash) || ! $this->counter->consume('site', $minute, 60)) {
+            throw new AssistantException('RATE_LIMITED', 'The site assistant request limit was reached. Try again later.', 429);
+        }
+        if ($sessionKey === null || $expiresAt === null) {
+            return;
+        }
+        // Only session issuance still needs the serialized registry, for its cap and cleanup.
+        $this->store->transaction('site-request-budget', static function (?array $state, callable $save) use ($sessionKey, $expiresAt): void {
             $now = time();
-            $state ??= ['minute' => intdiv($now, 60), 'count' => 0, 'ips' => [], 'sessions' => []];
-            if ($state['minute'] !== intdiv($now, 60)) {
-                $state['minute'] = intdiv($now, 60);
-                $state['count'] = 0;
-                $state['ips'] = [];
-            }
-            foreach ($state['sessions'] as $key => $expiry) {
+            $sessions = $state['sessions'] ?? [];
+            foreach ($sessions as $key => $expiry) {
                 if ($expiry + 120 < $now && ! OptionsStore::locked($key)) {
                     delete_option(OptionsStore::name($key));
-                    unset($state['sessions'][$key]);
+                    unset($sessions[$key]);
                 }
             }
-            if ($state['count'] >= 60 || ($state['ips'][$ipHash] ?? 0) >= 30 || count($state['sessions']) >= 1000 && $sessionKey !== null && ! isset($state['sessions'][$sessionKey])) {
+            if (count($sessions) >= 1000 && ! isset($sessions[$sessionKey])) {
                 throw new AssistantException('RATE_LIMITED', 'The site assistant request limit was reached. Try again later.', 429);
             }
-            $state['count']++;
-            $state['ips'][$ipHash] = ($state['ips'][$ipHash] ?? 0) + 1;
-            if ($sessionKey !== null && $expiresAt !== null) {
-                $state['sessions'][$sessionKey] = $expiresAt;
-            }
-            $save($state);
-        });
+            $sessions[$sessionKey] = $expiresAt;
+            $save(['sessions' => $sessions]);
+        }, 10);
     }
 
     public function provider(int $maximum): void
     {
-        $this->store->transaction('site-provider-budget', static function (?array $state, callable $save) use ($maximum): void {
-            $day = gmdate('Y-m-d');
-            $state = ($state['day'] ?? null) === $day ? $state : ['day' => $day, 'attempts' => 0];
-            if ($state['attempts'] >= $maximum) {
-                throw new AssistantException('PROVIDER_BUDGET', 'The site provider attempt budget was reached.', 429);
-            }
-            $state['attempts']++;
-            $save($state);
-        });
+        if (! $this->counter->consume('provider', self::day(), $maximum)) {
+            throw new AssistantException('PROVIDER_BUDGET', 'The site provider attempt budget was reached.', 429);
+        }
+    }
+
+    /** Lets a request fail fast with 429 before any conversation work when today's budget is spent. */
+    public function providerExhausted(int $maximum): bool
+    {
+        return $this->counter->value('provider', self::day()) >= $maximum;
+    }
+
+    public function providerAttempts(): int
+    {
+        return $this->counter->value('provider', self::day());
+    }
+
+    private static function minute(): string
+    {
+        return str_pad((string) intdiv(time(), 60), 10, '0', STR_PAD_LEFT);
+    }
+
+    private static function day(): string
+    {
+        return gmdate('Ymd', time());
     }
 }

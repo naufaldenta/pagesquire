@@ -5,7 +5,7 @@ import {
   mountWidget,
 } from '@pagesquire/client';
 import { createRuntime } from './adapters.mjs';
-import { api, route } from './api.mjs';
+import { api, readText, route } from './api.mjs';
 
 async function boot() {
   const element = document.querySelector('#pagesquire-site-config');
@@ -15,7 +15,27 @@ async function boot() {
   document
     .querySelector('#wpadminbar')
     ?.setAttribute('data-pagesquire-private', '');
-  const adapter = createRuntime(config, document);
+  let csrfToken;
+  const adapter = createRuntime(config, document, {
+    runAbility: async (name, input, signal) => {
+      if (!csrfToken) throw Error('The assistant session is not ready.');
+      const headers = {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrfToken,
+      };
+      if (config.nonce) headers['X-WP-Nonce'] = config.nonce;
+      const response = await fetch(route(config, 'ability'), {
+        method: 'POST',
+        credentials: 'same-origin',
+        redirect: 'error',
+        signal,
+        headers,
+        body: JSON.stringify({ name, input }),
+      });
+      if (!response.ok) throw Error('The ability could not run.');
+      return JSON.parse(await readText(response, 32768)).output;
+    },
+  });
   const { runtime, observer } = adapter;
   window.pagesquireWordPress = { runtime, observer, config };
   if (config.inspect) {
@@ -151,11 +171,12 @@ async function boot() {
       }
     return;
   }
-  const { csrfToken } = await api(config, 'session', {
+  ({ csrfToken } = await api(config, 'session', {
     method: 'POST',
     body: {},
-  });
+  }));
   const transport = createHttpTransport({
+    locale: config.locale ?? 'auto',
     endpoint: route(config, 'chat'),
     baseUrl: location.href,
     csrfToken: () => csrfToken,
@@ -175,13 +196,17 @@ async function boot() {
   const client = new AssistantClient({
     runtime,
     transport,
+    locale: config.locale ?? 'auto',
     ...(navigationStore ? { navigationStore } : {}),
     onEmotionChange: (emotion) =>
       window.dispatchEvent(
         new CustomEvent('pagesquire:emotion', { detail: emotion }),
       ),
   });
-  mountWidget(container, client, { title: config.assistantName });
+  mountWidget(container, client, {
+    title: config.assistantName,
+    locale: config.locale ?? 'auto',
+  });
   window.pagesquireWordPress.client = client;
   window.addEventListener(
     'pagehide',

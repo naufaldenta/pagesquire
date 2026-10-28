@@ -867,3 +867,70 @@ test('unknown model actions cannot mutate the page or produce a false success', 
   ).toBe(1);
   await guest.close();
 });
+
+test('approved read-only abilities run for visitors while writable abilities are never offered or run', async ({
+  page,
+  browser,
+}) => {
+  await expect(
+    page.locator('[name=abilities][value="pagesquire-fixture/reset-site"]'),
+  ).toHaveCount(0);
+  await page
+    .locator('[name=capabilityIds][value="wordpress.run_ability"]')
+    .check();
+  await page
+    .locator('[name=abilities][value="pagesquire-fixture/site-tagline"]')
+    .check();
+  await enable(page);
+  const guest = await browser.newContext();
+  const visitor = await guest.newPage();
+  const payloads = [];
+  visitor.on('request', (request) => {
+    if (
+      request.method() === 'POST' &&
+      decodeURIComponent(request.url()).includes('/pagesquire/v1/chat')
+    )
+      payloads.push(request.postDataJSON());
+  });
+  await visitor.goto(`${origin}/?page_id=${ids.alpha}`);
+  await visitor.waitForFunction(() =>
+    Boolean(window.pagesquireWordPress?.client),
+  );
+  const widget = visitor.locator('.pagesquire-widget');
+  await widget.getByRole('textbox').fill('What is the site tagline?');
+  await widget.getByRole('button', { name: 'Send', exact: true }).click();
+  await expect(widget).toHaveAttribute('data-busy', 'false', {
+    timeout: 30000,
+  });
+  await expect(widget.getByRole('log')).toContainText(
+    'requested changes were verified',
+  );
+  const result = payloads.find((payload) => payload.result)?.result;
+  expect(result.status).toBe('success');
+  expect(result.capabilityId).toBe('wordpress.run_ability');
+  expect(result.evidence).toEqual({
+    ability: 'pagesquire-fixture/site-tagline',
+    truncated: false,
+    output: { tagline: 'Synthetic fixture tagline' },
+  });
+  const session = await guest.request.post(endpoint('session'), {
+    data: {},
+    headers: { Origin: origin },
+  });
+  const { csrfToken } = await session.json();
+  const run = (name, headers = { 'X-CSRF-TOKEN': csrfToken }) =>
+    guest.request.post(endpoint('ability'), {
+      data: { name, input: {} },
+      headers: { Origin: origin, ...headers },
+    });
+  const writable = await run('pagesquire-fixture/reset-site');
+  expect(writable.status()).toBe(403);
+  expect((await writable.json()).code).toBe('ABILITY_DENIED');
+  expect((await run('pagesquire-fixture/site-tagline', {})).status()).toBe(403);
+  expect((await run('pagesquire-fixture/site-tagline')).status()).toBe(200);
+  const state = await (
+    await call(page, 'state', undefined, { fixture: true })
+  ).json();
+  expect(state.resetRan).toBe(false);
+  await guest.close();
+});

@@ -11,18 +11,23 @@ final class DatabaseLock
 {
     public function __construct(private readonly object $database) {}
 
-    public function acquire(string $name): string
+    public function acquire(string $name, int $attempts = 1): string
     {
         $token = bin2hex(random_bytes(16));
-        $result = $this->database->query($this->database->prepare('INSERT IGNORE INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $this->database->options, $name, $token, 'off'));
-        if ($result === false) {
-            throw new AssistantException('LOCK_UNAVAILABLE', 'The assistant lock could not be acquired.', 503);
+        for ($attempt = 1; ; $attempt++) {
+            $result = $this->database->query($this->database->prepare('INSERT IGNORE INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $this->database->options, $name, $token, 'off'));
+            if ($result === false) {
+                throw new AssistantException('LOCK_UNAVAILABLE', 'The assistant lock could not be acquired.', 503);
+            }
+            if ($result === 1) {
+                return $token;
+            }
+            if ($attempt >= min(max($attempts, 1), 20)) {
+                throw new AssistantException('BUSY', 'Another assistant request is running.', 409);
+            }
+            // A short jittered wait; a stranded lock still fails closed after the bounded attempts.
+            usleep(random_int(10_000, 30_000));
         }
-        if ($result !== 1) {
-            throw new AssistantException('BUSY', 'Another assistant request is running.', 409);
-        }
-
-        return $token;
     }
 
     public function held(string $name): bool

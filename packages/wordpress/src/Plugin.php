@@ -99,6 +99,7 @@ final class Plugin
                 return ['csrfToken' => $session['csrfToken']];
             }, $public],
             ['/chat', 'POST', $this->chat(...), $public],
+            ['/ability', 'POST', $this->ability(...), $public],
         ];
         foreach ($definitions as [$path, $methods, $callback, $permission]) {
             register_rest_route('pagesquire/v1', $path, ['methods' => $methods, 'permission_callback' => $permission, 'callback' => function (\WP_REST_Request $request) use ($callback): mixed {
@@ -145,6 +146,28 @@ final class Plugin
         }
     }
 
+    /** Runs one approved read-only WordPress ability for the browser handler of wordpress.run_ability. */
+    public function ability(\WP_REST_Request $request): array
+    {
+        $settings = Settings::get();
+        $session = Session::read($settings);
+        if ($session === null) {
+            throw new AssistantException('SESSION_REQUIRED', 'Reload the page to establish an assistant session.', 403);
+        }
+        $token = (string) $request->get_header('x-csrf-token');
+        if ($request->get_header('origin') !== Settings::origin() || strlen($token) < 16 || ! hash_equals($session['csrfToken'], $token)) {
+            throw new AssistantException('CSRF_MISMATCH', 'Refresh the page before using the assistant.', 403);
+        }
+        $raw = $this->raw($request);
+        if (! $raw instanceof \stdClass || array_keys(get_object_vars($raw)) !== ['name', 'input'] || ! $raw->input instanceof \stdClass) {
+            throw new AssistantException('INVALID_PAYLOAD', 'Send an ability name and input object.');
+        }
+        (new Quota(new OptionsStore))->request($this->ipHash());
+        $input = json_decode(wp_json_encode($raw->input), true, 32, JSON_THROW_ON_ERROR);
+
+        return ['output' => Abilities::run($settings, $raw->name, $input)];
+    }
+
     public function chat(\WP_REST_Request $request): \WP_REST_Response
     {
         $settings = Settings::get();
@@ -163,12 +186,23 @@ final class Plugin
         $store = new OptionsStore;
         $quota = new Quota($store);
         $quota->request($this->ipHash());
+        if ($quota->providerExhausted($settings['dailyAttempts'])) {
+            throw new AssistantException('PROVIDER_BUDGET', 'The site provider attempt budget was reached. Try again tomorrow.', 429);
+        }
         $validator = new ProtocolValidator;
         $provider = new SiteProvider(new OpenAiCompatibleProvider($validator, $settings['endpoint'], Settings::key(), $settings['model'], new WordPressHttpClient, options: Settings::providerOptions($settings)), $quota, $settings);
-        $endpoint = new ChatEndpoint(new ConversationEngine($provider, $validator, Mapping::manifest($settings['mapping'])), $validator, $store, Settings::origin());
+        $endpoint = new ChatEndpoint(new ConversationEngine($provider, $validator, Mapping::manifest($settings['mapping']), locale: self::locale($settings)), $validator, $store, Settings::origin());
         $result = $endpoint->handle($request->get_method(), ['origin' => $request->get_header('origin'), 'content-type' => $request->get_header('content-type'), 'x-csrf-token' => $request->get_header('x-csrf-token')], $request->get_body(), $session);
 
         return new \WP_REST_Response($result['body'], $result['status'] === 419 ? 403 : $result['status']);
+    }
+
+    /** Built-in UI and engine language: Indonesian for an Indonesian site or setting, English otherwise. */
+    private static function locale(array $settings): string
+    {
+        $language = $settings['language'] === 'auto' ? strtolower(substr((string) get_locale(), 0, 2)) : $settings['language'];
+
+        return $language === 'id' ? 'id' : 'en';
     }
 
     private function ipHash(): string
@@ -190,7 +224,7 @@ final class Plugin
             }
         }
 
-        return ['settings' => Settings::publicSettings(), 'providers' => ProviderConfiguration::presets(), 'choices' => array_values($choices), 'gaps' => Context::gaps($settings), 'observations' => array_values(get_option('pagesquire_observations', []))];
+        return ['settings' => Settings::publicSettings(), 'providers' => ProviderConfiguration::presets(), 'choices' => array_values($choices), 'gaps' => Context::gaps($settings), 'observations' => array_values(get_option('pagesquire_observations', [])), 'abilities' => Abilities::available()];
     }
 
     public function dashboard(): void
@@ -224,7 +258,7 @@ final class Plugin
         wp_enqueue_style('pagesquire-widget', plugins_url('assets/widget.css', $this->file), [], '0.1.0-beta.0');
         wp_enqueue_style('pagesquire-site', plugins_url('assets/plugin.css', $this->file), ['pagesquire-widget'], '0.1.0-beta.0');
         wp_enqueue_script('pagesquire-site', plugins_url('assets/frontend.js', $this->file), [], '0.1.0-beta.0', true);
-        $config = ['rest' => rest_url('pagesquire/v1/'), 'nonce' => is_user_logged_in() ? wp_create_nonce('wp_rest') : '', 'origin' => Settings::origin(), 'inspect' => $inspect, 'pageId' => $pageId, 'pages' => Context::pages($settings), 'mapping' => $settings['mapping'], 'fingerprint' => Context::fingerprint($settings), 'assistantName' => $settings['assistantName']];
+        $config = ['rest' => rest_url('pagesquire/v1/'), 'nonce' => is_user_logged_in() ? wp_create_nonce('wp_rest') : '', 'origin' => Settings::origin(), 'inspect' => $inspect, 'pageId' => $pageId, 'pages' => Context::pages($settings), 'mapping' => $settings['mapping'], 'fingerprint' => Context::fingerprint($settings), 'assistantName' => $settings['assistantName'], 'locale' => self::locale($settings)];
         add_action('wp_footer', function () use ($config): void {
             echo '<div id="pagesquire-widget" data-pagesquire-root></div>';
             $this->jsonConfig('pagesquire-site-config', $config);

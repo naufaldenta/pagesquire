@@ -1,14 +1,44 @@
 <?php
 
 declare(strict_types=1);
+use PageSquire\WordPress\DatabaseCounter;
 use PageSquire\WordPress\DatabaseLock;
 use PageSquire\WordPress\OptionsStore;
+use PageSquire\WordPress\Quota;
 use PageSquireWPVendor\PageSquire\Server\AssistantException;
 
 /** Local-only test harness. Never included in the distributable plugin. */
 if (! defined('PAGESQUIRE_FIXTURE') || ! PAGESQUIRE_FIXTURE || PHP_SAPI !== 'cli' && ! in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'], true)) {
     return;
 }
+
+add_action('wp_abilities_api_categories_init', static function (): void {
+    wp_register_ability_category('pagesquire-fixture', ['label' => 'PageSquire fixture', 'description' => 'Synthetic abilities for local tests.']);
+});
+add_action('wp_abilities_api_init', static function (): void {
+    wp_register_ability('pagesquire-fixture/site-tagline', [
+        'label' => 'Site tagline',
+        'description' => 'Returns the public synthetic site tagline.',
+        'category' => 'pagesquire-fixture',
+        'output_schema' => ['type' => 'object', 'properties' => ['tagline' => ['type' => 'string']]],
+        'execute_callback' => static fn (): array => ['tagline' => 'Synthetic fixture tagline'],
+        'permission_callback' => '__return_true',
+        'meta' => ['annotations' => ['readonly' => true, 'destructive' => false]],
+    ]);
+    wp_register_ability('pagesquire-fixture/reset-site', [
+        'label' => 'Reset site',
+        'description' => 'A writable synthetic ability that must never be offered.',
+        'category' => 'pagesquire-fixture',
+        'output_schema' => ['type' => 'object'],
+        'execute_callback' => static function (): array {
+            update_option('pagesquire_fixture_reset_ran', true, false);
+
+            return [];
+        },
+        'permission_callback' => '__return_true',
+        'meta' => ['annotations' => ['readonly' => false, 'destructive' => true]],
+    ]);
+});
 
 add_filter('pre_http_request', static function (mixed $result, array $arguments, string $url): mixed {
     if ($url !== 'https://provider.example.test/v1/chat/completions') {
@@ -39,6 +69,9 @@ add_filter('pre_http_request', static function (mixed $result, array $arguments,
         $ids = get_option('pagesquire_fixture_pages');
         $queue[] = ['capabilityId' => 'browser.navigate', 'parameters' => (object) ['url' => get_permalink($ids['beta'])]];
     }
+    if (str_contains($text, 'tagline')) {
+        $queue[] = ['capabilityId' => 'wordpress.run_ability', 'parameters' => (object) ['name' => 'pagesquire-fixture/site-tagline', 'input' => (object) []]];
+    }
     foreach (['heading' => ['accessibility.set_heading_color', ['color' => '#ff0000']], 'link' => ['accessibility.set_link_highlight', ['enabled' => true]], 'bold' => ['accessibility.set_font_weight', ['weight' => 700]]] as $word => [$id, $parameters]) {
         if (str_contains($text, $word)) {
             $queue[] = ['capabilityId' => $id, 'parameters' => (object) $parameters];
@@ -61,15 +94,16 @@ add_action('rest_api_init', static function (): void {
         foreach (array_keys($budget['sessions'] ?? []) as $key) {
             delete_option(OptionsStore::name($key));
         }
-        foreach (['pagesquire_settings', 'pagesquire_observations', 'pagesquire_provider_key', 'pagesquire_fixture_calls', 'pagesquire_fixture_mode', 'pagesquire_fixture_quota_time', OptionsStore::name('site-request-budget'), OptionsStore::name('site-provider-budget')] as $name) {
+        foreach (['pagesquire_settings', 'pagesquire_observations', 'pagesquire_provider_key', 'pagesquire_fixture_calls', 'pagesquire_fixture_mode', 'pagesquire_fixture_quota_time', 'pagesquire_fixture_reset_ran', OptionsStore::name('site-request-budget'), OptionsStore::name('site-provider-budget')] as $name) {
             delete_option($name);
         }
+        pagesquire_fixture_delete_counters();
         switch_theme('pagesquire-fixture');
 
         return ['pages' => get_option('pagesquire_fixture_pages')];
     }]);
     register_rest_route('pagesquire-fixture/v1', '/state', ['methods' => 'GET', 'permission_callback' => $permission, 'callback' => static function (): array {
-        return ['calls' => (int) get_option('pagesquire_fixture_calls', 0), 'budget' => get_option(OptionsStore::name('site-provider-budget')), 'pages' => get_option('pagesquire_fixture_pages')];
+        return ['resetRan' => (bool) get_option('pagesquire_fixture_reset_ran', false), 'calls' => (int) get_option('pagesquire_fixture_calls', 0), 'budget' => wp_json_encode(['attempts' => (new Quota(new OptionsStore))->providerAttempts()]), 'pages' => get_option('pagesquire_fixture_pages')];
     }]);
     register_rest_route('pagesquire-fixture/v1', '/locks', ['methods' => 'POST', 'permission_callback' => $permission, 'callback' => static function (): array {
         global $wpdb;
@@ -118,6 +152,7 @@ add_action('rest_api_init', static function (): void {
         }
         if ($body['resetRequestBudget'] ?? false) {
             delete_option(OptionsStore::name('site-request-budget'));
+            pagesquire_fixture_delete_counters(['ip', 'site']);
         }
         if ($body['freezeQuotaClock'] ?? false) {
             update_option('pagesquire_fixture_quota_time', ['now' => time()], false);
@@ -134,3 +169,12 @@ add_action('rest_api_init', static function (): void {
         return ['ok' => true];
     }]);
 });
+
+/** @param list<string> $kinds Counter kinds to delete; all when empty. */
+function pagesquire_fixture_delete_counters(array $kinds = []): void
+{
+    global $wpdb;
+    foreach ($kinds === [] ? [''] : $kinds as $kind) {
+        $wpdb->query($wpdb->prepare('DELETE FROM %i WHERE option_name LIKE %s', $wpdb->options, $wpdb->esc_like(DatabaseCounter::PREFIX.($kind === '' ? '' : $kind.'_')).'%'));
+    }
+}

@@ -80,6 +80,9 @@ final class Context
         if ($settings['pageIds'] === []) {
             return ['Select at least one public page.'];
         }
+        if (in_array(Abilities::CAPABILITY, $settings['mapping']['capabilityIds'], true) && Abilities::approved($settings) === []) {
+            $gaps[] = 'Select at least one read-only ability, or remove the '.Abilities::CAPABILITY.' adapter.';
+        }
         $reports = get_option('pagesquire_observations', []);
         $fingerprint = self::fingerprint($settings);
         foreach ($settings['pageIds'] as $id) {
@@ -95,7 +98,8 @@ final class Context
                 continue;
             }
             foreach ($settings['mapping']['capabilityIds'] as $capability) {
-                if (! in_array($capability, $report['verifiedCapabilityIds'], true)) {
+                // Abilities run on the server, not on a page, so they need no page inspection.
+                if ($capability !== Abilities::CAPABILITY && ! in_array($capability, $report['verifiedCapabilityIds'], true)) {
                     $gaps[] = 'Page '.$id.' has not verified '.$capability.'.';
                 }
             }

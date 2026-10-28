@@ -15,13 +15,14 @@ final class OptionsStore implements ConversationStore
         return 'pagesquire_state_'.hash('sha256', $key);
     }
 
-    public function transaction(string $key, callable $operation): mixed
+    /** @param int $attempts Short bounded retries for shared site records; conversations keep 1 (immediate BUSY). */
+    public function transaction(string $key, callable $operation, int $attempts = 1): mixed
     {
         global $wpdb;
         $name = self::name($key);
         $lock = $name.'_lock';
         $locks = new DatabaseLock($wpdb);
-        $token = $locks->acquire($lock);
+        $token = $locks->acquire($lock, $attempts);
         try {
             $encoded = get_option($name, null);
             $state = $encoded === null ? null : self::decode($encoded);
