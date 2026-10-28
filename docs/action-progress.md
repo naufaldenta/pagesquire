@@ -26,18 +26,18 @@ There is no fabricated percentage, elapsed-time estimate, model thought, paramet
 
 ## Stage meanings
 
-| Stage                | Meaning                                                                                                                                                               |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `checking`           | A fresh runtime attempt is checking its snapshot, registered capability and parameters. For destination resumption, the navigation preflight may already have passed. |
-| `executing`          | The queued handler boundary has been reached after authorization/schema/availability checks. The handler may still be preparing UI; this is not success.              |
-| `verifying`          | The queued registered verifier boundary has been reached after handler completion, or on destination resumption without executing navigation again.                   |
-| `navigation_pending` | Full-document navigation started; the destination is **not yet verified**. A matching continuation must perform that verification.                                    |
-| `verified`           | The actual registered postcondition returned a valid positive result. It does not certify every part of a compound request or all later page state.                   |
-| `unverified`         | The verifier returned a valid negative result. Changes may already exist; inspect the page before another request.                                                    |
-| `failed`             | A check, handler or verifier failed. Only reached stages are recorded; preflight rejection does not invent execution/verification.                                    |
-| `cancelled`          | Waiting was stopped. Existing/in-flight effects are not rolled back.                                                                                                  |
-| `timed_out`          | The action or client time limit expired. An uncooperative in-flight handler may still finish.                                                                         |
-| `replayed`           | A recorded result was reused. No new execution or fresh verification is claimed, even if the cached result was successful.                                            |
+| Stage                | Meaning                                                                                                                                                                      |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `checking`           | A fresh runtime attempt is checking its snapshot, registered capability and parameters. For destination resumption, the navigation preflight may already have passed.        |
+| `executing`          | The queued handler boundary has been reached after authorization/schema/availability checks. The handler may still be preparing UI; this is not success.                     |
+| `verifying`          | The queued registered verifier boundary has been reached after handler completion, or on destination resumption without executing navigation again.                          |
+| `navigation_pending` | Full-document navigation started; the destination is **not yet verified**. A matching continuation must perform that verification.                                           |
+| `verified`           | The actual registered postcondition returned a valid positive result. It does not certify every part of a compound request or all later page state.                          |
+| `unverified`         | The verifier returned a valid negative result. Changes may already exist; inspect the page before another request.                                                           |
+| `failed`             | A check, handler or verifier failed. Only reached stages are recorded; preflight rejection does not invent execution/verification.                                           |
+| `cancelled`          | Waiting was stopped. Existing/in-flight effects are not rolled back.                                                                                                         |
+| `timed_out`          | The action or client time limit expired. An uncooperative in-flight handler may still finish; new actions return `BUSY` until it settles or a further timeout window passes. |
+| `replayed`           | A recorded result was reused. No new execution or fresh verification is claimed, even if the cached result was successful.                                                   |
 
 Callbacks are delivered immediately before handler/verifier invocation; an observer cancelling at that boundary can still prevent invocation. No preparation-specific stage is guessed from cursor animation or a model claim. The existing thinking emotion covers provider/browser waiting and is separate from action evidence.
 

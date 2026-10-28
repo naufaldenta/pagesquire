@@ -10,6 +10,50 @@ All canonical release notes are English. PageSquire uses SemVer for packages and
 
 ### Added
 
+- Redacted screenshots (Phase 4D-5), off by default for owner, server and visitor:
+  - Optional `ActionResult.screenshot` and `Screenshot` (JPEG, at most 100,000 base64 characters).
+  - Opt-in `ui.screenshot` (`createScreenshotCapabilities`, embed `data-screenshots`) through `InputDriver.screenshot`, with `Verification.screenshot`.
+  - Engine `screenshots` (Node and PHP) and Laravel `PAGESQUIRE_SCREENSHOTS` forward the image as an OpenAI-compatible `image_url` part to the next provider call only; it is never stored.
+  - `siteDeclaration({ screenshots })` and `ActionSigner::declaration(..., true)`.
+  - In the extension: a visitor switch per site. Before the image leaves, form fields, private regions and frames are painted black, measured in an isolated world. Hidden panel elements stay hidden.
+- Session tabs (Phase 4D-4):
+  - Optional `PageSnapshot.tabs` and `TabSnapshot`, observer `remoteTabs`, and the generic `ui.switch_tab` tool through `InputDriver.switchTab`.
+  - Tab targets (`tab2-target-3`) use the frame driver path. Companion driver `tabs()` and `switchTab`.
+  - In the extension: same-origin tabs the page opens (confirmed by the new page) or the visitor shares from the side panel join a labelled tab group. They are read and acted in through their own debugger session, signed per target. They leave on close, origin change or unshare. Stop or Esc in any tab stops the whole session.
+  - The page side also gained:
+    - a relay `hello-wait` notice, so a slow service worker is not mistaken for a missing extension;
+    - generic tools that no longer wait for animation frames in hidden pages;
+    - extension codes in companion error messages.
+  - The frame script is now the remote script (`dist/remote.js`), and extension tests run one browser at a time.
+- Cross-origin frames (Phase 4D-3):
+  - Optional `PageSnapshot.frames` and `FrameSnapshot`, observer `remoteFrames`.
+  - Generic `ui.click`/`ui.check`/`ui.type`/`ui.press_key` on frame targets (`frame1-target-3`) through `InputDriver.frameTarget`/`frameAct`.
+  - Companion driver `frames()` and frame calls.
+  - In the extension: a bundled frame script (`scripts/build-extension.mjs`) reads and prepares input only in frames the site declares and the visitor allows, with a deny list for payment and identity providers. Input goes through the frame's own CDP session with a hit test across frame owners. Signatures bind the frame target ID. Stop hides frames.
+- Signed action calls (Phase 4D-2): optional `ActionCall.signature` (Ed25519 over server-written `claims` text with origin, call, parameters and a 60-second expiry); Node engine `signing` with `createSigningKey`, `signingPublicKey`, `signActionCall`, `verifyActionCall` and `siteDeclaration`; PHP `ActionSigner` and engine `signer`; Laravel `PAGESQUIRE_SIGNING_KEY`/`PAGESQUIRE_SITE_ORIGIN` with an automatic `/.well-known/pagesquire.json`; `pagesquire signing-key`. The companion extension now requires a declared `publicKey` and runs only signed calls whose input matches, once each; unsigned calls keep synthetic events. Update browser bundles before enabling signing.
+- Companion extension development build (Phase 4D-1, `packages/extension`, local and `.test` sites only): Manifest V3, a visitor grant per origin in the side panel after checking the site's `/.well-known/pagesquire.json`, trusted main-frame click, text and keys through `chrome.debugger` with its own nonce lookup, hit test and reserved-target refusals, Esc/Stop/Resume, idle and out-of-origin detach, per-tab rate limit and a local audit log without typed text. Core `InputDriver` (`GenericOptions.driver`) and `createCompanionDriver`, and the embed's `data-companion`, fall back to synthetic events without it. See [companion extension](docs/companion-extension.md).
+- Phase 4D-0 spike checks in `tests/spike` with results in the companion extension design.
+- Visitor prompts: generic `ui.ask` (choose one of 2–5 options) and `ui.hand_off` ("Your turn" for sign-in, CAPTCHA, one-time codes or payment), runtime `visitor`/`visitorTimeoutMs`, `ExecutionContext.askVisitor`, client `createVisitorPrompt`, `VISITOR_*` codes, English/Indonesian copy, and embed wiring. See [generic actions](docs/generic-actions.md).
+- Opt-in visible plan (`plan` on Node/PHP engines, `limits.plan` in Laravel): one planner call per visitor message, a bounded optional `plan` on the first action reply, shown by the widget and fed back to later steps.
+- Opt-in action check (`checkActions`, `limits.check_actions`): a fail-closed reviewer call before each model-chosen action that is not read-only.
+- Observer `outline` and read-only same-origin `frames` text options, with `data-outline`/`data-frames` embed attributes.
+- Laravel streams fixed progress stages as NDJSON when asked.
+- Streamed server progress: opt-in NDJSON responses (`Accept: application/x-ndjson`) with fixed stages (`accepted`, `thinking`, `reviewing`, `replaying`) and a final validated reply or error line, in the Node handler and native PHP endpoint; engine `onProgress` callbacks; client transport streaming with plain-JSON fallback, `state.serverStage`, widget status and `server` trace events. Model text is never streamed. See [streaming](docs/streaming.md).
+
+- Built-in English and Indonesian copy for the widget, action progress, approval prompt, guided tour, transport/client errors and engine fixed replies; `locale`/`messages` options (auto-detected from `<html lang>`), embed `data-locale`, engine `locale` (Node/PHP), Laravel `PAGESQUIRE_LOCALE`, WordPress site-language support. Default transport errors no longer mention the OFFBEAT demo. See [languages](docs/i18n.md).
+
+- Phase 4C: native dialog capture during generic actions; verification of re-rendered elements by role and name; server typed-data screening for `ui.type` (Node/PHP); opt-in completion validator (`validateCompletion`, Laravel `limits.validate_completion`); trajectory cache (`TrajectoryCache`, `MemoryTrajectoryCache`, Laravel `trajectory_cache`) that replays verified turns without provider calls; evaluation `--validate`, `--cache`, `--repeat` and a stricter oracle self-check. See [generic actions](docs/generic-actions.md).
+
+- Phase 4B: client `onTrace` events, `TraceRecorder` (bounded, redacted by default, JSON export) and `mountTraceViewer`; embed `data-trace`; a 36-task generic browser evaluation (`npm run test:eval-generic` oracle self-check in CI, `npm run eval:generic:live -- --max-calls N` for budgeted live models) graded from the final page state. Snapshots keep on-screen targets first when truncating, so overlays stay visible. See [traces and evaluation](docs/trace-and-eval.md).
+
+- Phase 4A browser robustness: observation v2 (stable target IDs, element state flags, open shadow DOM, `new`/`removedTargets` diffs, `observer.find`); opt-in guarded generic `ui.*` tools with Playwright-style actionability checks, realistic events, DOM/network settling, built-in risk tiers and in-action approval; server-led recovery (`maxRecoveries` on Node/PHP engines, Laravel `max_recoveries`, client `allowRecovery`) with repeat detection; embed `data-generic`. See [generic actions](docs/generic-actions.md).
+
+- Phase 3: `exposeToWebMcp` registers capabilities as WebMCP tools through the verified runtime; opt-in approval for consequential capabilities (`allowConsequential` on Node/PHP engines and `PAGESQUIRE_ALLOW_CONSEQUENTIAL` in Laravel, a runtime `approve` hook and `createApprovalPrompt`); WordPress `wordpress.run_ability` adapter for administrator-selected read-only WordPress Abilities, run server-side with the visitor's own permissions. See [WebMCP, approvals and WordPress Abilities](docs/webmcp-and-approval.md).
+
+- Phase 2 reliability: opt-in `tools` response mode (Node, native PHP, Laravel, WordPress) that offers approved capabilities as native function definitions and reads the first tool call as the single proposed action; provider diagnostics with outcome, HTTP status, latency and token usage but no content (`onDiagnostic` in Node/PHP, `ProviderCalled` event in Laravel).
+
+- Phase 1 stabilization: per-session hourly provider budgets (`attemptsPerHour`, default 60) in the Node and native PHP endpoints that survive new conversations and principal changes; `PageObserver` `observeUrl` (observation scope separate from navigation) and `redactUrl` (snapshot URL redaction); `BrowserRuntime.resetSession()`, called by `AssistantClient.reset()`, so the action budget and replay cache start fresh per conversation.
+
 - C4 metadata-only runtime progress, bounded immutable client action timelines and fixed recovery copy. The shared widget shows actual handler/verifier boundaries, distinguishes cached results and unverified navigation, ignores late/cancelled work, and scopes busy semantics to the message log. No chain of thought, automatic retry/rollback, permission expansion or wire/storage change is introduced.
 
 - C3 optional public `AppContext`, flat typed state, fixed availability statuses and bounded/unique protocol envelope. Clients refresh per round; Node/PHP providers receive ephemeral untrusted state and filter future proposals, runtime handlers recheck availability and Laravel preserves validated context. Pending results, permissions, replay/accounting and default-off behavior remain intact. Coordinated browser/server rollout is required; no training, whole-store upload or inference retry is added.
@@ -44,6 +88,14 @@ All canonical release notes are English. PageSquire uses SemVer for packages and
 - GitHub-first release checks, local source/npm/PHP/plugin artifacts, checksums, compatibility evidence and community templates.
 
 ### Fixed
+
+- WordPress per-minute site/IP limits and the daily provider budget use lock-free atomic counters instead of one shared non-blocking option lock, so simultaneous visitors no longer get spurious 409 `BUSY` responses. An exhausted daily provider budget now returns 429 `PROVIDER_BUDGET` before any conversation work instead of a 502 after the attempt was recorded.
+
+- Laravel passes the contract-validated raw JSON body to the engine. Global `TrimStrings`/`ConvertEmptyStringsToNull` middleware previously turned empty titles or unlabeled targets into `null`, so ordinary pages were rejected with 422 `INVALID_PAYLOAD`, and trimmed visitor messages.
+- Node/PHP conversation history keeps browser results without their `observation` snapshot (the current page is already sent each turn), so multi-step tasks no longer exhaust the context limit after a few large pages. An oversized context now finishes without charging an attempt.
+- After a timeout or cancellation, the browser runtime refuses new actions until the abandoned handler or verifier settles (bounded by one more timeout window), so a late mutation cannot be credited to the next verifier.
+- Fragment-only document navigation is verified in place instead of leaving a navigation checkpoint for a page load that never happens.
+- More sensitive query/fragment keys (signatures, nonces, credentials, JWTs, session IDs, `sig`/`sid`/`otp`) block navigation and observation.
 
 - Closed native `details` content is no longer considered visible solely because it retains layout rectangles; its first summary remains available. Registered handlers must explicitly prepare hidden controls.
 

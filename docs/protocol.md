@@ -33,6 +33,8 @@ The registry requires a handler, verifier, and compiled parameter validator for 
 
 ## F2 conversation envelopes
 
+A snapshot may carry optional `tabs`: up to four other same-origin tabs of the [companion extension's](companion-extension.md#tabs-4d-4) session (the page itself is `tab1`), each with an `id` (`tab2`…), its `url` (origin and path), `title`, bounded `text`, `targets` whose IDs start with that tab ID, `truncated` flags and whether it is `active`. It may also carry optional `frames`: up to five granted cross-origin frames read by the [companion extension](companion-extension.md#frames-4d-3). Each has an `id` (`frame1`…), its `origin`, `title`, bounded `text`, `targets` whose IDs start with that frame ID, and `truncated` flags.
+
 `ChatRequest` includes `protocolVersion`, a unique `requestId`, a filtered `snapshot`, and `capabilityIds` installed on the browser. A new turn contains `message`; a pending-action continuation contains `result` and `conversationId` instead. The schema requires exactly one of message/result. Message length is at most 4,000 characters; capability IDs are unique and limited to 100. The server accepts no client history, system prompt, schema, provider setting, budget, or permission grant.
 
 `ChatReply` contains `protocolVersion`, a server-owned `conversationId`, and an `AssistantResponse`. F2 accepts one tool call in an unfinished response, and none in a finished response. The server assigns call/snapshot IDs; the provider draft only names an authorized capability and its parameters. Each result must match the pending call before inference continues. These sequencing/authorization rules are enforced beyond structural JSON validation.
@@ -47,9 +49,9 @@ Handlers receive immutable parameters and an execution context. A verifier retur
 
 ## Calls and results
 
-An action call contains `protocolVersion`, `callId`, `capabilityId`, `snapshotId`, and `parameters`. The snapshot must be the current observation. Replaying the same call ID and payload returns the previous promise/result rather than rerunning the handler. Reusing an ID for a different payload is rejected.
+An action call contains `protocolVersion`, `callId`, `capabilityId`, `snapshotId`, and `parameters`, and optionally a server `signature` that only the [companion extension](companion-extension.md#signed-action-calls) checks. The snapshot must be the current observation. Replaying the same call ID and payload returns the previous promise/result rather than rerunning the handler. Reusing an ID for a different payload is rejected.
 
-Results contain the call/capability IDs, status, code, English message, bounded JSON evidence, and normally a fresh observation. Early rejections such as BUSY do not replace an active action's snapshot.
+Results contain the call/capability IDs, status, code, English message, bounded JSON evidence, and normally a fresh observation. A verified `ui.screenshot` result may also carry `screenshot`: a redacted JPEG (`mediaType`, base64 `data` of at most 100,000 characters, `width`, `height`) that engines forward once and never store ([screenshots](companion-extension.md#screenshots-4d-5)). Early rejections such as BUSY do not replace an active action's snapshot.
 
 | Status       | Meaning                                                        |
 | ------------ | -------------------------------------------------------------- |

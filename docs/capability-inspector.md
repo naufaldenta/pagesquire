@@ -61,7 +61,7 @@ No automatic polling, DOM mutation observer or provider request is installed. Mo
 | `interaction_denied`                                   | The optional generic click/fill check was denied by the observer.                                                                                 |
 | `scope_denied`                                         | The current URL is outside the observer's allowed scope; target probes are skipped. The URL is not included.                                      |
 | `probe_failed`                                         | The host resolver returned an unsupported value or a local check threw. Debug locally; no private exception detail is included.                   |
-| `blocked_in_alpha`                                     | Consequential capabilities remain blocked. Their probes are not run.                                                                              |
+| `blocked_in_alpha`                                     | Consequential capabilities: blocked unless approval is configured (see [approvals](webmcp-and-approval.md)). Their probes are not run.            |
 
 The inline UI searches IDs/descriptions/aliases, filters statuses, and exposes registered binding names and input-schema metadata through native disclosures. It has labeled controls, keyboard focus styles, no focus-stealing modal, no motion and no HTML interpretation. It is marked `data-pagesquire-root` so the observer excludes it. Manual screen-reader and broad browser acceptance remain separate release gates.
 

@@ -62,7 +62,8 @@ Anthropic Messages, OpenAI Responses, Azure deployment URLs/API-version authenti
 Leave these unset to use the preset. They are explicit server-side settings, not browser preferences:
 
 ```dotenv
-# json_object requests JSON mode; prompt omits response_format but keeps strict output validation.
+# json_object requests JSON mode; prompt omits response_format but keeps strict output validation;
+# tools sends approved capabilities as native function definitions.
 PAGESQUIRE_RESPONSE_MODE=json_object
 # Send exactly one output limit field.
 PAGESQUIRE_TOKEN_PARAMETER=max_completion_tokens
@@ -73,11 +74,16 @@ PAGESQUIRE_THINKING=default
 ```
 
 - `json_object` asks the API for JSON; `prompt` uses the same JSON instructions without sending `response_format`. If a provider rejects JSON mode, select `prompt` deliberately. PageSquire does not retry a billable request with another dialect.
+- `tools` (opt-in, no preset uses it by default) sends only the capabilities approved for this turn as native `tools` function definitions, with dots in IDs replaced to fit function-name rules. Only the first returned tool call is read as the single proposed action; later calls are never executed or reported. A plain-text reply becomes a finished answer without actions, and a JSON reply is still accepted. The engine still authorizes the capability, validates parameters with the trusted schema and requires browser verification. Some providers support only a subset of JSON Schema in function parameters; test your provider and model before enabling it.
 - Token fields are `max_tokens` or `max_completion_tokens`; PageSquire never sends both. Reasoning tokens may consume the limit before a final answer. Adjust the host's bounded output-token budget and timeout deliberately, or choose a model suited to short interactive actions. Current engine ceilings remain 4096 output tokens and 60 seconds at transport level; hosting may impose lower limits.
 - `PAGESQUIRE_THINKING=disabled` maps to `enable_thinking: false` for Qwen and `thinking: {type: "disabled"}` for direct Z.AI/Zhipu/DeepSeek. Use it only when the selected model supports disabling reasoning. Some reasoning-only models reject or ignore it. Other presets reject this option locally rather than inventing a provider parameter.
 - Trusted system instructions are consolidated at the start of the provider request. User messages and browser results remain untrusted data. No sampling temperature, provider tool, web search or arbitrary extra-body setting is silently enabled.
 
-The response reader accepts bounded text or text-only content parts containing a complete JSON object, optionally inside a whole JSON Markdown fence. It does not extract fragments from prose, repair malformed JSON, execute native provider tool calls, forward reasoning text, or accept partial/truncated/refused completions. All six emotions, the strict response schema, capability authorization, parameters and browser postconditions still apply. A provider preset never grants additional website permissions.
+The response reader accepts bounded text or text-only content parts containing a complete JSON object, optionally inside a whole JSON Markdown fence. Outside `tools` mode it does not extract fragments from prose, repair malformed JSON, accept native provider tool calls, forward reasoning text, or accept partial/truncated/refused completions.
+
+## Provider diagnostics
+
+Each provider call can report metadata for logs and metrics: `outcome` (`ok`, `http_error`, `network_error`, `timeout`, `cancelled` in Node, `invalid_response`), the HTTP `status` when known, `latencyMs`, and token `usage` (`inputTokens`, `outputTokens`, `totalTokens`) when the provider returns it. Prompts, completions, headers, response bodies and keys are never included. Node: pass `onDiagnostic` to `OpenAiCompatibleProvider`. Native PHP: pass a callable as the `onDiagnostic` constructor argument or to `fromEnvironment`. Laravel: listen for `PageSquire\Laravel\Events\ProviderCalled`. Hook failures are ignored and never change the provider outcome. All six emotions, the strict response schema, capability authorization, parameters and browser postconditions still apply. A provider preset never grants additional website permissions.
 
 ## Node and Next.js
 
