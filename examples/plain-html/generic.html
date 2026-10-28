@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="synthetic-generic-csrf-token-0123456789" />
+    <title>PageSquire generic tools</title>
+    <link rel="stylesheet" href="/demo.css" />
+    <link rel="stylesheet" href="/dist/embed/pagesquire.css" />
+    <link rel="stylesheet" href="/generic-fixture.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Generic tools fixture</h1>
+      <form id="profile">
+        <label for="name">Your name</label>
+        <input id="name" name="name" required />
+        <p id="greeting">Hello, stranger</p>
+        <label for="size">Size</label>
+        <select id="size">
+          <option value="">Choose a size</option>
+          <option value="s">Small</option>
+          <option value="l">Large</option>
+        </select>
+        <label><input id="newsletter" type="checkbox" /> Newsletter</label>
+        <button type="submit">Save profile</button>
+        <p id="saved" hidden>Saved</p>
+      </form>
+      <button id="dark-mode" type="button" role="switch" aria-checked="false">
+        Dark mode
+      </button>
+      <details id="details">
+        <summary>More details</summary>
+        <button type="button">Detail action</button>
+      </details>
+      <button id="open-dialog" type="button">Open dialog</button>
+      <button id="reset-form" type="button">Reset form</button>
+      <div id="dialog" role="dialog" aria-label="Dialog" hidden>
+        <p>Dialog is open</p>
+        <button id="close-dialog" type="button">Close dialog</button>
+      </div>
+      <button id="load-more" type="button">Load more</button>
+      <ul id="items">
+        <li>Item 1</li>
+      </ul>
+      <div class="cover-host">
+        <button id="covered" type="button">Covered action</button>
+        <div class="cover" aria-hidden="true"></div>
+      </div>
+      <fixture-widget></fixture-widget>
+      <p><a href="/index.html">Other page</a></p>
+      <form id="login">
+        <label for="user">User</label>
+        <input id="user" />
+        <input id="password" type="password" aria-label="Password" />
+        <button type="submit">Sign in</button>
+      </form>
+    </main>
+    <footer><button type="button">Footer action</button></footer>
+    <script src="/generic-fixture.js" defer></script>
+    <script
+      src="/dist/embed/pagesquire.min.js"
+      data-endpoint="/pagesquire/chat"
+      data-pages="/generic.html"
+      data-title="Generic demo"
+      data-styles="none"
+      data-generic="true"
+      data-actable="main"
+      defer
+    ></script>
+  </body>
+</html>

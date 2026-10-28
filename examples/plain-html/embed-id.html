@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="synthetic-embed-csrf-token-0123456789" />
+    <title>Contoh embed PageSquire</title>
+    <link rel="stylesheet" href="/demo.css" />
+    <link rel="stylesheet" href="/dist/embed/pagesquire.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Contoh embed berbahasa Indonesia</h1>
+      <p>Bahasa antarmuka asisten mengikuti atribut lang pada elemen html.</p>
+      <form id="profil">
+        <label for="nama">Nama</label>
+        <input id="nama" />
+        <button type="submit">Simpan</button>
+      </form>
+    </main>
+    <script src="/embed-id.js" defer></script>
+    <script
+      src="/dist/embed/pagesquire.min.js"
+      data-endpoint="/pagesquire/chat"
+      data-pages="/embed-id.html"
+      data-styles="none"
+      data-generic="true"
+      defer
+    ></script>
+  </body>
+</html>

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="synthetic-embed-csrf-token-0123456789" />
+    <title>PageSquire one-tag embed</title>
+    <link rel="stylesheet" href="/demo.css" />
+    <!-- Under a strict CSP, link the stylesheet and set data-styles="none". -->
+    <link rel="stylesheet" href="/dist/embed/pagesquire.css" />
+  </head>
+  <body>
+    <main>
+      <h1>One-tag embed</h1>
+      <p>
+        This page loads PageSquire with a single script tag. The assistant can
+        read, scroll to and highlight this public content.
+      </p>
+    </main>
+    <script
+      src="/dist/embed/pagesquire.min.js"
+      data-endpoint="/pagesquire/chat"
+      data-pages="/embed.html"
+      data-title="Embed demo"
+      data-styles="none"
+      defer
+    ></script>
+  </body>
+</html>

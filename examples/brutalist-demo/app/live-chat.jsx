@@ -62,6 +62,13 @@ export default function LiveChat({ runtime, onState, pageBusy }) {
       endpoint: '/api/chat',
       baseUrl: window.location.href,
       csrfToken: () => session.csrfToken,
+      // This private demo is unlocked with an access code and shares one quota.
+      messages: {
+        'error.http403':
+          'Your assistant access is unavailable. Reload the page and unlock the demo again.',
+        'error.http429':
+          'The demo usage limit was reached. Wait before trying again; starting a new conversation does not reset the shared quota.',
+      },
     });
     const instance = new AssistantClient({
       runtime,
