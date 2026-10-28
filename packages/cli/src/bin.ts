@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { generateKeyPairSync } from 'node:crypto';
 import { parseArgs } from 'node:util';
 import { realpath } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -27,7 +28,8 @@ export async function run(
   });
   if (values.help)
     return {
-      usage: 'pagesquire <init|scan|report|prepare-ai|validate> [--root path]',
+      usage:
+        'pagesquire <init|scan|report|prepare-ai|validate|signing-key> [--root path]',
       commands: {
         init: '[--url URL] Create a default-deny project setup; no overwrites.',
         scan: '[--url URL ...] Read local metadata; observe only explicitly approved pages.',
@@ -36,11 +38,21 @@ export async function run(
           '--host codex|claude|both Install reviewed project-local integration skills.',
         validate:
           '[--compile] Inspect contracts/exports without executing project modules.',
+        'signing-key':
+          'Print a new Ed25519 key for signing action calls to the companion extension.',
       },
       version: '0.1.0-beta.0',
     };
   if (values.version) return { version: '0.1.0-beta.0' };
   const [command] = positionals;
+  if (command === 'signing-key' && positionals.length === 1) {
+    if (values.root || values.url || values.host || values.compile)
+      throw new OnboardingError(
+        'INVALID_OPTIONS',
+        'This option is not supported by the selected command.',
+      );
+    return signingKey();
+  }
   if (
     positionals.length !== 1 ||
     !['init', 'scan', 'report', 'prepare-ai', 'validate'].includes(
@@ -49,7 +61,7 @@ export async function run(
   )
     throw new OnboardingError(
       'INVALID_COMMAND',
-      'Choose init, scan, report, prepare-ai, or validate. Use --help for options.',
+      'Choose init, scan, report, prepare-ai, validate, or signing-key. Use --help for options.',
     );
   if (
     (values.url && !['init', 'scan'].includes(command!)) ||
@@ -87,6 +99,24 @@ export async function run(
   if (command === 'prepare-ai') return prepareAi(files, values.host ?? '');
   return validateProject(files, values.compile ?? false);
 }
+/** A fresh key pair; the CLI never stores it. */
+function signingKey() {
+  const jwk = generateKeyPairSync('ed25519').privateKey.export({
+    format: 'jwk',
+  });
+  const base64 = (value: string) =>
+    Buffer.from(value, 'base64url').toString('base64');
+  return {
+    signingKey: base64(jwk.d!),
+    publicKey: `ed25519:${base64(jwk.x!)}`,
+    next: [
+      'Store signingKey as a server secret (PAGESQUIRE_SIGNING_KEY in Laravel, signing.key on the Node engine, ActionSigner in PHP).',
+      'Publish publicKey in /.well-known/pagesquire.json; Laravel serves it when the key is set.',
+      'Never commit signingKey or send it to a browser.',
+    ],
+  };
+}
+
 if (
   import.meta.main ??
   (process.argv[1] !== undefined &&
