@@ -1,0 +1,95 @@
+{
+  "extName": {
+    "message": "PageSquire Companion (development)"
+  },
+  "extDescription": {
+    "message": "Lets the PageSquire assistant of a site you allow use real clicks and typing. Development build: local and .test sites only."
+  },
+  "devBuild": {
+    "message": "Development build: it only works on local and .test sites."
+  },
+  "noSite": {
+    "message": "This tab is not a local or .test site, so the companion cannot act here."
+  },
+  "checking": {
+    "message": "Checking the site's declaration…"
+  },
+  "manifestError": {
+    "message": "This site has no valid PageSquire declaration:"
+  },
+  "declares": {
+    "message": "The site declares:"
+  },
+  "endpoint": {
+    "message": "Chat endpoint"
+  },
+  "features": {
+    "message": "Features"
+  },
+  "allow": {
+    "message": "Allow on this site"
+  },
+  "allowHelp": {
+    "message": "The site's assistant will be able to read this page and the frames listed, and click, type and press keys there with real input. Password, payment and one-time-code fields stay yours."
+  },
+  "allowed": {
+    "message": "Allowed on this site."
+  },
+  "revoke": {
+    "message": "Revoke"
+  },
+  "acting": {
+    "message": "The assistant is acting in this tab."
+  },
+  "idle": {
+    "message": "The assistant is not acting now."
+  },
+  "stopped": {
+    "message": "Stopped in this tab. The assistant uses the page's own input until you resume."
+  },
+  "stop": {
+    "message": "Stop"
+  },
+  "resume": {
+    "message": "Resume"
+  },
+  "stopHelp": {
+    "message": "Press Esc in the page or Stop here to end it at any time."
+  },
+  "activity": {
+    "message": "Recent activity"
+  },
+  "noActivity": {
+    "message": "Nothing yet."
+  },
+  "frames": {
+    "message": "Frames"
+  },
+  "noFrames": {
+    "message": "None"
+  },
+  "framesRefused": {
+    "message": "Not allowed in frames (payment, sign-in or not a local site):"
+  },
+  "framesAllowed": {
+    "message": "Also reads and acts in these frames:"
+  },
+  "share": {
+    "message": "Share this tab with the assistant"
+  },
+  "unshare": {
+    "message": "Stop sharing this tab"
+  },
+  "sharedTabs": {
+    "message": "Tabs shared with this page’s assistant:"
+  },
+  "memberOf": {
+    "message": "This tab is shared with the assistant as"
+  },
+  "screenshots": {
+    "message": "Allow redacted screenshots of this site"
+  },
+  "screenshotsHelp": {
+    "message": "The assistant may then take a picture of the visible page to check its work. Form fields, private areas and frames are blacked out first. Off by default."
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "extName": {
+    "message": "PageSquire Companion (pengembangan)"
+  },
+  "extDescription": {
+    "message": "Mengizinkan asisten PageSquire di situs yang kamu izinkan memakai klik dan ketikan asli. Versi pengembangan: hanya situs lokal dan .test."
+  },
+  "devBuild": {
+    "message": "Versi pengembangan: hanya berfungsi di situs lokal dan .test."
+  },
+  "noSite": {
+    "message": "Tab ini bukan situs lokal atau .test, jadi companion tidak bisa bertindak di sini."
+  },
+  "checking": {
+    "message": "Memeriksa deklarasi situs…"
+  },
+  "manifestError": {
+    "message": "Situs ini tidak punya deklarasi PageSquire yang valid:"
+  },
+  "declares": {
+    "message": "Situs ini mendeklarasikan:"
+  },
+  "endpoint": {
+    "message": "Endpoint chat"
+  },
+  "features": {
+    "message": "Fitur"
+  },
+  "allow": {
+    "message": "Izinkan di situs ini"
+  },
+  "allowHelp": {
+    "message": "Asisten situs ini akan bisa membaca halaman ini dan frame yang tercantum, serta mengklik, mengetik dan menekan tombol di sana dengan input asli. Kolom password, pembayaran dan kode sekali pakai tetap milikmu."
+  },
+  "allowed": {
+    "message": "Diizinkan di situs ini."
+  },
+  "revoke": {
+    "message": "Cabut"
+  },
+  "acting": {
+    "message": "Asisten sedang bertindak di tab ini."
+  },
+  "idle": {
+    "message": "Asisten sedang tidak bertindak."
+  },
+  "stopped": {
+    "message": "Dihentikan di tab ini. Asisten memakai input halaman sendiri sampai kamu melanjutkan."
+  },
+  "stop": {
+    "message": "Hentikan"
+  },
+  "resume": {
+    "message": "Lanjutkan"
+  },
+  "stopHelp": {
+    "message": "Tekan Esc di halaman atau Hentikan di sini kapan saja."
+  },
+  "activity": {
+    "message": "Aktivitas terbaru"
+  },
+  "noActivity": {
+    "message": "Belum ada."
+  },
+  "frames": {
+    "message": "Frame"
+  },
+  "noFrames": {
+    "message": "Tidak ada"
+  },
+  "framesRefused": {
+    "message": "Tidak diizinkan di frame (pembayaran, login atau bukan situs lokal):"
+  },
+  "framesAllowed": {
+    "message": "Juga membaca dan bertindak di frame ini:"
+  },
+  "share": {
+    "message": "Bagikan tab ini ke asisten"
+  },
+  "unshare": {
+    "message": "Berhenti membagikan tab ini"
+  },
+  "sharedTabs": {
+    "message": "Tab yang dibagikan ke asisten halaman ini:"
+  },
+  "memberOf": {
+    "message": "Tab ini dibagikan ke asisten sebagai"
+  },
+  "screenshots": {
+    "message": "Izinkan screenshot tersensor di situs ini"
+  },
+  "screenshotsHelp": {
+    "message": "Asisten lalu boleh memotret bagian halaman yang terlihat untuk memeriksa hasilnya. Kolom form, area privat dan frame dihitamkan lebih dulu. Mati secara bawaan."
+  }
+}

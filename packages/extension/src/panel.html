@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PageSquire Companion</title>
+    <link rel="stylesheet" href="panel.css" />
+  </head>
+  <body>
+    <header>
+      <h1 data-i18n="extName"></h1>
+      <p class="note" data-i18n="devBuild"></p>
+    </header>
+    <section aria-live="polite">
+      <p id="origin" class="origin"></p>
+      <p id="message"></p>
+      <div id="declaration" hidden>
+        <p data-i18n="declares"></p>
+        <dl>
+          <dt data-i18n="endpoint"></dt>
+          <dd id="endpoint"></dd>
+          <dt data-i18n="features"></dt>
+          <dd id="features"></dd>
+          <dt data-i18n="frames"></dt>
+          <dd id="frames"></dd>
+        </dl>
+        <p id="frames-refused" class="note" hidden></p>
+      </div>
+      <ul id="errors" class="errors" hidden></ul>
+      <p id="allow-help" class="note" data-i18n="allowHelp" hidden></p>
+      <p id="granted-frames" class="note" hidden></p>
+      <p id="shared-tabs" class="note" hidden></p>
+      <label id="screenshots-row" class="toggle" hidden>
+        <input id="screenshots" type="checkbox" />
+        <span data-i18n="screenshots"></span>
+      </label>
+      <p
+        id="screenshots-help"
+        class="note"
+        data-i18n="screenshotsHelp"
+        hidden
+      ></p>
+      <div class="actions">
+        <button id="allow" type="button" data-i18n="allow" hidden></button>
+        <button id="stop" type="button" data-i18n="stop" hidden></button>
+        <button id="resume" type="button" data-i18n="resume" hidden></button>
+        <button id="share" type="button" data-i18n="share" hidden></button>
+        <button id="unshare" type="button" data-i18n="unshare" hidden></button>
+        <button id="revoke" type="button" data-i18n="revoke" hidden></button>
+      </div>
+      <p id="stop-help" class="note" data-i18n="stopHelp" hidden></p>
+    </section>
+    <section>
+      <h2 data-i18n="activity"></h2>
+      <ol id="activity" class="activity"></ol>
+    </section>
+    <script type="module" src="panel.js"></script>
+  </body>
+</html>
