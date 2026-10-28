@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="synthetic-eval-csrf-token-0123456789" />
+    <title>Eval todo</title>
+    <link rel="stylesheet" href="/demo.css" />
+    <link rel="stylesheet" href="/dist/embed/pagesquire.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Tasks</h1>
+      <label for="new-task">New task</label>
+      <input id="new-task" />
+      <button id="add-task" type="button">Add task</button>
+      <div aria-label="Filter">
+        <button type="button" data-filter="all" aria-pressed="true">All</button>
+        <button type="button" data-filter="active" aria-pressed="false">
+          Active
+        </button>
+        <button type="button" data-filter="done" aria-pressed="false">
+          Completed
+        </button>
+      </div>
+      <ul id="tasks" aria-label="Tasks"></ul>
+      <p><output id="left">0</output> items left</p>
+      <button id="clear-completed" type="button">Clear completed</button>
+    </main>
+    <script src="/eval-todo.js" defer></script>
+    <script
+      src="/dist/embed/pagesquire.min.js"
+      data-endpoint="/pagesquire/chat"
+      data-pages="/eval-todo.html"
+      data-title="Task assistant"
+      data-styles="none"
+      data-generic="true"
+      data-trace="content"
+      defer
+    ></script>
+  </body>
+</html>

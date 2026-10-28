@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="synthetic-eval-csrf-token-0123456789" />
+    <title>Eval settings</title>
+    <link rel="stylesheet" href="/demo.css" />
+    <link rel="stylesheet" href="/dist/embed/pagesquire.css" />
+    <link rel="stylesheet" href="/eval-fixture.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Account settings</h1>
+      <div role="tablist" aria-label="Settings sections">
+        <button
+          role="tab"
+          id="tab-profile"
+          aria-selected="true"
+          aria-controls="panel-profile"
+          type="button"
+        >
+          Profile
+        </button>
+        <button
+          role="tab"
+          id="tab-notifications"
+          aria-selected="false"
+          aria-controls="panel-notifications"
+          type="button"
+        >
+          Notifications
+        </button>
+        <button
+          role="tab"
+          id="tab-privacy"
+          aria-selected="false"
+          aria-controls="panel-privacy"
+          type="button"
+        >
+          Privacy
+        </button>
+      </div>
+      <section role="tabpanel" id="panel-profile" aria-labelledby="tab-profile">
+        <form id="profile-form" novalidate>
+          <label for="email">Email</label>
+          <input id="email" type="email" value="old@example.com" />
+          <p id="email-error" role="alert" hidden>
+            Enter a valid email address.
+          </p>
+          <label for="bio">Bio</label>
+          <textarea id="bio">I like long walks.</textarea>
+          <label for="language">Language</label>
+          <select id="language">
+            <option value="en">English</option>
+            <option value="id">Indonesian</option>
+            <option value="es">Spanish</option>
+          </select>
+          <button type="submit">Save settings</button>
+          <p id="settings-saved" hidden>Settings saved</p>
+        </form>
+      </section>
+      <section
+        role="tabpanel"
+        id="panel-notifications"
+        aria-labelledby="tab-notifications"
+        hidden
+      >
+        <button
+          type="button"
+          role="switch"
+          id="email-alerts"
+          aria-checked="true"
+        >
+          Email alerts
+        </button>
+        <button
+          type="button"
+          role="switch"
+          id="sms-alerts"
+          aria-checked="false"
+        >
+          SMS alerts
+        </button>
+      </section>
+      <section
+        role="tabpanel"
+        id="panel-privacy"
+        aria-labelledby="tab-privacy"
+        hidden
+      >
+        <fieldset>
+          <legend>Profile visibility</legend>
+          <label
+            ><input type="radio" name="visibility" value="public" checked />
+            Public</label
+          >
+          <label
+            ><input type="radio" name="visibility" value="friends" />
+            Friends</label
+          >
+          <label
+            ><input type="radio" name="visibility" value="private" />
+            Private</label
+          >
+        </fieldset>
+        <button type="button" id="delete-account">Delete account</button>
+        <p id="account-status">Account active</p>
+      </section>
+    </main>
+    <script src="/eval-settings.js" defer></script>
+    <script
+      src="/dist/embed/pagesquire.min.js"
+      data-endpoint="/pagesquire/chat"
+      data-pages="/eval-settings.html"
+      data-title="Settings assistant"
+      data-styles="none"
+      data-generic="true"
+      data-trace="content"
+      defer
+    ></script>
+  </body>
+</html>

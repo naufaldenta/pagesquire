@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="synthetic-eval-csrf-token-0123456789" />
+    <title>Eval shop</title>
+    <link rel="stylesheet" href="/demo.css" />
+    <link rel="stylesheet" href="/dist/embed/pagesquire.css" />
+    <link rel="stylesheet" href="/eval-fixture.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Eval shop</h1>
+      <p>Cart: <output id="cart-count">0</output> items</p>
+      <ul id="cart-items" aria-label="Cart"></ul>
+      <label for="search">Search products</label>
+      <input id="search" type="search" />
+      <fieldset>
+        <legend>Category</legend>
+        <label
+          ><input type="checkbox" name="category" value="books" /> Books</label
+        >
+        <label
+          ><input type="checkbox" name="category" value="music" /> Music</label
+        >
+        <label
+          ><input type="checkbox" name="category" value="games" /> Games</label
+        >
+      </fieldset>
+      <label for="sort">Sort by</label>
+      <select id="sort">
+        <option value="featured">Featured</option>
+        <option value="price-asc">Price: low to high</option>
+        <option value="price-desc">Price: high to low</option>
+      </select>
+      <ul id="products" aria-label="Products"></ul>
+      <button id="checkout" type="button">Checkout</button>
+      <p id="order-status">No order yet</p>
+      <h2>All gift cards</h2>
+      <ul id="gift-cards" aria-label="Gift cards"></ul>
+    </main>
+    <div id="cookie-banner" class="banner" role="region" aria-label="Cookies">
+      <p>We use cookies.</p>
+      <button type="button" data-choice="accepted">Accept cookies</button>
+      <button type="button" data-choice="rejected">Reject cookies</button>
+    </div>
+    <p id="cookie-choice" hidden></p>
+    <script src="/eval-shop.js" defer></script>
+    <script
+      src="/dist/embed/pagesquire.min.js"
+      data-endpoint="/pagesquire/chat"
+      data-pages="/eval-shop.html"
+      data-title="Shop assistant"
+      data-styles="none"
+      data-generic="true"
+      data-actable="main, #cookie-banner"
+      data-trace="content"
+      defer
+    ></script>
+  </body>
+</html>

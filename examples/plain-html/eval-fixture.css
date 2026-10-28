@@ -1,0 +1,16 @@
+.banner {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 100vh;
+  padding: 1rem;
+  background: rgb(255 255 255 / 0.85);
+  border-bottom: 2px solid currentColor;
+}
+
+.banner[hidden] {
+  display: none;
+}
+
+[role='tabpanel'][hidden] {
+  display: none;
+}

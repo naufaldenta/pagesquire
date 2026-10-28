@@ -294,9 +294,13 @@ export async function runModelEvaluation(options, dependencies = {}) {
         }
         let input;
         // The backend remains the authority for bounded JSON, Origin, CSRF, auth and capability validation.
+        // The grader inspects whole replies, so it asks the backend for plain JSON.
+        const headers = new Headers(request.headers);
+        if (url.pathname === '/api/chat')
+          headers.set('accept', 'application/json');
         const incoming = new Request(url, {
           method: request.method,
-          headers: request.headers,
+          headers,
           ...(!['GET', 'HEAD'].includes(request.method)
             ? { body: Readable.toWeb(request), duplex: 'half' }
             : {}),
