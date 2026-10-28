@@ -312,6 +312,8 @@ test('source inventory excludes local notes/cache and includes release/community
     'vercel.json',
     '.vercelignore',
     'playwright.offbeat.config.mjs',
+    'playwright.extension.config.mjs',
+    'packages/extension/manifest.json',
     'examples/brutalist-demo/env.example',
   ])
     assert.ok(files.has(name), name);

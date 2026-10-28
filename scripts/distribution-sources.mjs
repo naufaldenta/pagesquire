@@ -32,6 +32,7 @@ const rootFiles = new Set([
   'playwright.config.mjs',
   'playwright.wordpress.config.mjs',
   'playwright.offbeat.config.mjs',
+  'playwright.extension.config.mjs',
   'vercel.json',
 ]);
 const omitted = new Set([
