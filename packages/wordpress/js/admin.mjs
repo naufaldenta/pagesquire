@@ -1,5 +1,6 @@
 import { zipSync, strToU8 } from 'fflate';
 import { api, readText } from './api.mjs';
+import { setupPartners } from './partners.mjs';
 const element = document.querySelector('#pagesquire-admin-config');
 if (element) {
   const config = JSON.parse(element.textContent);
@@ -61,6 +62,7 @@ if (element) {
     Promise.resolve()
       .then(task)
       .catch((error) => notice(error.message, true));
+  setupPartners(config, notice, handle);
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     void handle(async () => {

@@ -8,6 +8,7 @@ use PageSquireWPVendor\PageSquire\Server\AssistantException;
 use PageSquireWPVendor\PageSquire\Server\ConversationEngine;
 use PageSquireWPVendor\PageSquire\Server\Http\ChatEndpoint;
 use PageSquireWPVendor\PageSquire\Server\Http\OpenAiCompatibleProvider;
+use PageSquireWPVendor\PageSquire\Server\Link\Link;
 use PageSquireWPVendor\PageSquire\Server\ProtocolValidator;
 use PageSquireWPVendor\PageSquire\Server\ProviderConfiguration;
 
@@ -18,6 +19,7 @@ final class Plugin
     public function register(): void
     {
         add_action('rest_api_init', $this->routes(...));
+        add_action('init', Partners::serveDeclaration(...), 0);
         add_action('admin_menu', function (): void {
             add_menu_page('PageSquire', 'PageSquire', 'manage_options', 'pagesquire', $this->dashboard(...), 'dashicons-universal-access-alt', 80);
         });
@@ -100,6 +102,23 @@ final class Plugin
             }, $public],
             ['/chat', 'POST', $this->chat(...), $public],
             ['/ability', 'POST', $this->ability(...), $public],
+            // PageSquire Link: partner servers sign their messages; owners manage partners from the dashboard.
+            ['/link', 'POST', fn (\WP_REST_Request $request): \WP_REST_Response => Partners::receive($request, $this->ipHash()), Partners::permission(...)],
+            ['/link/admin', 'GET', fn (): array => Partners::state(), $admin],
+            ['/link/settings', 'PUT', fn (\WP_REST_Request $request): array => Partners::save($this->input($request)), $admin],
+            ['/link/invite', 'POST', fn (\WP_REST_Request $request): array => Partners::manager()->createInvitation($this->int($this->input($request)['hours'] ?? 24)), $admin],
+            ['/link/accept', 'POST', fn (\WP_REST_Request $request): array => Partners::manager()->acceptInvitation($this->text($this->input($request)['code'] ?? null)), $admin],
+            ['/link/approve', 'POST', function (\WP_REST_Request $request): array {
+                $input = $this->input($request);
+                $offer = $input['offer'] ?? [];
+                $accept = $input['accept'] ?? [];
+                if (! is_array($offer) || ! is_array($accept)) {
+                    throw new AssistantException('INVALID_SCOPE', 'Send the skills to offer and accept.', 400);
+                }
+
+                return Partners::manager()->approve($this->text($input['link'] ?? null), ['offer' => $offer, 'accept' => $accept]);
+            }, $admin],
+            ['/link/revoke', 'POST', fn (\WP_REST_Request $request): array => Partners::manager()->revoke($this->text($this->input($request)['link'] ?? null)), $admin],
         ];
         foreach ($definitions as [$path, $methods, $callback, $permission]) {
             register_rest_route('pagesquire/v1', $path, ['methods' => $methods, 'permission_callback' => $permission, 'callback' => function (\WP_REST_Request $request) use ($callback): mixed {
@@ -144,6 +163,34 @@ final class Plugin
         } catch (\JsonException) {
             throw new AssistantException('INVALID_PAYLOAD', 'Send a valid JSON object.');
         }
+    }
+
+    /** @return array<string, mixed> A JSON object body as an associative array. */
+    private function input(\WP_REST_Request $request): array
+    {
+        if (! $this->raw($request) instanceof \stdClass) {
+            throw new AssistantException('INVALID_PAYLOAD', 'Send a JSON object.');
+        }
+
+        return json_decode($request->get_body(), true, 64, JSON_THROW_ON_ERROR);
+    }
+
+    private function text(mixed $value): string
+    {
+        if (! is_string($value) || strlen($value) > 512) {
+            throw new AssistantException('INVALID_PAYLOAD', 'Send a valid value.');
+        }
+
+        return $value;
+    }
+
+    private function int(mixed $value): int
+    {
+        if (! is_int($value)) {
+            throw new AssistantException('INVALID_PAYLOAD', 'Send a whole number.');
+        }
+
+        return $value;
     }
 
     /** Runs one approved read-only WordPress ability for the browser handler of wordpress.run_ability. */
@@ -191,7 +238,12 @@ final class Plugin
         }
         $validator = new ProtocolValidator;
         $provider = new SiteProvider(new OpenAiCompatibleProvider($validator, $settings['endpoint'], Settings::key(), $settings['model'], new WordPressHttpClient, options: Settings::providerOptions($settings)), $quota, $settings);
-        $endpoint = new ChatEndpoint(new ConversationEngine($provider, $validator, Mapping::manifest($settings['mapping']), locale: self::locale($settings)), $validator, $store, Settings::origin());
+        $manifest = Mapping::manifest($settings['mapping']);
+        $links = Partners::enabled() ? Partners::manager() : null;
+        if ($links !== null) {
+            $manifest['capabilities'][] = Link::handoffCapability();
+        }
+        $endpoint = new ChatEndpoint(new ConversationEngine($provider, $validator, $manifest, locale: self::locale($settings), links: $links), $validator, $store, Settings::origin());
         $result = $endpoint->handle($request->get_method(), ['origin' => $request->get_header('origin'), 'content-type' => $request->get_header('content-type'), 'x-csrf-token' => $request->get_header('x-csrf-token')], $request->get_body(), $session);
 
         return new \WP_REST_Response($result['body'], $result['status'] === 419 ? 403 : $result['status']);
@@ -224,7 +276,7 @@ final class Plugin
             }
         }
 
-        return ['settings' => Settings::publicSettings(), 'providers' => ProviderConfiguration::presets(), 'choices' => array_values($choices), 'gaps' => Context::gaps($settings), 'observations' => array_values(get_option('pagesquire_observations', [])), 'abilities' => Abilities::available()];
+        return ['settings' => Settings::publicSettings(), 'providers' => ProviderConfiguration::presets(), 'choices' => array_values($choices), 'gaps' => Context::gaps($settings), 'observations' => array_values(get_option('pagesquire_observations', [])), 'abilities' => Abilities::available(), 'link' => Partners::state()];
     }
 
     public function dashboard(): void
@@ -258,7 +310,7 @@ final class Plugin
         wp_enqueue_style('pagesquire-widget', plugins_url('assets/widget.css', $this->file), [], '0.1.0-beta.0');
         wp_enqueue_style('pagesquire-site', plugins_url('assets/plugin.css', $this->file), ['pagesquire-widget'], '0.1.0-beta.0');
         wp_enqueue_script('pagesquire-site', plugins_url('assets/frontend.js', $this->file), [], '0.1.0-beta.0', true);
-        $config = ['rest' => rest_url('pagesquire/v1/'), 'nonce' => is_user_logged_in() ? wp_create_nonce('wp_rest') : '', 'origin' => Settings::origin(), 'inspect' => $inspect, 'pageId' => $pageId, 'pages' => Context::pages($settings), 'mapping' => $settings['mapping'], 'fingerprint' => Context::fingerprint($settings), 'assistantName' => $settings['assistantName'], 'locale' => self::locale($settings)];
+        $config = ['rest' => rest_url('pagesquire/v1/'), 'nonce' => is_user_logged_in() ? wp_create_nonce('wp_rest') : '', 'origin' => Settings::origin(), 'inspect' => $inspect, 'pageId' => $pageId, 'pages' => Context::pages($settings), 'mapping' => $settings['mapping'], 'fingerprint' => Context::fingerprint($settings), 'assistantName' => $settings['assistantName'], 'locale' => self::locale($settings), 'link' => Partners::enabled()];
         add_action('wp_footer', function () use ($config): void {
             echo '<div id="pagesquire-widget" data-pagesquire-root></div>';
             $this->jsonConfig('pagesquire-site-config', $config);

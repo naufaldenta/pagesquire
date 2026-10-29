@@ -317,7 +317,8 @@ test('installed ZIP completes five-step setup and verified full-document assista
   page,
   browser,
 }, testInfo) => {
-  await expect(page.locator('.pagesquire-step')).toHaveCount(5);
+  // Five setup steps, then the optional Partner sites (PageSquire Link).
+  await expect(page.locator('.pagesquire-step')).toHaveCount(6);
   expect(config.state.settings.enabled).toBe(false);
   await enable(page, true);
   await page.evaluate(() => window.scrollTo(0, 0));

@@ -111,3 +111,15 @@
     width: calc(100vw - 24px);
   }
 }
+
+.pagesquire-partner {
+  margin: 12px 0;
+  padding: 12px 16px;
+  border: 1px solid #dcdcde;
+}
+.pagesquire-partner h4 {
+  margin: 0 0 8px;
+}
+.pagesquire-partner fieldset {
+  margin: 8px 0;
+}

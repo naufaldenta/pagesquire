@@ -41,6 +41,9 @@ add_action('wp_abilities_api_init', static function (): void {
 });
 
 add_filter('pre_http_request', static function (mixed $result, array $arguments, string $url): mixed {
+    if (preg_match('~^http://127\.0\.0\.1:[0-9]+/~', $url) === 1 && ! str_starts_with($url, 'http://127.0.0.1:4177/')) {
+        return $result; // Local PageSquire Link partners started by the tests.
+    }
     if ($url !== 'https://provider.example.test/v1/chat/completions') {
         return new WP_Error('fixture_network_denied', 'External network is disabled in this fixture.');
     }

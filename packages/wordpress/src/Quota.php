@@ -44,6 +44,14 @@ final class Quota
         }, 10);
     }
 
+    /** PageSquire Link messages from partner servers, per IP and minute. */
+    public function link(string $ipHash): void
+    {
+        if (! $this->counter->consume('link', self::minute(), 60, $ipHash)) {
+            throw new AssistantException('RATE_LIMITED', 'Too many link messages. Try again later.', 429);
+        }
+    }
+
     public function provider(int $maximum): void
     {
         if (! $this->counter->consume('provider', self::day(), $maximum)) {

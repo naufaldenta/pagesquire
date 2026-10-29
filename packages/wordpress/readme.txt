@@ -20,6 +20,8 @@ The administrator can select Sumopod, OpenAI, OpenRouter, Groq, DeepSeek, Qwen/A
 
 When enabled, visitor messages, filtered visible page observations and selected public metadata are sent to the provider endpoint chosen by the site administrator. No external model service is selected or contacted on activation, draft saving, inspection or context export. The administrator must supply the provider API key, review that provider's terms/privacy policy, configure spending controls and obtain appropriate visitor consent. Review public metadata before sharing AI integration exports with any coding service. PageSquire does not ship analytics or a hosted inference service.
 
+PageSquire Link is off by default. When the administrator enables it and pairs with a partner site, this site's server exchanges signed messages with that partner's server only. Those messages carry site names, public keys, skills, approvals and revocations, and no visitor data. The partner is chosen and approved by the administrator.
+
 == Installation ==
 
 Upload the prebuilt ZIP, activate, open PageSquire, and complete the five setup steps. Production HTTPS is required. Server-side PAGESQUIRE_API_KEY configuration is supported; encrypted dashboard key storage also requires sodium. Hosting users do not need Composer or Node.js.

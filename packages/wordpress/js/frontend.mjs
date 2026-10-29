@@ -2,6 +2,8 @@ import {
   AssistantClient,
   ChatNavigationStore,
   createHttpTransport,
+  createVisitorPrompt,
+  mountLinkArrival,
   mountWidget,
 } from '@pagesquire/client';
 import { createRuntime } from './adapters.mjs';
@@ -35,6 +37,11 @@ async function boot() {
       if (!response.ok) throw Error('The ability could not run.');
       return JSON.parse(await readText(response, 32768)).output;
     },
+    // PageSquire Link: the client is created below, before any handoff runs.
+    approveHandoff: (callId, signal) => client.approveHandoff(callId, signal),
+    visitor: createVisitorPrompt(container, {
+      locale: config.locale ?? 'auto',
+    }),
   });
   const { runtime, observer } = adapter;
   window.pagesquireWordPress = { runtime, observer, config };
@@ -207,6 +214,8 @@ async function boot() {
     title: config.assistantName,
     locale: config.locale ?? 'auto',
   });
+  if (config.link === true)
+    mountLinkArrival(container, client, { locale: config.locale ?? 'auto' });
   window.pagesquireWordPress.client = client;
   window.addEventListener(
     'pagehide',

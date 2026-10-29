@@ -1,4 +1,8 @@
-import { navigationCapability, createPageCapabilities } from '@pagesquire/core';
+import {
+  navigationCapability,
+  createLinkCapabilities,
+  createPageCapabilities,
+} from '@pagesquire/core';
 const capability = (id, description, properties) => ({
   id,
   description,
@@ -55,5 +59,7 @@ export const manifest = {
       ),
       risk: 'read_only',
     },
+    // Offered only while PageSquire Link is enabled.
+    ...createLinkCapabilities(),
   ],
 };

@@ -42,6 +42,6 @@ final class Session
         $user = wp_get_current_user();
         $key = 'chat:'.hash('sha256', $id.'|'.get_current_user_id().'|'.wp_get_session_token());
 
-        return ['key' => $key, 'expiresAt' => $expires, 'principal' => hash('sha256', wp_json_encode([get_current_user_id(), $user->roles, $user->allcaps, $settings['revision']])), 'csrfToken' => hash_hmac('sha256', $key.'|'.$expires, wp_salt('nonce')), 'capabilityIds' => $settings['mapping']['capabilityIds']];
+        return ['key' => $key, 'expiresAt' => $expires, 'principal' => hash('sha256', wp_json_encode([get_current_user_id(), $user->roles, $user->allcaps, $settings['revision']])), 'csrfToken' => hash_hmac('sha256', $key.'|'.$expires, wp_salt('nonce')), 'capabilityIds' => [...$settings['mapping']['capabilityIds'], ...(Partners::enabled() ? ['link.handoff'] : [])]];
     }
 }

@@ -70,4 +70,23 @@ if (! defined('ABSPATH')) {
             <p><button type="submit" class="button button-secondary" value="draft"><?php esc_html_e('Save draft and disable', 'pagesquire'); ?></button> <button type="submit" class="button button-primary" value="enable"><?php esc_html_e('Enable verified assistant', 'pagesquire'); ?></button></p>
         </section>
     </form>
+    <?php $link = $state['link']; ?>
+    <section class="pagesquire-step" id="pagesquire-link" aria-labelledby="pagesquire-step-6">
+        <h2 id="pagesquire-step-6"><span class="pagesquire-step-number">6</span> <?php esc_html_e('Partner sites (PageSquire Link)', 'pagesquire'); ?></h2>
+        <p><?php esc_html_e('Pair with another owner’s PageSquire site using a one-time invitation. Each owner approves their own side, and either can revoke at any time. The site name, public key and skills below are published at /.well-known/pagesquire.json; the private site key never leaves this server.', 'pagesquire'); ?></p>
+        <?php if (! $link['available']) { ?><p class="notice notice-warning inline"><?php esc_html_e('PageSquire Link needs WordPress at the root of an HTTPS domain.', 'pagesquire'); ?></p><?php } ?>
+        <form id="pagesquire-link-form">
+            <p><label><input name="enabled" type="checkbox" <?php checked($link['settings']['enabled']); ?>> <?php esc_html_e('Enable PageSquire Link', 'pagesquire'); ?></label></p>
+            <p><label for="ps-link-name"><?php esc_html_e('Site name shown to partners', 'pagesquire'); ?></label><br><input id="ps-link-name" name="name" class="regular-text" maxlength="80" value="<?php echo esc_attr($link['settings']['name']); ?>"></p>
+            <p><label for="ps-link-skills"><?php esc_html_e('Skills partners may hand visitors into (JSON)', 'pagesquire'); ?></label><br><textarea id="ps-link-skills" name="skills" rows="8" class="large-text code"><?php echo esc_textarea((string) wp_json_encode($link['settings']['skills'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)); ?></textarea></p>
+            <p class="description"><?php esc_html_e('Each skill has an id, name, description, tags, fields (at most 10 typed values) and the startPath where a visitor arrives.', 'pagesquire'); ?></p>
+            <p><button type="submit" class="button"><?php esc_html_e('Save Link settings', 'pagesquire'); ?></button></p>
+        </form>
+        <h3><?php esc_html_e('Invite or accept', 'pagesquire'); ?></h3>
+        <p><label for="ps-link-hours"><?php esc_html_e('Invitation valid for (hours)', 'pagesquire'); ?></label> <input id="ps-link-hours" type="number" min="1" max="168" value="24"> <button type="button" class="button" id="pagesquire-link-invite"><?php esc_html_e('Create invitation', 'pagesquire'); ?></button></p>
+        <p><label for="ps-link-code"><?php esc_html_e('New invitation', 'pagesquire'); ?></label><br><input id="ps-link-code" class="large-text code" readonly></p>
+        <p><label for="ps-link-accept-code"><?php esc_html_e('Invitation from a partner', 'pagesquire'); ?></label><br><input id="ps-link-accept-code" class="large-text code" autocomplete="off"> <button type="button" class="button" id="pagesquire-link-accept"><?php esc_html_e('Accept invitation', 'pagesquire'); ?></button></p>
+        <h3><?php esc_html_e('Partners', 'pagesquire'); ?></h3>
+        <div id="pagesquire-link-partners"></div>
+    </section>
 </div>

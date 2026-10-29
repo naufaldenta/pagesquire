@@ -4,6 +4,7 @@ import {
   NavigationStore,
   PageObserver,
   BrowserDriver,
+  createLinkBindings,
   createPageBindings,
 } from '@pagesquire/core';
 import { manifest } from './capabilities.mjs';
@@ -12,7 +13,11 @@ import { parameters } from '../dist/generated/bindings.mjs';
 /** Ability output above this size is withheld from evidence and reported as truncated. */
 const ABILITY_EVIDENCE_BYTES = 8000;
 
-export function createRuntime(config, document, { runAbility } = {}) {
+export function createRuntime(
+  config,
+  document,
+  { runAbility, approveHandoff, visitor } = {},
+) {
   const abilityResults = new Map();
   const visible = (element) =>
     observer.isVisible(element) && !observer.isExcluded(element);
@@ -22,8 +27,10 @@ export function createRuntime(config, document, { runAbility } = {}) {
   const links = () => [...root().querySelectorAll('a[href]')].filter(visible);
   const local = {
     ...manifest,
-    capabilities: manifest.capabilities.filter((entry) =>
-      config.mapping.capabilityIds.includes(entry.id),
+    capabilities: manifest.capabilities.filter(
+      (entry) =>
+        config.mapping.capabilityIds.includes(entry.id) ||
+        (entry.id === 'link.handoff' && config.link === true),
     ),
   };
   const allowed = (value) => {
@@ -142,9 +149,13 @@ export function createRuntime(config, document, { runAbility } = {}) {
       evidence: { ready: true },
     }),
   };
+  const link =
+    config.link === true && approveHandoff
+      ? createLinkBindings({ approve: approveHandoff })
+      : undefined;
   const registry = new CapabilityRegistry(local, {
-    handlers,
-    verifiers,
+    handlers: { ...handlers, ...link?.handlers },
+    verifiers: { ...verifiers, ...link?.verifiers },
     parameters,
   });
   let navigationStore;
@@ -163,7 +174,9 @@ export function createRuntime(config, document, { runAbility } = {}) {
       observer,
       registry,
       presentation: driver,
-      timeoutMs: 5000,
+      // A handoff waits for the partner's server (up to 10 seconds).
+      timeoutMs: link ? 20000 : 5000,
+      ...(link && visitor ? { visitor } : {}),
       ...(navigationStore ? { navigationStore } : {}),
     }),
     root,
