@@ -66,6 +66,18 @@ return [
         // own PageSquire\Server\Link\LinkStore for several application servers.
         'store' => env('PAGESQUIRE_LINK_STORE'),
         'requests_per_minute' => 60,
+        // Optional A2A interface (Phase 6E): any A2A agent may send a request into the
+        // skills listed here and receives a single-use link where the person continues
+        // and confirms. Publishes /.well-known/agent-card.json, signed with the site key.
+        'a2a' => [
+            'enabled' => env('PAGESQUIRE_A2A', false),
+            'path' => 'pagesquire/a2a',
+            // IDs from 'skills' above, e.g. ['book_table'].
+            'skills' => [],
+            // The Agent Card description (default: generated from the site name).
+            'description' => null,
+            'requests_per_minute' => 30,
+        ],
     ],
     // Replay verified trajectories for identical instructions without calling the provider.
     'trajectory_cache' => [

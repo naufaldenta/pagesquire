@@ -8,6 +8,7 @@ use PageSquire\Laravel\CapabilityCatalog;
 use PageSquire\Laravel\PageSquireServiceProvider;
 use PageSquire\Server\ActionSigner;
 use PageSquire\Server\AssistantException;
+use PageSquire\Server\Link\A2A;
 use PageSquire\Server\Link\LinkEndpoint;
 use PageSquire\Server\Link\LinkManager;
 use PageSquire\Server\Link\LinkStore;
@@ -45,6 +46,7 @@ final class LinkTest extends TestCase
         $app['config']->set('pagesquire.link.enabled', true);
         $app['config']->set('pagesquire.link.name', 'Hotel Example');
         $app['config']->set('pagesquire.link.skills', [self::FIND_ROOM]);
+        $app['config']->set('pagesquire.link.a2a', ['enabled' => true, 'path' => 'pagesquire/a2a', 'skills' => ['find_room']]);
         $app['config']->set('pagesquire.manifest', ['schemaVersion' => '0.1', 'capabilities' => [[
             'id' => 'accessibility.set_heading_color', 'description' => 'Set the heading color.', 'execution' => 'browser', 'handler' => 'setHeadingColor',
             'inputSchema' => ['type' => 'object', 'properties' => ['color' => ['type' => 'string']], 'required' => ['color'], 'additionalProperties' => false],
@@ -94,9 +96,40 @@ final class LinkTest extends TestCase
         $this->assertSame('active', $ours['status']);
         $this->assertSame(['book_table' => ['people']], $ours['ours']['offer']);
 
+        // The owner's overview: who offers what, who may use our skills, what was carried.
+        $this->artisan('pagesquire:link-overview')->expectsOutputToContain('No handoffs yet.')->assertSuccessful();
+        app(LinkManager::class)->handoff($link['id'], ['skill' => 'book_table', 'goal' => 'A table for four', 'fields' => ['people' => 4]]);
+        $this->assertSame(0, Artisan::call('pagesquire:link-overview'));
+        $output = Artisan::output();
+        $this->assertStringContainsString('Partners: 1 active, 0 pending, 0 revoked. Visitors sent: 1, received: 0.', $output);
+        $this->assertMatchesRegularExpression('/book_table \(Book a table\)\s*\|\s*Resto \(https:\/\/resto\.example\)/', $output);
+        $this->assertMatchesRegularExpression('/find_room \(Find a room\)\s*\|\s*Resto \(https:\/\/resto\.example\)/', $output);
+        $this->assertStringContainsString('book_table 1 / 0', $output);
+        $this->assertMatchesRegularExpression('/\d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC/', $output);
+
         $this->artisan('pagesquire:link-revoke', ['link' => $link['id']])->expectsOutputToContain('Revoked.')->assertSuccessful();
         $this->assertSame('revoked', $this->partner->get($link['id'])['status']);
         $this->artisan('pagesquire:link-approve', ['link' => $link['id']])->expectsOutputToContain('LINK_REVOKED')->assertFailed();
+    }
+
+    public function test_the_a2a_interface_serves_a_signed_card_and_answers_agents(): void
+    {
+        $card = $this->get('/.well-known/agent-card.json')->assertOk()->assertHeader('Access-Control-Allow-Origin', '*');
+        $this->assertSame([['url' => 'https://hotel.example/pagesquire/a2a', 'protocolBinding' => 'JSONRPC', 'protocolVersion' => '1.0']], $card->json('supportedInterfaces'));
+        $this->assertSame(['find_room'], array_column($card->json('skills'), 'id'));
+        $keys = $this->get('/.well-known/pagesquire-keys.json')->assertOk();
+        $this->assertTrue(A2A::verifyCard(json_decode((string) $card->getContent()), json_decode((string) $keys->getContent())));
+
+        $request = ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'SendMessage', 'params' => ['message' => ['messageId' => 'm-1', 'role' => 'ROLE_USER', 'parts' => [
+            ['data' => ['skill' => 'find_room', 'goal' => 'A room for two nights', 'fields' => ['checkIn' => '2026-11-01']]],
+        ]]]];
+        $answer = $this->postJson('/pagesquire/a2a', $request, ['A2A-Version' => '1.0'])->assertOk();
+        $this->assertStringContainsString('no-store', (string) $answer->headers->get('Cache-Control'));
+        $url = $answer->json('result.message.parts.1.data.url');
+        $this->assertMatchesRegularExpression('~^https://hotel\.example/rooms#psq-agent=[\w-]{22}$~', $url);
+        $this->assertSame('agent', app(LinkManager::class)->redeem(explode('#psq-agent=', $url)[1])['kind']);
+        $this->postJson('/pagesquire/a2a', $request)->assertOk()->assertJsonPath('error.code', -32009);
+        $this->artisan('pagesquire:link-overview')->expectsOutputToContain('A2A agents may send requests into: find_room. Requests received: 1.')->assertSuccessful();
     }
 
     public function test_artisan_accepts_an_invitation_from_the_partner(): void
@@ -126,7 +159,7 @@ final class LinkTest extends TestCase
     public function test_the_catalog_lists_link_handoff_only_while_link_is_on(): void
     {
         $ids = static fn (): array => array_column(app(CapabilityCatalog::class)->manifest()['capabilities'], 'id');
-        $this->assertSame(['accessibility.set_heading_color', 'link.handoff'], $ids());
+        $this->assertSame(['accessibility.set_heading_color', 'link.handoff', 'link.return'], $ids());
         config(['pagesquire.link.enabled' => false]);
         $this->assertSame(['accessibility.set_heading_color'], $ids());
     }

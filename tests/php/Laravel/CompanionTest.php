@@ -42,6 +42,8 @@ final class CompanionTest extends TestCase
         $this->getJson('/.well-known/pagesquire.json')->assertJsonPath('features', ['trustedInput', 'screenshots']);
         // Link stays off, and its route absent, until the owner turns it on.
         $this->postJson('/pagesquire/link', [])->assertNotFound();
+        $this->get('/.well-known/agent-card.json')->assertNotFound();
+        $this->postJson('/pagesquire/a2a', [])->assertNotFound();
     }
 
     public function test_chat_replies_carry_calls_signed_for_the_app_origin(): void

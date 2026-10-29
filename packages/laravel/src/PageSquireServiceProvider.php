@@ -50,6 +50,10 @@ final class PageSquireServiceProvider extends ServiceProvider
                     'skills' => (array) $config->get('pagesquire.link.skills', []),
                 ],
                 $app->make(LinkTransport::class),
+                a2a: $config->get('pagesquire.link.a2a.enabled') ? [
+                    'endpoint' => '/'.ltrim((string) $config->get('pagesquire.link.a2a.path', 'pagesquire/a2a'), '/'),
+                    'skills' => array_values((array) $config->get('pagesquire.link.a2a.skills', [])),
+                ] + ($config->get('pagesquire.link.a2a.description') ? ['description' => (string) $config->get('pagesquire.link.a2a.description')] : []) : null,
             );
         });
         $this->app->bind(Provider::class, function ($app): Provider {
@@ -111,6 +115,7 @@ final class PageSquireServiceProvider extends ServiceProvider
                 Console\LinkInviteCommand::class,
                 Console\LinkAcceptCommand::class,
                 Console\LinkListCommand::class,
+                Console\LinkOverviewCommand::class,
                 Console\LinkApproveCommand::class,
                 Console\LinkRevokeCommand::class,
             ]);
@@ -134,6 +139,10 @@ final class PageSquireServiceProvider extends ServiceProvider
         RateLimiter::for('pagesquire-link', fn (Request $request): Limit => Limit::perMinute(max(1, min(600, (int) config('pagesquire.link.requests_per_minute', 60))))
             ->by('ip:'.hash('sha256', (string) $request->ip()))
             ->response(fn (): mixed => response()->json(['error' => ['code' => 'RATE_LIMITED', 'message' => 'Too many link messages.']], 429)->header('Cache-Control', 'no-store')));
+        // Any A2A agent may call the A2A endpoint: limit by address too.
+        RateLimiter::for('pagesquire-a2a', fn (Request $request): Limit => Limit::perMinute(max(1, min(600, (int) config('pagesquire.link.a2a.requests_per_minute', 30))))
+            ->by('ip:'.hash('sha256', (string) $request->ip()))
+            ->response(fn (): mixed => response()->json(['jsonrpc' => '2.0', 'id' => null, 'error' => ['code' => -32603, 'message' => 'Too many requests. Try again in a minute.']], 429)->header('Cache-Control', 'no-store')));
         $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
     }
 }

@@ -45,15 +45,20 @@ final class CapabilityCatalog
     }
 
     /**
-     * With PageSquire Link on, the catalog also lists link.handoff; the pagesquire.capability gate still decides who may use it.
+     * With PageSquire Link on, the catalog also lists link.handoff and link.return; the pagesquire.capability gate still decides who may use them.
      *
      * @param  array<string, mixed>  $manifest
      * @return array<string, mixed>
      */
     private function withLink(array $manifest): array
     {
-        if ($this->config->get('pagesquire.link.enabled') && $this->config->get('pagesquire.companion.signing_key') && ! in_array('link.handoff', array_column($manifest['capabilities'], 'id'), true)) {
-            $manifest['capabilities'][] = Link::handoffCapability();
+        if ($this->config->get('pagesquire.link.enabled') && $this->config->get('pagesquire.companion.signing_key')) {
+            $ids = array_column($manifest['capabilities'], 'id');
+            foreach ([Link::handoffCapability(), Link::returnCapability()] as $capability) {
+                if (! in_array($capability['id'], $ids, true)) {
+                    $manifest['capabilities'][] = $capability;
+                }
+            }
         }
 
         return $manifest;
