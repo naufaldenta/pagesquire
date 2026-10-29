@@ -9,7 +9,7 @@
     "packages/cli/dist/scan.d.ts": "d16df7518d42f60b7e1f32fa7c81116fbe3683548362ecad50168be787005cef",
     "packages/cli/dist/validate.d.ts": "37bc797cc36d763d47e29ff3b91ec5be2d029531affb20e114b5bef72bb43ac1",
     "packages/cli/dist/workflow.d.ts": "3232d5d352adecca0fe3df1f351867ee78f6564a025bcd4c9d7d3040e7cf9283",
-    "packages/cli/package.json": "8b0f55ffc4e2a543364a795affdbc6e96550580674130914a5048f2556ffaa5b",
+    "packages/cli/package.json": "43888cf1a719f2ffe64cacae99feb88bd34260fbfabcfce5c37bd9bfd1490e0b",
     "packages/client/dist/approval.d.ts": "62480009dafd7bf3c4010f3e8317ef4e3c23c012c0f18149a183c7251a8930f6",
     "packages/client/dist/client.d.ts": "77ff6f70fac9049d52e59d978adfe89379adbf13e0cf883b83dd578701d77944",
     "packages/client/dist/i18n.d.ts": "58c523bec62de138ba942393f83a23d207598ddd72debb17e4593b90adfc378b",

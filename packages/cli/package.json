@@ -19,7 +19,7 @@
     "README.md"
   ],
   "bin": {
-    "pagesquire": "./dist/bin.js"
+    "pagesquire": "dist/bin.js"
   },
   "exports": {
     ".": {
