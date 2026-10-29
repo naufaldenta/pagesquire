@@ -1,26 +1,26 @@
 # Assistant driving and feature parity
 
-PageSquire supplies reusable driving primitives, not permission to operate arbitrary controls. They use the same browser core in plain HTML/PHP, Laravel/Inertia, React/Next.js and WordPress. These are alpha APIs. Reference-site content, routes, Sienna UI, Rive assets and commercial TTS credentials are not distributed.
+These helpers let the assistant visibly drive the page: move a cursor, scroll, prepare menus, set controls, read content, give tours and speak answers. They do not grant permission to operate any control. They use the same browser core in plain HTML and PHP, Laravel with Inertia, React and Next.js, and WordPress. The APIs may still change.
 
-## Reference behavior and generic implementation
+## Behaviors and how to build them
 
-| Behavior                                                                                                                      | PageSquire integration                                                                                                                                                     |
-| ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Moving cursor, target outline, click feedback                                                                                 | `BrowserDriver` and the existing client stylesheet. Presentation never performs a click or grants permission.                                                              |
-| Scrolling, including nested containers                                                                                        | `driver.scrollTo(target, signal, 'start' or 'end')`; `page.scroll_to` uses a declared public scope.                                                                        |
-| Menu, dropdown, accessibility panel preparation                                                                               | Owner-authored `prepare` callbacks in `createControlBindings`; explicit, cooperative prerequisites only.                                                                   |
-| Native color/range/text/select and button controls                                                                            | `createControlBindings` and `setControlValue`, with mandatory desired-state verification and no blind repeat toggles.                                                      |
-| Heading/body colors, heading/link highlighting, font weight/size, spacing, alignment and contrast                             | Bind the site's actual controls with separate closed schemas and computed-state verifiers. Names alone do not make a capability available.                                 |
-| Reading fonts, images/tooltips, masks/guides, focus, magnification, cursor sizes, virtual keyboard and accessibility profiles | Same generic host-control binding contract. PageSquire does not bundle a third-party accessibility engine or certify a profile's medical effectiveness.                    |
-| Open page/article and continue                                                                                                | Existing document checkpoint, Inertia or committed-ready Next adapter; preserve remaining user goals after verified arrival.                                               |
-| Scan/read and summarize                                                                                                       | `createPageCapabilities` / `createPageBindings`: public scope, bounded offsets, private exclusions and explicit truncation evidence. Visual scanning is not reading proof. |
-| Guided highlight tour                                                                                                         | `GuidedTour`: owner-authored resolvers/literal text, Previous/Next/Finish/Stop, Escape, focus restoration and cleanup. No target click.                                    |
-| Six emotions and loading expression                                                                                           | Existing `onEmotionChange` / `subscribe`: idle, happy, sad, thinking, confused, hover. Loading remains thinking through provider/browser work.                             |
-| Final-answer speech                                                                                                           | Opt-in `SpeechOutput`, initially disabled and local-voice-only. No microphone or bundled cloud TTS client.                                                                 |
-| Content search / recent content                                                                                               | Host semantic search/list capability with bounded public results and real verification. No reference news catalog, database or routes in core.                             |
-| Print, download, PDF parsing, commercial TTS                                                                                  | Host integrations with separate permissions, privacy and cost controls. Consequential actions remain blocked in this alpha; never relabel them to bypass policy.           |
+| Behavior                                                                                                                      | PageSquire integration                                                                                                                                                               |
+| ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Moving cursor, target outline, click feedback                                                                                 | `BrowserDriver` and the client stylesheet. Presentation never clicks anything or grants permission.                                                                                  |
+| Scrolling, including nested containers                                                                                        | `driver.scrollTo(target, signal, 'start' or 'end')`; `page.scroll_to` uses a declared public scope.                                                                                  |
+| Preparing menus, dropdowns and accessibility panels                                                                           | `prepare` callbacks you write in `createControlBindings`; explicit, cooperative steps only.                                                                                          |
+| Native color, range, text, select and button controls                                                                         | `createControlBindings` and `setControlValue`, with required desired-state verification and no blind repeated toggles.                                                               |
+| Heading/body colors, heading/link highlighting, font weight/size, spacing, alignment and contrast                             | Bind the site's actual controls with separate closed schemas and verifiers that check computed state. A capability's name alone does not make it available.                          |
+| Reading fonts, images/tooltips, masks/guides, focus, magnification, cursor sizes, virtual keyboard and accessibility profiles | The same host-control binding contract. PageSquire does not bundle an accessibility engine or make claims about what a profile does for users.                                       |
+| Open a page or article and continue                                                                                           | The document checkpoint, the Inertia adapter or the Next.js adapter (after the destination reports it is ready). Keep the rest of the user's goal after a verified arrival.          |
+| Scan, read and summarize                                                                                                      | `createPageCapabilities` / `createPageBindings`: public scope, bounded offsets, private exclusions and explicit truncation evidence. Scrolling past text does not prove it was read. |
+| Guided highlight tour                                                                                                         | `GuidedTour`: resolvers and literal text you write, Previous/Next/Finish/Stop, Escape, focus restoration and cleanup. It never clicks targets.                                       |
+| Six emotions and a loading expression                                                                                         | `onEmotionChange` / `subscribe`: idle, happy, sad, thinking, confused, hover. The loading state stays `thinking` while the provider or browser is working.                           |
+| Speaking the final answer                                                                                                     | Opt-in `SpeechOutput`, off at first and limited to local voices. No microphone and no bundled cloud TTS client.                                                                      |
+| Content search, recent content                                                                                                | A search or list capability of your own, with bounded public results and real verification. Core includes no catalog, database or routes.                                            |
+| Print, download, PDF parsing, commercial TTS                                                                                  | Host integrations with their own permissions, privacy and cost controls. Consequential actions need [approval](webmcp-and-approval.md); never relabel them to get around that.       |
 
-This is reusable assistant behavior and integration hooks, not an installation of every reference accessibility UI on every website. Sienna or other third-party controls remain host-owned/licensed. Only advertise features that the current host actually implements and authorizes.
+These are reusable behaviors and hooks. They do not install an accessibility toolbar on every site. Third-party accessibility widgets remain the host's own, under their own license. Only advertise features your site actually implements and authorizes.
 
 ## Enable presentation
 
@@ -37,25 +37,25 @@ const runtime = new BrowserRuntime({
 });
 ```
 
-Registered handlers call `await context.present(target, 'click' | 'fill' | 'highlight')`, check cancellation/target freshness, perform the approved operation, then verify its actual postcondition. The presenter does not execute the operation. Runtime cleanup removes presentation after each action. Replays use cached results, not another animation/click. Invalid parameters/private/hidden/detached targets and consequential actions cannot gain permission through animation.
+Registered handlers call `await context.present(target, 'click' | 'fill' | 'highlight')`, check for cancellation and that the target is still current, perform the operation, then verify the real postcondition. The presenter only animates; it executes nothing. The runtime removes presentation after each action. Replays return cached results without animating or clicking again. Animation never makes invalid parameters, private, hidden or detached targets, or consequential actions acceptable.
 
-OS reduced motion is checked dynamically; `motion: 'none'` disables motion regardless of OS settings. Overlays are noninteractive and excluded from observation. Successful scans restore saved positions; cancelled scans stop at the current position. Already-rendered DOM text does not require scrolling. Lazy-loaded/virtualized content needs a host reader and completeness tests.
+Reduced motion is read live from the OS setting, and `motion: 'none'` turns motion off regardless. Overlays cannot be clicked and are excluded from observation. A completed scan restores the saved scroll position; a cancelled scan stops where it is. Text already in the DOM can be read without scrolling. Lazy-loaded or virtualized content needs a reader of your own and tests that it reads everything.
 
-Use the existing external widget stylesheet; no injected style block, animation framework or unsafe evaluation is needed. Dispose the driver on unmount/document exit. Do not share a driver/runtime among simultaneous clients and tours: stop the current operation or provide separate presenters.
+Use the widget stylesheet; no injected styles, animation library or `eval` is needed. Dispose the driver on unmount or when the page unloads. Do not share one driver or runtime between clients and tours running at the same time: stop the current one, or give each its own presenter.
 
 ## Bind the actual controls
 
 `createControlBindings` accepts up to 100 explicit bindings:
 
-- `definition`: the server/registry's closed capability definition, with compiled parameters.
-- `target(parameters, context)`: one public host control, never a model-supplied selector.
-- Optional `prepare(parameters, context)`: open the known parent menu/panel. Honor its signal and operate only approved prerequisites.
-- Optional `value(parameters)`: desired native value; otherwise click an approved button/checkbox/radio control.
-- `isApplied(parameters, context)`: mandatory boolean from the actual page state, not merely a changed input or in-memory success flag.
+- `definition`: the closed capability definition from the server and registry, with compiled parameters.
+- `target(parameters, context)`: one public host control, never a selector from the model.
+- Optional `prepare(parameters, context)`: open the known parent menu or panel. Honor its signal and only perform approved steps.
+- Optional `value(parameters)`: the desired native value. Without it, the binding clicks an approved button, checkbox or radio control.
+- `isApplied(parameters, context)`: required. Returns a boolean from the page's actual state, not from a changed input or an in-memory success flag.
 
-It returns `capabilities`, `handlers`, `verifiers`, avoids repeat toggles, rejects disabled/read-only/stale controls and refuses submission/link controls as generic control clicks. An input/change event is not evidence that heading styles changed. For every existing accessibility feature, either bind/verify its real postcondition or record why it is unavailable. Visibility is not authorization.
+It returns `capabilities`, `handlers` and `verifiers`. It avoids repeated toggles, rejects disabled, read-only and stale controls, and refuses submit buttons and links as generic clicks. An `input` or `change` event does not prove that heading styles changed. For each accessibility feature on the site, either bind it and verify its real postcondition, or write down why it is unavailable. A visible control is not an authorized one.
 
-## Read and preserve compound goals
+## Read content and keep compound goals
 
 ```ts
 import { createPageBindings } from '@pagesquire/core';
@@ -70,33 +70,43 @@ const pages = createPageBindings({
 // Compile validators for these exact definitions before registry creation.
 ```
 
-Only the host chooses scope resolvers; the model selects a closed scope name, not a selector. `page.read` requires `{ scope, mode: 'summary' | 'full', offset }`. Summary/full reads return at most 12,000/24,000 characters; offsets are integers from zero through 40,000. Evidence contains `text`, `truncated`, `nextOffset`, `complete`, scope and URL. `complete` means one nontruncated read from offset zero of the configured rendered scope, not every linked/lazy-loaded document.
+Only the host defines scope resolvers. The model picks a scope by name, never a selector. `page.read` takes `{ scope, mode: 'summary' | 'full', offset }`:
 
-Without a configured driver, `createPageBindings().capabilities` omits `page.highlight`; a model must not be offered a visual capability that the host cannot present. Reading and instant scrolling remain available. `createPageCapabilities` is the complete definition blueprint; select only the actually wired entries when building a catalog.
+- Summary reads return at most 12,000 characters, full reads at most 24,000.
+- `offset` is an integer from 0 to 40,000.
+- Evidence contains `text`, `truncated`, `nextOffset`, `complete`, the scope and the URL. `complete` means one untruncated read from offset 0 of the configured rendered scope, not of every linked or lazy-loaded document.
 
-Follow `nextOffset` only when supported and within budget. A truncated read without continuation remains partial. Never substitute catalog metadata for full article text. `PageObserver.readContent(root, maxLength, offset)` shares private/ignore/assistant/hidden/form-content exclusions without replacing the active action snapshot. Content and URL are rechecked before verified success. No extra localStorage transcript or text telemetry is added.
+Without a driver, `createPageBindings().capabilities` leaves out `page.highlight`, so the model is never offered a visual capability the host cannot show. Reading and instant scrolling still work. `createPageCapabilities` returns every definition; use only the ones you actually wire up when building a catalog.
 
-For “open the article and summarize”: open/navigate, wait for destination readiness, read the article scope, then summarize the returned text. Node/PHP instructions now preserve the entire goal. Prompt/contract tests are not measured model comprehension: an unsuitable model may still return answer-only text. Do not add hidden paid retries or a guessed regex fallback. Any host intent resolver must preserve remaining goals, not always finish with a navigation confirmation.
+Follow `nextOffset` only when it is supported and within budget; a truncated read without it stays partial. Never use catalog metadata in place of the article text. `PageObserver.readContent(root, maxLength, offset)` applies the same private, ignore, assistant, hidden and form-content exclusions without replacing the snapshot used for actions. Content and URL are checked again before success is reported. Nothing extra is written to localStorage or sent as telemetry.
+
+For "open the article and summarize": navigate, wait until the destination is ready, read the article scope, then summarize the text that came back. The Node and PHP engines tell the model to keep the whole goal. A weaker model may still answer without acting; do not add hidden paid retries or regex guesses to compensate. If your host resolves intents itself, keep the remaining goals rather than stopping at a navigation confirmation.
 
 ## Tours, speech and avatar
 
-`new GuidedTour({ observer, driver }).start(steps, signal)` accepts at most 30 `{ target: () => Element, text, prepare? }` steps. Text is literal, not HTML. Targets resolve per step with route/visibility/private checks. `cancel()` / `dispose()` clean UI and restore focus. Preparation is raced against cancellation, but host callbacks must honor signals to prevent their own late side effects. No tour plan is persisted across documents.
+`new GuidedTour({ observer, driver }).start(steps, signal)` accepts up to 30 `{ target: () => Element, text, prepare? }` steps. Text is shown as plain text, never HTML. Each step's target is resolved when the step starts, with route, visibility and privacy checks. `cancel()` and `dispose()` remove the UI and restore focus. Preparation is raced against cancellation, but your callbacks must honor the signal to avoid late side effects of their own. Tours do not continue across documents.
 
-`new SpeechOutput({ window, lang: 'en', localOnly: true })` starts disabled. Enable only from an explicit user audio control, then `speak(text, signal)` for a final verified answer, at most 4,000 characters. Disabled/unsupported/local-voice-unavailable/error/abort cases return false. Do not speak tool narration or private text automatically. Network-backed OS voices require explicit `localOnly: false` and privacy disclosure. Availability varies. The browser speech queue is document-wide: use one host-owned output, not unrelated shared audio clients. Disable/cancel on Stop/New conversation and dispose on unmount.
+`new SpeechOutput({ window, lang: 'en', localOnly: true })` starts disabled.
 
-Forward six emotion values to the host's own licensed Rive input mapping. There is no assumed state-machine name or redistributed .riv/mascot. Commercial TTS is a separate server provider, not a browser API key. Optional audio/visual presentation never grants permissions or changes quota accounting.
+- Enable it only from an audio control the user operates, then call `speak(text, signal)` for a final verified answer of at most 4,000 characters.
+- It returns false when disabled, unsupported, without a local voice, on error or when aborted.
+- Do not speak tool narration or private text automatically.
+- OS voices that use the network need an explicit `localOnly: false` and a privacy notice. Voice availability varies.
+- The browser's speech queue is shared by the whole document, so use one output owned by the host. Disable or cancel it on Stop or New conversation, and dispose it on unmount.
+
+Forward the six emotions to your own licensed Rive mapping. PageSquire assumes no state-machine name and ships no `.riv` file or mascot. Commercial TTS belongs on the server as its own provider, never as an API key in the browser. Audio and visuals never grant permissions or change quota accounting.
 
 ## Onboarding and frameworks
 
-- CLI manifests remain JSON and binding modules require direct named function exports. Factories return function maps: wrap selected entries in named host exports for static inspection. Serialize/review factory definitions into the host manifest with a trusted build, then use `validate --compile`. The CLI must not import arbitrary application code. See the [driving manifest](../examples/plain-html/driving-capabilities.mjs) and [host example](../examples/plain-html/driving.ts).
-- Plain PHP / Laravel: helpers run in the existing frontend build; keep the PHP catalog identical and sessions/CSRF/storage/keys private. Laravel route/auth conventions are unchanged.
-- React/Inertia/Next.js: create driver/runtime in the persistent client layout, retain the injected navigation adapter and dispose presentation/tour/speech during teardown. Document continuation still mounts the same catalog and calls `client.resumeNavigation()` once.
-- WordPress: optional `page.read`, `page.scroll_to`, `page.highlight` use only scope `content` under the mapping root. Defaults do not enable them. Select them, inspect each selected public page again, review consent and explicitly enable. Inspection uploads counts/verified IDs, not read text. Custom third-party controls still require a reviewed site adapter, not executable JSON.
+- **CLI.** Manifests stay JSON, and binding modules must use direct named function exports. The helper factories return maps of functions, so wrap the entries you use in named exports the CLI can inspect. Write the factory definitions into the host manifest during a trusted build, then run `validate --compile`. The CLI never imports arbitrary application code. See the [driving manifest](../examples/plain-html/driving-capabilities.mjs) and the [host example](../examples/plain-html/driving.ts).
+- **Plain PHP and Laravel.** The helpers run in your existing frontend build. Keep the PHP catalog identical, and keep sessions, CSRF, storage and keys private. Laravel routes and auth are unchanged.
+- **React, Inertia and Next.js.** Create the driver and runtime in the persistent client layout, keep the navigation adapter you passed in, and dispose presentation, tours and speech on teardown. Continuing after a full-document navigation still mounts the same catalog and calls `client.resumeNavigation()` once.
+- **WordPress.** The optional `page.read`, `page.scroll_to` and `page.highlight` use only the `content` scope under the mapping root, and are off by default. Select them, inspect each selected public page again, review consent and enable them. Inspection uploads counts and verified IDs, not page text. Custom third-party controls still need a reviewed site adapter, not executable JSON.
 
-## Verification example and limits
+## Demo and limits
 
-Run `npm run build`, then `npm run demo` and visit `/driving.html` on that local server. This neutral fixture uses deterministic replies, not a paid model. It demonstrates actual opening/heading controls, cursor feedback, scan/read, a synthetic excerpt-based summary, tours and user-enabled local voice. It does not measure live language understanding. Unit/browser and native PHP compound-goal tests cover the relevant boundaries; WordPress tests exercise the built ZIP separately. OS voice, screen-reader behavior and arbitrary website compatibility remain unverified until actually tested.
+Run `npm run build`, then `npm run demo`, and open `/driving.html` on the local server. It uses scripted replies, not a paid model. It shows opening content, heading controls, cursor feedback, scanning and reading, a summary built from an excerpt, tours and local voice that the user turns on. It does not measure how well a live model understands language. Unit, browser and native PHP tests cover compound goals, and the WordPress tests run against the built ZIP. OS voices, screen readers and arbitrary websites have not been tested.
 
-The OFFBEAT art demo also wires the presenter into its existing thirteen semantic actions and uses animated, verified edge-aligned scrolling. It points to actual visible content rather than pretending to click its hidden adapter controls. No capability or provider quota is added by presentation.
+The OFFBEAT demo also uses the presenter for its thirteen actions, with verified, edge-aligned animated scrolling. It points at real visible content instead of pretending to click its hidden adapter controls. Presentation adds no capability and uses no provider quota.
 
-Browser references: [Web Animations](https://developer.mozilla.org/en-US/docs/Web/API/Element/animate), [motion queries](https://developer.mozilla.org/en-US/docs/Web/API/Window/matchMedia), [speech synthesis](https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis), [decorative accessibility-tree exclusion](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-hidden). Decorative overlays use visual geometry/style checks; actual host targets retain the observer's stricter privacy/accessibility exclusions.
+Browser references: [Web Animations](https://developer.mozilla.org/en-US/docs/Web/API/Element/animate), [motion queries](https://developer.mozilla.org/en-US/docs/Web/API/Window/matchMedia), [speech synthesis](https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis), [decorative accessibility-tree exclusion](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-hidden). Decorative overlays are positioned using geometry and style only; real targets still go through the observer's stricter privacy and accessibility exclusions.

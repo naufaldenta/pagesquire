@@ -1,10 +1,10 @@
 # Generic actions, observation v2 and recovery
 
-PageSquire works best with capabilities the site owner registers. Some pages have ordinary controls that nobody mapped, such as forms, filters, dialogs and web components. For those pages, a host can opt in to **generic `ui.*` tools**. They borrow the reliability techniques of browser agents such as Playwright MCP, Browser Use and Claude in Chrome, adapted to an assistant that runs as JavaScript inside the page.
+PageSquire works best with capabilities the site owner registers. Some pages have ordinary controls that nobody mapped, such as forms, filters, dialogs and web components. For those pages, a host can opt in to **generic `ui.*` tools**. They use the techniques that make browser-automation agents reliable, adapted to an assistant that runs as JavaScript inside the page.
 
 ## Observation v2
 
-Snapshots now carry more than text and target names.
+Snapshots carry more than text and target names.
 
 - **Stable target IDs.** An element keeps its `target-N` ID across snapshots for as long as it exists. A stale or changed element fails with `STALE_TARGET` rather than being guessed.
 - **State flags.** Targets report `checked`, `expanded`, `selected`, `required`, `invalid`, `filled` and `inViewport` when these apply. Field values are never sent; `filled` only says whether a field has a value.
@@ -18,7 +18,7 @@ Two opt-in observer options add structure. Neither changes the protocol.
 - **`outline: true`** starts the snapshot text with a compact outline of visible `h1`–`h3` headings and landmarks (navigation, main, complementary, search, dialogs, and labelled forms), e.g. `[Outline: navigation "Main menu" | main | h1 Shop | h2 Filters]`.
 - **`frames: true`** appends the visible text of up to five same-origin iframes, labelled with their `title`. This is read-only: elements inside frames never become targets, and cross-origin, sandboxed and excluded frames are skipped. Acting inside frames needs a browser extension; see the [companion extension design](companion-extension.md).
 
-These are additive optional protocol fields. Deploy the server (Node, PHP, Laravel or WordPress) before or together with the browser bundle, because older servers reject the new fields.
+These are optional protocol fields. Deploy the server (Node, PHP, Laravel or WordPress) before or together with the browser bundle, because older servers reject the new fields.
 
 ## Generic tools
 
@@ -45,7 +45,11 @@ After acting, the tool waits for the page to **settle**: a quiet DOM period (300
 Failure codes tell the model what to try next: `TARGET_HIDDEN`, `TARGET_DISABLED`, `TARGET_UNSTABLE`, `TARGET_COVERED`, `LINK_NAVIGATION` (use `browser.navigate`), `UNSUPPORTED_TARGET` and `OPTION_MISSING`. The `OPTION_MISSING` message lists the available options.
 
 ```js
-import { createGenericBindings, BrowserRuntime } from '@pagesquire/core';
+import {
+  createGenericBindings,
+  BrowserRuntime,
+  PageObserver,
+} from '@pagesquire/core';
 import { createApprovalPrompt } from '@pagesquire/client';
 
 const generic = createGenericBindings();
@@ -106,7 +110,7 @@ Generic tools are off unless the host adds them, and they act only where the hos
 - **Links.** Links to other pages, downloads and new windows are refused, so navigation stays within the `browser.navigate` allowlist and checkpoint.
 - **Event trust.** Events are synthetic (`isTrusted=false`). A few sites ignore them, and closed shadow roots and cross-origin iframes are out of reach. Those need a browser extension or CDP.
 
-Because generic tools act on ordinary controls, the model can now do more than a curated catalog allows. Review the actable region and risk tiers for each site, and keep server-side authorization authoritative.
+Because generic tools act on ordinary controls, the model can do more than a curated catalog allows. Review the actable region and risk tiers for each site, and keep server-side authorization authoritative.
 
 ## Server-led recovery
 
@@ -133,7 +137,7 @@ With `validateCompletion: true` (Node or PHP engine; `pagesquire.limits.validate
 
 - An unconfirmed completion is shown with "I could not confirm this is complete: …" and the `confused` emotion, instead of as success.
 - A reviewer failure keeps the original answer.
-- This costs one extra attempt per acted turn. Skyvern reported a similar validator step as its largest WebVoyager gain.
+- This costs one extra provider attempt for each turn that included actions.
 
 ## Visible plan
 

@@ -1,6 +1,6 @@
 # WebMCP, approvals and WordPress Abilities
 
-Three opt-in Phase 3 features. Each one is off by default.
+Three optional features, all off by default.
 
 ## WebMCP bridge
 

@@ -1,19 +1,19 @@
 # Authoring a website adapter
 
-An adapter connects reviewed website capabilities; it does not train the model or grant general DOM control. Start with [the protocol](protocol.md), [runtime](runtime.md) and [onboarding](onboarding.md). Follow the compilable examples in `examples/plain-html` and `tests/fixtures`, not an unverified AI success message.
+An adapter connects a website's reviewed capabilities to PageSquire. It does not train the model or give it general control of the DOM. Start with [the protocol](protocol.md), [the runtime](runtime.md) and [onboarding](onboarding.md). Copy from the examples that compile and run, in `examples/plain-html` and `tests/fixtures`, not from an AI's claim that something works.
 
 ## Contract checklist
 
-1. Give each capability a stable English ID, bounded input schema, clear description, risk/permission scope and explicit target policy. Keep the trusted server catalog synchronized with the browser manifest. Unknown capabilities/parameters must fail closed.
-2. Bind execution and verification together. Prefer desired state, such as setting a weight, over toggling it. Restrict targets to the approved root; never let a model supply arbitrary selectors or executable JavaScript.
-3. Verify the actual postcondition: heading color on headings, visible link outlines on links, computed style/application state on the intended content, and destination readiness after navigation. Missing or ambiguous targets are failures, not permission to affect the whole page.
-4. Honor the execution signal, timeouts and fresh observations. Navigation must use the host adapter; full-document continuation must not replay the original action. Do not persist transcripts or sensitive page data in browser checkpoints.
-5. Keep authorization and consequential business permissions on the server. Client results are untrusted telemetry. Presentation-only capability approval is not permission to submit forms, purchase, delete or modify records.
+1. Give each capability a stable English ID, a bounded input schema, a clear description, a risk level, a permission scope and an explicit target policy. Keep the server's trusted catalog in sync with the browser manifest. Unknown capabilities and parameters must fail closed.
+2. Bind execution and verification together. Prefer setting a desired state, such as a font weight, over toggling. Restrict targets to the approved root. Never let the model supply selectors or JavaScript.
+3. Verify the actual postcondition: heading color on headings, visible outlines on links, the computed style or application state of the intended content, and destination readiness after navigation. Missing or ambiguous targets are failures, not permission to change the whole page.
+4. Honor the execution signal, timeouts and fresh observations. Navigate through the host's navigation adapter. Continuing after a full-document navigation must not replay the original action. Do not store transcripts or sensitive page data in browser checkpoints.
+5. Keep authorization and business permissions on the server. Results from the browser are untrusted. Approving a presentation-only capability is not permission to submit forms, buy, delete or change records.
 
 ## Tests and handoff
 
-Add synthetic unit/real-browser fixtures for success, repeated desired state, missing/ambiguous/hidden/stale targets, denial, timeout/cancellation and navigation. Verify schemas under the no-unsafe-eval CSP and both PHP/Node wire contracts when changing shared behavior. Test a built/packed consumer where packaging changes.
+Add unit tests and real-browser fixtures with synthetic data for success, setting a state that is already set, missing, ambiguous, hidden and stale targets, denial, timeout, cancellation and navigation. When you change shared behavior, check that schemas work under a CSP without `unsafe-eval`, and that both the PHP and Node wire contracts still pass. When packaging changes, test a built and packed consumer.
 
-Source/DOM scans report observed metadata and coverage gaps; they do not certify hidden/authenticated states. Optional `$assistant-setup`/`/assistant-setup` guidance helps a coding agent wire and test reviewed contracts; its output is still owner-reviewed code. WordPress uses its separate dashboard and closed built-in mapping import. Custom theme/plugin/business adapters require a developer-reviewed source change, not executable JSON import.
+Source and DOM scans report what they saw and what they could not cover; they say nothing about hidden or logged-in states. The optional `$assistant-setup` / `/assistant-setup` skill helps a coding agent wire up and test reviewed contracts, but its output is code you still review. WordPress uses its own dashboard and imports only the closed set of built-in mappings. Custom theme, plugin or business adapters need a reviewed source change, not an executable JSON import.
 
-Add exact supported-version evidence to [compatibility.json](compatibility.json), explain limitations in the English guide and preserve asset/dependency rights. Do not bundle pilot branding, private content or an unlicensed avatar. Emotion callbacks accept the protocol's six states; keep loading in `thinking` and provide a fallback when a renderer/state is unavailable.
+Record exactly which versions you support in [compatibility.json](compatibility.json), explain limitations in the English guide, and respect the rights to assets and dependencies. Do not bundle another site's branding, private content or an avatar you have no license for. Emotion callbacks accept the protocol's six states. Keep loading in `thinking`, and provide a fallback when a renderer or state is unavailable.

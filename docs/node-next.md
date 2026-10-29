@@ -1,18 +1,18 @@
 # Node and Next.js integration
 
-The shared widget/React wrapper includes [action progress](action-progress.md). Custom Next client UI must render `state.actionProgress` explicitly; do not label a path change as verified navigation or expose model reasoning. C4 changes browser assets/client state, not the Node endpoint, provider configuration or DB schema.
+PageSquire ships a Node.js 24 backend (`@pagesquire/server`) and a Next.js 16.4.2 App Router fixture. You do not train a model for each website. Use the [onboarding CLI](onboarding.md) to map the site's real controls, write verified capabilities and connect a catalog that the server owns. The packages are not on npm yet; install them from this repository.
 
-Optional [AppContext](app-context.md) shares declared public state/availability from the runtime. Do not use it as server identity/permission; deploy matching schemas first. Read current host state rather than a stale React closure. No provider/model-specific configuration is required.
+These browser features work the same way in Next.js:
 
-Add [assistant driving](assistant-driving.md) inside the existing client runtime: optional animated cursor, host control preparation, scoped reading, tours and local-first speech. Preserve committed-destination readiness before reading or summarizing; a path change alone is insufficient. Keep server catalog/permission checks identical to the browser definitions.
-
-F4 supplies a Node.js 24 backend and a Next.js 16.4.2 App Router fixture. No per-website model training is needed: use the hybrid CLI to map real controls, author verified capabilities and connect a server-owned catalog. All package identifiers remain unpublished local preview identifiers.
+- [Action progress](action-progress.md). The shared widget and React wrapper show it. A custom Next.js UI must render `state.actionProgress` itself. Do not present a path change as verified navigation, and do not show model reasoning.
+- [AppContext](app-context.md). Optional public state and feature availability from the runtime. It is not server identity or permission. Deploy matching schemas first, and read current host state rather than a stale React closure.
+- [Assistant driving](assistant-driving.md). Animated cursor, preparing host controls, scoped reading, tours and local speech. Wait until the destination is committed and ready before reading or summarizing; a path change is not enough. Keep the server catalog and permission checks identical to the browser definitions.
 
 ## Node backend
 
-Choose `PAGESQUIRE_PROVIDER`, `PAGESQUIRE_API_KEY` and `PAGESQUIRE_MODEL` on the server; custom/regional gateways also require `PAGESQUIRE_PROVIDER_URL`. See [provider presets and compatibility tutorials](providers.md). Presets do not hardcode a model or certify every model. React/browser-only apps still need a backend to keep keys private.
+Set `PAGESQUIRE_PROVIDER`, `PAGESQUIRE_API_KEY` and `PAGESQUIRE_MODEL` on the server. Custom or regional gateways also need `PAGESQUIRE_PROVIDER_URL`. See [providers](providers.md); presets do not choose a model for you. A React or browser-only app still needs a backend to keep the key private.
 
-Build PageSquire, install the local packages into your approved host workspace, and keep the server import out of client bundles. The host integration must provide a real session/auth service and a private persistent storage directory. The following `hostAuth` and `manifest` imports are site-owned examples, not bundled services:
+Build PageSquire, install the packages into your project, and keep the server import out of client bundles. Your app must provide a real session and auth service and a private, persistent storage directory. `hostAuth` and `manifest` below are your own code, not part of PageSquire:
 
 ```ts
 import {
@@ -48,21 +48,36 @@ export const POST = createChatHandler({
 });
 ```
 
-Configure the exact **public** origin; proxy-internal Request URLs do not define this security boundary. The browser transport sends a session-bound `X-CSRF-TOKEN`; missing Origin/CSRF is rejected. Keep provider settings server-only, validate environment configuration at startup and do not print secrets. The host owns session creation, cookies, login, capability permissions, reverse-proxy trust, per-principal/IP/global quotas, retention, and operational monitoring. Never return transcript/state/provider settings to the browser.
+Set `origin` to the exact **public** origin. Internal URLs behind a proxy do not count. The browser transport sends a session-bound `X-CSRF-TOKEN`, and requests without a matching Origin or CSRF token are rejected. Keep provider settings on the server, validate the environment at startup and never print secrets. Never return the transcript, conversation state or provider settings to the browser.
 
-Use the host's supported bridge from its HTTP server to Web Request/Response. Apply ingress body/connection limits before buffering. The local [Node fixture](../examples/node-chat/server.mjs) demonstrates native HTTP streaming but has localhost-only, in-memory demo sessions and must not be deployed publicly.
+Your app is responsible for:
+
+- session creation, cookies and login
+- which capabilities each user may use
+- reverse-proxy trust
+- quotas per principal, per IP and globally
+- retention and monitoring
+
+Connect your HTTP server to Web Request/Response with whatever your stack supports, and apply body and connection limits before buffering. The [Node fixture](../examples/node-chat/server.mjs) shows native HTTP streaming, but its sessions live in memory and only work on localhost. Do not deploy it.
 
 ## Next.js server
 
-An App Router `app/api/assistant/route.ts` can export the handler above with `export const runtime = 'nodejs'`. Do not use the Edge runtime. Existing host authentication/CSRF infrastructure is required. The route uses Web Request/Response, so NextRequest-specific cookies are optional. See the official [Route Handler API](https://nextjs.org/docs/app/api-reference/file-conventions/route).
+An App Router `app/api/assistant/route.ts` can export the handler above with `export const runtime = 'nodejs'`. The Edge runtime is not supported. Your app's existing authentication and CSRF handling are required. The handler uses Web Request/Response, so the NextRequest cookie helpers are optional. See the [Route Handler reference](https://nextjs.org/docs/app/api-reference/file-conventions/route).
 
-File storage requires **one persistent host**. Vercel/serverless/multi-instance deployments need an injected shared `ConversationStore` with durable transactions and serialization. `createChatHandler` also streams fixed progress stages as NDJSON when the client asks; see [streaming](streaming.md). A module-level Map is not production persistence or global rate limiting. `createChatHandler` keeps a per-session hourly provider budget (`attemptsPerHour`, default 60, maximum 1000) across conversations next to the per-minute request bucket; exhaustion returns 429 `BUDGET_EXHAUSTED`. It is not a global or per-IP quota. The real fixture uses a Map only for synthetic local session setup; it is not a reusable auth implementation.
+`FileConversationStore` needs **one persistent host**. On Vercel, serverless or several instances, pass in a shared `ConversationStore` with durable transactions and serialization. A module-level `Map` is neither persistence nor a global rate limit; the fixture uses one only to set up fake local sessions.
 
-For a concrete same-project Vercel frontend/API example, see [OFFBEAT](../examples/brutalist-demo/README.md). It supplies a private Supabase PostgreSQL store with committed checkpoints, fenced leases and atomic usage limits, plus its own access-code sessions and CSRF/origin checks. These example policies and thirteen capabilities are scoped to OFFBEAT; review and adapt authorization, privacy, quotas and database privileges for your own host.
+`createChatHandler` has these limits built in:
+
+- A per-minute request bucket for each session.
+- An hourly provider budget for each session (`attemptsPerHour`, default 60, maximum 1000) that counts across conversations. When it runs out, the handler returns 429 `BUDGET_EXHAUSTED`. This is not a global or per-IP quota.
+
+When the client asks for it, the handler also streams fixed progress stages as NDJSON; see [streaming](streaming.md).
+
+For a full Vercel example with frontend and API in one project, see [OFFBEAT](../examples/brutalist-demo/README.md). It stores conversations in a private Supabase PostgreSQL database with committed checkpoints, fenced leases and atomic usage limits, and has its own access-code sessions and CSRF and origin checks. Its policies and thirteen capabilities are specific to OFFBEAT. Adapt authorization, privacy, quotas and database privileges to your own site.
 
 ## Next.js browser
 
-Keep the widget/runtime in a persistent Client Component/layout. In its browser-only effect, inject the actual App Router instance:
+Keep the widget and runtime in a persistent Client Component or layout. In its browser-only effect, pass in the App Router instance:
 
 ```ts
 import { createNextNavigation } from '@pagesquire/react/next';
@@ -72,17 +87,24 @@ const navigation = createNextNavigation(router, { document });
 navigation.committed(location.href);
 ```
 
-The destination must notify from its committed, ready client effect, **not** a loading fallback or merely a pathname watcher. For streamed/deferred pages, call only once the state needed by the capability verifier is available. Share the adapter through the site's existing persistent context. `push()` alone is not completion. The adapter then allows the normal registered postcondition verifier to run and a fresh snapshot to be returned. Redirects to an unexpected destination fail; missing readiness times out. Cancellation stops waiting, not an already-issued framework route transition. Restrict URLs through the observer's explicit same-origin allowlist and do not expose mutating GET routes.
+Call `navigation.committed()` from the destination's committed, ready client effect, **not** from a loading fallback or a pathname watcher. For streamed or deferred pages, call it once the state the capability verifier needs is available. Share the adapter through the site's persistent context.
 
-The injected interface has no Next.js runtime dependency or SSR document access. The tested adapter targets App Router; Pages Router and custom routers are not certified. See [the official App Router navigation reference](https://nextjs.org/docs/app/api-reference/functions/use-router).
+- `push()` alone does not count as arrival. After `committed()`, the registered postcondition verifier runs and a fresh snapshot is returned.
+- A redirect to an unexpected destination fails. A destination that never becomes ready times out.
+- Cancelling stops the wait, but not a route transition that has already started.
+- Restrict URLs with the observer's same-origin allowlist, and do not expose GET routes that change data.
 
-Reuse the host's established authenticated session and make bootstrap effects safe under React Strict Mode replay. The local fixture shares one cookie-establishing request per browser document: racing two initial session requests can otherwise pair one response's CSRF token with the other response's cookie. This fixture technique is not a replacement for host authentication or production session management.
+The adapter has no Next.js runtime dependency and does not touch the document during SSR. It is tested with the App Router only; the Pages Router and custom routers are not tested. See the [useRouter reference](https://nextjs.org/docs/app/api-reference/functions/use-router).
 
-## Local verification
+Reuse the host's authenticated session, and make bootstrap effects safe when React Strict Mode runs them twice. The fixture sends one cookie-setting request per document, because two racing session requests can pair one response's CSRF token with the other response's cookie. That is a trick for the fixture, not a replacement for real session management.
 
-For trusted server-only transcript erasure without resetting request/provider budgets, use `forgetConversation(store, sessionKey, principal)` as described in the [operations runbook](operations.md). It is not an assistant capability or a public endpoint and does not revoke host sessions or delete provider/backups.
+## Erasing a transcript
 
-After root `npm ci`, `composer install` and `npm run build`:
+To erase a transcript from trusted server code without resetting request or provider budgets, call `forgetConversation(store, sessionKey, principal)`; see the [operations runbook](operations.md). It is not an assistant capability or a public endpoint. It does not revoke host sessions or delete data held by the provider or in backups.
+
+## Running the fixtures
+
+After `npm ci`, `composer install` and `npm run build` in the repository root:
 
 ```sh
 node examples/node-chat/server.mjs
@@ -90,4 +112,4 @@ node examples/node-chat/server.mjs
 npm --prefix examples/nextjs run dev
 ```
 
-Use the local addresses printed by the development servers. Try `Navigate then make headings red`. The real Next.js browser test checks streamed destination readiness, persistent widget, fresh destination snapshot, heading-only action and final emotion. Node/PHP full-document tests verify continuation without replaying navigation. Fixture providers are deterministic, not live models. Next's development fixture does not claim the strict CSP certification of the plain-HTML runtime fixture.
+Open the addresses the dev servers print and try `Navigate then make headings red`. The Next.js browser test checks streamed destination readiness, the persistent widget, a fresh destination snapshot, the heading-only action and the final emotion. The Node and PHP full-document tests check that continuing after navigation does not replay it. The fixture providers are scripted, not live models. The Next.js dev fixture does not run under the strict CSP that the plain-HTML fixture uses.

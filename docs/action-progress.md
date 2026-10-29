@@ -1,10 +1,12 @@
-# Truthful action progress
+# Action progress
 
-C4 exposes operational browser stages, not model reasoning or estimated completion. The standard `mountWidget` and React wrapper show a compact timeline when their client receives runtime events. Custom UIs can read `client.state.actionProgress` and use `describeActionProgress`. Nothing in this feature grants permission, executes a partial model response, retries inference or replaces the registered verifier.
+The widget shows what each browser action is actually doing: checking, executing, verifying and so on. These are real runtime stages, not model reasoning or an estimate of how far along it is. `mountWidget` and the React wrapper show a compact timeline automatically. A custom UI can read `client.state.actionProgress` and format it with `describeActionProgress`.
+
+Progress is for display only. It grants no permission, runs nothing from a partial model response, retries nothing and does not replace the registered verifier.
 
 ## Use the shared widget or a custom UI
 
-No extra option is needed for a matching `BrowserRuntime` / `AssistantClient` / `mountWidget` installation. Rebuild browser assets and import the existing external `@pagesquire/client/widget.css` stylesheet. The neutral `/driving.html` example uses a deterministic provider and displays real action progress without keys.
+With a standard `BrowserRuntime`, `AssistantClient` and `mountWidget`, no option is needed. Rebuild your browser assets and import `@pagesquire/client/widget.css`. The `/driving.html` example uses a scripted provider and shows real action progress without any keys.
 
 ```ts
 import { describeActionProgress } from '@pagesquire/client';
@@ -20,28 +22,36 @@ const unsubscribe = client.subscribe((state) => {
 // On teardown: unsubscribe(), unmount your UI and cancel the client as usual.
 ```
 
-`ActionTimelineEntry` contains a local attempt `id`, protocol `callId`, registered `capabilityId`, current `stage`, up to eight observed `stages`, and an optional fixed-enum `code`. Attempt IDs distinguish a cache lookup from an earlier execution with the same call ID. Entries are ordered and limited to the **latest 20 attempts per client instance**. Subscription snapshots are immutable. The list does not grow with every status repaint.
+Each `ActionTimelineEntry` has:
 
-There is no fabricated percentage, elapsed-time estimate, model thought, parameter dump, evidence, DOM text, URL or private adapter/provider exception in these records. Registered capability IDs and call IDs remain metadata: do not encode secrets/personal information in them.
+- a local attempt `id`, which tells a cache lookup apart from an earlier run with the same call ID
+- the protocol `callId`
+- the registered `capabilityId`
+- the current `stage`, and up to eight observed `stages`
+- an optional `code` from a fixed list
+
+The list keeps the **latest 20 attempts per client**, in order. Snapshots are immutable, and the list does not grow when the status repaints.
+
+Entries never contain percentages, time estimates, model thoughts, parameters, evidence, DOM text, URLs or private exception messages. Capability IDs and call IDs do appear, so do not put secrets or personal data in them.
 
 ## Stage meanings
 
 | Stage                | Meaning                                                                                                                                                                      |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `checking`           | A fresh runtime attempt is checking its snapshot, registered capability and parameters. For destination resumption, the navigation preflight may already have passed.        |
-| `executing`          | The queued handler boundary has been reached after authorization/schema/availability checks. The handler may still be preparing UI; this is not success.                     |
-| `verifying`          | The queued registered verifier boundary has been reached after handler completion, or on destination resumption without executing navigation again.                          |
-| `navigation_pending` | Full-document navigation started; the destination is **not yet verified**. A matching continuation must perform that verification.                                           |
-| `verified`           | The actual registered postcondition returned a valid positive result. It does not certify every part of a compound request or all later page state.                          |
-| `unverified`         | The verifier returned a valid negative result. Changes may already exist; inspect the page before another request.                                                           |
-| `failed`             | A check, handler or verifier failed. Only reached stages are recorded; preflight rejection does not invent execution/verification.                                           |
-| `cancelled`          | Waiting was stopped. Existing/in-flight effects are not rolled back.                                                                                                         |
+| `checking`           | A new attempt is checking its snapshot, registered capability and parameters. When resuming at a destination, the navigation preflight may already have passed.              |
+| `executing`          | The handler has been reached after the authorization, schema and availability checks. The handler may still be preparing the UI; this is not success.                        |
+| `verifying`          | The registered verifier has been reached after the handler finished, or on arrival at a destination without running navigation again.                                        |
+| `navigation_pending` | Full-document navigation started. The destination is **not verified yet**; a matching continuation must verify it.                                                           |
+| `verified`           | The registered postcondition check passed. It does not cover every part of a compound request or later changes to the page.                                                  |
+| `unverified`         | The verifier reported that the postcondition does not hold. Changes may already have happened; check the page before another request.                                        |
+| `failed`             | A check, the handler or the verifier failed. Only stages actually reached are recorded; a rejection during checks does not add execution or verification stages.             |
+| `cancelled`          | Waiting was stopped. Effects already applied or in progress are not rolled back.                                                                                             |
 | `timed_out`          | The action or client time limit expired. An uncooperative in-flight handler may still finish; new actions return `BUSY` until it settles or a further timeout window passes. |
-| `replayed`           | A recorded result was reused. No new execution or fresh verification is claimed, even if the cached result was successful.                                                   |
+| `replayed`           | A recorded result was reused. Nothing ran again and nothing was verified again, even if the cached result was a success.                                                     |
 
-Callbacks are delivered immediately before handler/verifier invocation; an observer cancelling at that boundary can still prevent invocation. No preparation-specific stage is guessed from cursor animation or a model claim. The existing thinking emotion covers provider/browser waiting and is separate from action evidence.
+Progress is reported just before the handler or verifier is called, so an observer that cancels at that moment can still prevent the call. There is no preparation stage guessed from cursor animation or model claims. The `thinking` emotion covers waiting for the provider and browser and is separate from action progress.
 
-The client retains a verified result when a subsequent provider round fails. Failure of the follow-up answer is not retroactive action failure. Cancelled/expired runs ignore late progress; a new run/reset cannot be overwritten by an old handler. Invalid/mismatched/regressing custom progress is ignored. Runtimes without progress callbacks leave the timeline empty rather than inventing stages from old result messages.
+If the next provider round fails after a verified action, the action stays verified. Cancelled or expired runs ignore late progress, and an old handler cannot overwrite a new run or a reset. Invalid, mismatched or backwards custom progress is ignored. Runtimes without progress callbacks leave the timeline empty instead of inventing stages.
 
 ## Optional host diagnostics
 
@@ -65,24 +75,25 @@ const result = await runtime.execute(call, {
 // client.resumeNavigation() instead; never consume its checkpoint separately.
 ```
 
-`ActionProgressEvent`, `ActionProgressListener`, immutable `ACTION_PROGRESS_STAGES` and `ACTION_PROGRESS_CODES` are exported from core. Events contain only `callId`, `capabilityId`, `stage` and an optional allowlisted code. Unknown custom error codes become `ACTION_FAILED` in progress, without changing the underlying action-result contract. Event objects are frozen. Global and per-invocation hooks are isolated from thrown/rejected observer errors; their returned promises are not awaited. There is no global client event subscription to leak after unmount.
+Core exports `ActionProgressEvent`, `ActionProgressListener` and the immutable `ACTION_PROGRESS_STAGES` and `ACTION_PROGRESS_CODES`. An event contains only `callId`, `capabilityId`, `stage` and an optional code from the allowlist. Unknown custom error codes appear as `ACTION_FAILED` in progress; the action result itself is unchanged. Event objects are frozen. Errors thrown by listeners are caught, and returned promises are not awaited. There is no global client event subscription that could leak after unmount.
 
-Hooks are trusted integration code, not a sandbox: a slow callback can block the main thread, and a callback can deliberately cancel or perform its own side effects. It must be fast/read-only, not a second execution/authorization path. Use per-call identifiers when observing different calls/replays; do not assume a single flattened global stream proves completion order.
+Listeners are trusted code and are not sandboxed. Keep them fast and read-only: a slow one blocks the main thread, and a listener can cancel or cause its own side effects. Do not use them as a second way to execute or authorize anything. Use per-call IDs to follow different calls and replays; one combined stream does not prove the order in which actions completed.
 
 ## Recovery, privacy and navigation
 
-`describeActionProgress({stage, code})` returns fixed English `{label, message}` copy. It distinguishes unavailable app state, stale pages, missing/ambiguous targets, invalid parameters, denied actions, limits, invalid verification and navigation mismatch. It never renders arbitrary raw error messages. Recovery asks the user to inspect state or submit a **new explicit request**; it does not add a retry/approve/undo button or promise rollback. Consequential actions remain blocked by the existing runtime/server contracts.
+`describeActionProgress({stage, code})` returns fixed `{label, message}` text, which you can translate with its optional `messages` argument ([languages](i18n.md)). It distinguishes unavailable app state, stale pages, missing or ambiguous targets, invalid parameters, denied actions, limits, failed verification and navigation mismatches. It never shows raw error messages. Recovery text asks the visitor to check the page or make a **new request**. There are no retry, approve or undo buttons, and no promise of rollback. Consequential actions stay blocked by the runtime and server rules.
 
-Progress is client memory only: it is not added to chat requests, action evidence, provider prompts, C2 diagnostics, navigation checkpoints, server transcripts, localStorage or analytics. `client.reset()` clears this list and visible messages, not the runtime replay cache, durable server history or usage budgets. Custom observers/loggers/state persistence can still retain it; review those separately. Existing [privacy and erasure boundaries](operations.md) remain in force.
+Progress lives only in client memory. It is not sent in chat requests, action evidence or provider prompts, and not stored in inspector diagnostics, navigation checkpoints, server transcripts, localStorage or analytics. `client.reset()` clears the list and the visible messages, but not the runtime replay cache, server history or usage budgets. Your own observers, loggers or state persistence may keep it, so review those. See [operations](operations.md) for privacy and erasure.
 
-Full-document navigation discards the previous document's local timeline. The destination starts a **verification-only** entry after consuming existing minimal checkpoints, never a fake reconstruction of prior execution stages. Without continuation, the prior page can only report pending navigation. SPA navigation stays in the same runtime and follows actual handler/verifier events.
+A full-document navigation discards the old page's timeline. After reading the navigation checkpoint, the destination starts a **verification-only** entry; it does not rebuild the earlier stages. Without continuation, the old page can only show that navigation is pending. SPA navigation stays in the same runtime and shows the real handler and verifier events.
 
-## Integration and rollout
+## Integration notes
 
-- Plain JS/PHP/Node/Laravel hosts use the same browser APIs; their backend configuration/DB schema does not change for C4.
-- The React wrapper inherits the standard widget timeline. A custom React/Inertia/Next UI must deliberately render the new client state; existing custom production demos are not automatically restyled or deployed.
-- Rebuilt WordPress ZIP assets include the shared widget timeline. No new admin screen, action mapping, privilege or provider option is enabled.
-- This alpha adds required `ChatState.actionProgress`; manually authored typed state fixtures must provide `[]`. Rebuild matching core/client/widget assets. The widget busy selector is now `data-busy="true|false"`; `aria-busy` is scoped to the message log so the adjacent polite status is not suppressed. Private DOM selectors are not a stable styling API.
-- C4 does not change protocol/storage formats. C3's separate opt-in context still requires matching server schemas; see [upgrading](upgrading.md).
+- Plain JavaScript, PHP, Node and Laravel hosts use the same browser APIs. Backend configuration and database schemas do not change.
+- The React wrapper shows the standard widget timeline. A custom React, Inertia or Next.js UI has to render the client state itself.
+- The WordPress plugin's widget includes the timeline. It adds no admin screen, action mapping, privilege or provider option.
+- `ChatState.actionProgress` is required. Hand-written typed state fixtures must set it to `[]`. Rebuild the core, client and widget assets together.
+- The widget's busy attribute is `data-busy="true|false"`. `aria-busy` is set on the message log only, so the polite status next to it is still announced. Other DOM selectors are private and not a styling API.
+- Progress does not change the protocol or storage formats. [AppContext](app-context.md) is separate and needs matching server schemas; see [upgrading](upgrading.md).
 
-The native ordered timeline is keyboard-readable, uses text labels as well as color, does not steal focus on progress updates, and supports narrow layouts without added animation. Status semantics follow the [ARIA status guidance](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/status_role); the mutating timeline is not mislabelled as an append-only log. Synthetic unit/browser/packed-consumer checks are not a live-model, real assistive-technology, remote-CI or production-host certification. Independent user testing and the existing [beta gates](beta.md) remain open.
+The timeline is a native ordered list. It can be read with the keyboard, uses text labels as well as color, does not move focus on updates and fits narrow layouts without extra animation. It uses [status semantics](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/status_role) rather than a log role, because entries change in place. It has unit, browser and packaged-consumer tests, but has not been tried with real assistive technology yet.

@@ -1,6 +1,8 @@
-# Companion extension (Phase 4D)
+# Companion extension
 
-**Status: development build.** The [4D-0 spike](#spike-results-4d-0) confirmed the core assumptions on 2026-10-28. The [development build](#development-build-4d-1-to-4d-5) runs only calls signed by the site's server (4D-2), and only on local and `.test` sites. It also reads and acts in the [cross-origin frames](#frames-4d-3) a site declares (4D-3) and in [other tabs](#tabs-4d-4) of the session (4D-4). With the owner's and the visitor's consent, it takes [redacted screenshots](#screenshots-4d-5) for visual checks (4D-5). Opening it to other sites is a separate step that needs the distribution decisions below. Nothing is published to an extension store.
+The companion extension is an optional Chromium extension that gives PageSquire real (trusted) input and lets it work beyond the single page.
+
+**Status: development build.** The [development build](#development-build-4d-1-to-4d-5) runs only calls signed by the site's server, and only on local and `.test` sites. It reads and acts in the [cross-origin frames](#frames-4d-3) a site declares and in [other tabs](#tabs-4d-4) of the session. With the consent of both the site owner and the visitor, it takes [redacted screenshots](#screenshots-4d-5) for visual checks. A [spike](#spike-results-4d-0) on 2026-10-28 confirmed the design's core assumptions. The extension is not in any extension store yet, and running it on other sites depends on the [open questions](#open-questions) at the end.
 
 ## Why an extension
 
@@ -25,7 +27,7 @@ File uploads stay a [hand-off](generic-actions.md#asking-the-visitor-and-handing
 
 ## Threat model
 
-The extension is the most powerful component PageSquire would ship. It can type into and click any page it is attached to, so its main risk is a **confused deputy**: something that is not the visitor using the extension's power.
+The extension is the most powerful component PageSquire ships. It can type into and click any page it is attached to, so its main risk is a **confused deputy**: something that is not the visitor using the extension's power.
 
 | Actor                                  | Trusted for                                     | Main threat                                                            |
 | -------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------- |
@@ -66,7 +68,7 @@ These hold in the extension's own code. The page, the server and the model canno
 
 ### Page side (`@pagesquire/core`)
 
-- **A driver seam.** Generic tools take an optional `InputDriver` with `click`, `type` and `pressKey`. Each method delivers the input and resolves true, or resolves false to let the built-in synthetic events run. `createCompanionDriver()` forwards to the extension when it is present and granted. Later phases add frame, tab and screenshot methods.
+- **A driver seam.** Generic tools take an optional `InputDriver` with `click`, `type` and `pressKey`. Each method delivers the input and resolves true, or resolves false to let the built-in synthetic events run. `createCompanionDriver()` forwards to the extension when it is present and granted. The driver also has frame, tab and screenshot methods, described below.
 - **Same semantics.** Capabilities, schemas, verification and the server engine do not change. Actionability, approvals and settling still run in the page. The driver only changes how input is delivered. Verifiers still check postconditions from the DOM.
 - **Detection.** The page posts a `pagesquire:hello` message carrying a `MessagePort`, and waits up to 400 ms for a versioned answer on that port. Other frames cannot listen in. Without an answer, the synthetic events run, so the page works the same without the extension. A content script injected later announces itself, so a site allowed mid-visit needs no reload.
 
@@ -163,12 +165,12 @@ The spike ran on 2026-10-28 with Chromium 156 (Playwright 1.64) on Windows 11. I
 1. **Two coordinate spaces.** Content quads, box models and `Input.*` use viewport coordinates. `DOM.getNodeForLocation` takes document coordinates and only finds visible nodes. The hit test adds each document's scroll offset from `Page.getLayoutMetrics`. That value comes from the renderer, so page scripts cannot fake it.
 2. **The debugger ignores host access.** CDP read the accessibility tree of the `[::1]` frame without host permission for it, while `chrome.scripting` skipped that frame. Frame grants are therefore enforced in the extension's own code, and frames are read through content scripts.
 3. **Chrome does not keep the scope.** The debugger survived a navigation to another origin, so the worker adds the scope watch described above.
-4. **Attach lifetime.** Attaching shrinks the viewport, which fires one `resize` and can move targets. The worker attaches on the first action of a turn and waits up to 300 ms for the resize to settle before it locates the target. It then waits 30 s without actions before detaching. Recommendation 3 below changes to match.
-5. **Dispatch dominates latency.** The three awaited mouse events take about 60% of the worker time. Commands on one session stay in order, so 4D-1 can send them without awaiting each one.
+4. **Attach lifetime.** Attaching shrinks the viewport, which fires one `resize` and can move targets. The worker attaches on the first action of a turn and waits up to 300 ms for the resize to settle before it locates the target. It then waits 30 s without actions before detaching.
+5. **Dispatch dominates latency.** The three awaited mouse events take about 60% of the worker time. Commands on one session stay in order, so they can be sent without awaiting each one.
 
 ### Not covered by the spike
 
-- Closed shadow DOM, canvas UIs, screenshots and multiple tabs. These belong to later phases.
+- Closed shadow DOM, canvas UIs, screenshots and multiple tabs. Screenshots and tabs were added later in the development build.
 - Chrome, Edge and Brave builds. Branded Chrome no longer accepts `--load-extension`, so automated tests use Chromium. Installing from a store is not affected.
 - Service-worker lifetime beyond 45 seconds, and how the bar looks on macOS and Linux.
 
@@ -336,15 +338,16 @@ Any same-origin script can use this channel, but only with calls the server sign
 
 ### Tests
 
-`npm run test:extension` loads the unpacked extension into Chromium. It covers:
+`npm run test:extension` loads the unpacked extension into Chromium. Playwright uses a persistent context (`--load-extension`, headless supported) and reaches the service worker through `context.serviceWorkers()`. The tests cover:
 
 - the synthetic fallback before a grant and after a revoke;
 - trusted click, text and Tab after a grant;
 - refusals sent straight through the page channel, skipping the page's own checks;
 - unsigned, forged, other-origin, altered, expired and replayed calls;
+- a password field as the target;
 - reading and acting in a declared cross-origin frame with trusted input;
 - signatures bound to frame targets;
-- refusing undeclared frames and denied providers;
+- refusing undeclared frames and denied providers, including a click redirected into a denied frame;
 - hiding frames after Stop;
 - a tab the page opens joining the session, read and acted in with trusted input, and shown with `ui.switch_tab`;
 - sharing and unsharing a tab, and a tab leaving when it changes origin;
@@ -358,29 +361,18 @@ Any same-origin script can use this channel, but only with calls the server sign
 
 Unit tests cover the policy module, the page driver and signing. The Node and PHP tests share one Ed25519 test vector, so all three implementations must agree byte for byte.
 
-## Phases
+## Protocol changes
 
-| Phase    | Scope                                                                                                      | Protocol change                                     |
-| -------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| **4D-0** | Done. See [spike results](#spike-results-4d-0).                                                            | None                                                |
-| **4D-1** | Done (development build): grants, well-known manifest, kill switch, side panel, main-frame click/type/key  | None                                                |
-| **4D-2** | Done: signed action calls (Node and PHP engines, Laravel config, CLI key)                                  | Optional `ActionCall.signature`                     |
-| **4D-3** | Done: declared cross-origin frames, read through content scripts and acted in through child sessions       | Optional `PageSnapshot.frames`                      |
-| **4D-4** | Done: same-origin tabs the page opens or the visitor shares, read and acted in, shown with `ui.switch_tab` | Optional `PageSnapshot.tabs`, `ui.switch_tab`       |
-| **4D-5** | Done: redacted screenshots for visual checks, off by default for owner, server and visitor                 | Optional `ActionResult.screenshot`, `ui.screenshot` |
+| Feature                                                                | Protocol change                                     |
+| ---------------------------------------------------------------------- | --------------------------------------------------- |
+| Grants, site declaration, stop switch, side panel, main-frame input    | None                                                |
+| Signed action calls (Node and PHP engines, Laravel config, CLI key)    | Optional `ActionCall.signature`                     |
+| Declared cross-origin frames                                           | Optional `PageSnapshot.frames`                      |
+| Same-origin tabs the page opens or the visitor shares                  | Optional `PageSnapshot.tabs`, `ui.switch_tab`       |
+| Redacted screenshots, off by default for the owner, server and visitor | Optional `ActionResult.screenshot`, `ui.screenshot` |
 
-Each phase ships with tests. Playwright loads the unpacked extension into Chromium with a persistent context (`--load-extension`, headless supported) and reaches the service worker through `context.serviceWorkers()`. Hostile fixtures then cover:
+## Open questions
 
-- page scripts driving the extension without a signature;
-- a replayed or expired call;
-- a click redirected into a denied frame;
-- navigation out of scope;
-- a password field target.
-
-## Decisions for the owner
-
-1. **Signed calls mandatory?** Recommended: required from 4D-2 onward. Before then, 4D-1 runs only on `localhost` and test hosts.
-2. **Screenshots.** Implemented as recommended: off by default, and the image is used for one provider call and never stored.
-3. **Debugger lifetime.** Recommended after the spike: attach on the first action of a turn, and detach after 30 idle seconds or when the visitor stops. The alternative is to stay attached for the whole session.
-4. **Distribution.** A Chrome Web Store listing needs a developer account, a privacy policy and a justification for the `debugger` permission, which gets a closer review. Edge Add-ons is optional.
-5. **Name and branding** of the extension, and whether WordPress sites get a one-click well-known manifest from the plugin.
+- **Distribution.** A Chrome Web Store listing needs a developer account, a privacy policy and a justification for the `debugger` permission, which gets a closer review. Edge Add-ons is optional.
+- **Name and branding.** The extension's final name and branding are not settled.
+- **WordPress.** Whether the plugin should serve the well-known declaration with one click.
