@@ -16,4 +16,6 @@ Server-approved IDs are intersected with the browser's installed IDs; consequent
 
 `AssistantException` exposes a sanitized `errorCode`, message, and HTTP status. Providers must not attach raw bodies, credentials, or prompt data to those errors/logs. `Provider` implementations must bound HTTP time, response size, and output length themselves. The native Http/OpenAiCompatibleProvider and Laravel package supply such transports. Native HTTP validates raw JSON before conversion and preserves parameter objects in stored checkpoints. Custom providers must preserve object/array distinctions at their own ingress boundary.
 
+`Link\LinkManager` pairs this site with another owner's PageSquire site ([PageSquire Link](../../docs/link.md#using-link-phase-6a)). It signs server-to-server envelopes with the `ActionSigner` site key, keeps links in a `LinkStore` (`FileLinkStore` serializes with file locks), and reaches partners through `CurlLinkTransport`, which refuses redirects and bounds time and size. Serve `LinkEndpoint` at the link path and pass `$manager->declaration()` to `ActionSigner::declaration()`.
+
 Release packaging must include `resources/schemas/*.json`, this guide, the MIT license, and Composer runtime dependencies. These packages are local-only and unpublished; no `composer require` from Packagist is available yet.

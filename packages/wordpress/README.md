@@ -56,6 +56,17 @@ From the PageSquire repository root: `npm ci`, `composer install`, `npm run buil
 
 The WordPress package is GPL-3.0-or-later. Shared PageSquire packages remain MIT. The nested `corresponding-source.zip` contains the editable project and build/test sources; extract it outside the web root to rebuild. See `THIRD-PARTY.md` and the accompanying licenses. This beta candidate has not been published to WordPress.org or certified against a live AI provider.
 
+## PageSquire Link (partner sites)
+
+Step 6 of the dashboard pairs this site with another owner's PageSquire site, on WordPress or any other stack ([PageSquire Link](../../docs/link.md#using-link-phase-6a)). It is off by default and needs WordPress at the root of an HTTPS domain.
+
+- **Enabling** creates a site key once, kept encrypted with the auth salt in the non-autoloaded `pagesquire_site_key` option. To manage the key yourself, define `PAGESQUIRE_SIGNING_KEY` (from `npx pagesquire signing-key`) in `wp-config.php`. The plugin then serves `/.well-known/pagesquire.json` with the public key, the site name and the skills you list.
+- **Pairing.** Create an invitation and send it to the partner owner over a channel you trust, or paste theirs. Then approve which partner skills to offer, with their fields, and which of your skills the partner may use. Either owner can revoke at any time.
+- **Partner messages** arrive at the public REST route `pagesquire/v1/link`. They are Ed25519-signed and checked against the partner's own declaration, limited to 60 per source IP per minute, and stored in the non-autoloaded `pagesquire_links` option.
+- **Outbound requests** to partners use the WordPress HTTP API with no redirects and bounded time and size. HTTPS partners pass WordPress's unsafe-URL checks.
+
+While Link is enabled, the assistant can offer an approved partner skill. The visitor sees the partner, its origin, the goal and every field before anything is sent, and the partner opens in a new tab. A visitor sent here by a partner sees a banner and continues with one click. A partner's `startPath` must be one of the approved public pages.
+
 ## Read-only WordPress Abilities
 
 On WordPress 6.9+ you can offer administrator-selected abilities that are annotated `readonly`. Add the `wordpress.run_ability` adapter to the mapping and select the abilities in the dashboard. They run on the server with the visitor's own permissions through a session-, CSRF- and quota-protected route. Writable abilities are never listed or run. See [WebMCP, approvals and WordPress Abilities](../../docs/webmcp-and-approval.md).

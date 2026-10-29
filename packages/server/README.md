@@ -18,4 +18,6 @@ Defaults: 20 valid requests/session/minute, 30-second endpoint wait, 8 action st
 
 For multi-instance, serverless or ephemeral hosts, inject a shared durable transactional store with real distributed serialization; the file store is not suitable. A custom host adapter must bound its own I/O and retain its lock until pending writes have settled. One conversation slot per session; identity changes invalidate state but retain the rate bucket.
 
+`LinkManager({ store, signingKey, origin, profile })` pairs this site with another owner's PageSquire site ([PageSquire Link](../../docs/link.md#using-link-phase-6a)): invitations, approval and revocation, with Ed25519-signed envelopes between servers. Route `createLinkHandler(manager)` at the profile's endpoint and pass `link: manager.declaration()` to `siteDeclaration()`. `FileLinkStore` suits one process; multi-instance hosts need a shared transactional `LinkStore`.
+
 See [Node/Next.js integration](../../docs/node-next.md), [standalone PHP](../../docs/standalone-php.md) and the [security scope](../../SECURITY.md). Shared fixtures verify PHP/Node semantics; deterministic tests are not live-model certification.

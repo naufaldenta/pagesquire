@@ -73,6 +73,10 @@ Set `PAGESQUIRE_LOCALE=id` for Indonesian fixed engine replies (default `en`). B
 
 Set `PAGESQUIRE_SIGNING_KEY` to a key from `npx pagesquire signing-key` to sign every action call for the [companion extension](../../docs/companion-extension.md#signed-action-calls). The package then also serves the public key at `/.well-known/pagesquire.json`. Calls are signed for the origin of `APP_URL`; set `PAGESQUIRE_SITE_ORIGIN` if the public origin differs. Keep the key secret, like the provider key. `PAGESQUIRE_SCREENSHOTS=true` also declares redacted screenshots and forwards them once to the model, which must read images; visitors still allow them in the extension.
 
+## PageSquire Link
+
+With the signing key set, `PAGESQUIRE_LINK=true` lets this site pair with another owner's PageSquire site ([PageSquire Link](../../docs/link.md#using-link-phase-6a)). The package serves `POST /pagesquire/link`, adds a `link` section to `/.well-known/pagesquire.json`, and keeps links in `storage/app/pagesquire-links.json` (`PAGESQUIRE_LINK_STORE` to move it). Name the site with `PAGESQUIRE_LINK_NAME` and list partner-facing skills under `pagesquire.link.skills`. Owners pair from the command line: `pagesquire:link-invite`, `pagesquire:link-accept`, `pagesquire:link-list`, `pagesquire:link-approve` and `pagesquire:link-revoke`. Handoffs need the browser side too: the one-tag embed with `data-link="true"`, or `createLinkBindings` and `mountLinkArrival` in a custom setup ([details](../../docs/link.md#handoff-phase-6b)). Allow `link.handoff` in your `pagesquire.capability` gate.
+
 ## Verification
 
 From the monorepo root, after building the protocol and installing Composer dependencies:
