@@ -1,10 +1,16 @@
 {
   "name": "@pagesquire/core",
   "version": "0.1.0-beta.0",
-  "private": true,
   "type": "module",
   "license": "MIT",
   "description": "Framework-independent PageSquire browser observation and verified execution.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/naufaldenta/pagesquire.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/naufaldenta/pagesquire/tree/main/packages/core#readme",
+  "bugs": "https://github.com/naufaldenta/pagesquire/issues",
   "files": [
     "dist",
     "README.md"
@@ -20,5 +26,8 @@
   },
   "engines": {
     "node": ">=24"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -185,10 +185,10 @@ export async function checkRelease(root = projectRoot) {
     'Invalid GitHub repository identity.',
   );
   check(
-    ['npm', 'packagist', 'wordpress'].every(
-      (name) => config.registries?.[name] === 'deferred',
+    ['npm', 'packagist', 'wordpress'].every((name) =>
+      ['deferred', 'enabled'].includes(config.registries?.[name]),
     ),
-    'Registry publishing must remain deferred.',
+    'Registry states must be deferred or enabled.',
   );
   const gateNames = [
     'repositoryCreated',
@@ -208,9 +208,20 @@ export async function checkRelease(root = projectRoot) {
       `${name}: package identity/version differs.`,
     );
     check(
-      item.private === true && item.license === 'MIT',
-      `${name}: private/MIT boundary differs.`,
+      item.private !== true && item.license === 'MIT',
+      `${name}: publishable/MIT boundary differs.`,
     );
+    check(
+      item.publishConfig?.access === 'public',
+      `${name}: publishConfig must make the package public.`,
+    );
+    check(
+      item.repository?.url ===
+        `git+https://github.com/${config.repository?.owner}/${config.repository?.name}.git` &&
+        item.repository?.directory === `packages/${name}`,
+      `${name}: repository metadata differs.`,
+    );
+    await lstat(path.join(root, `packages/${name}/LICENSE`));
     check(
       lock.packages[`packages/${name}`]?.version === version,
       `${name}: lockfile version differs.`,
@@ -238,6 +249,21 @@ export async function checkRelease(root = projectRoot) {
     );
     await lstat(path.join(root, `packages/${directory}/LICENSE`));
   }
+  const laravel = await json(path.join(root, 'packages/laravel/composer.json'));
+  check(
+    laravel.require?.['pagesquire/server'] === version,
+    'laravel: internal Composer dependency is not synchronized.',
+  );
+  const workspace = await json(path.join(root, 'composer.json'));
+  check(
+    ['server', 'laravel'].every((name) =>
+      workspace.repositories?.some(
+        (repository) =>
+          repository.options?.versions?.[`pagesquire/${name}`] === version,
+      ),
+    ),
+    'Composer path repository versions differ.',
+  );
   const header = await readFile(
     path.join(root, 'packages/wordpress/pagesquire.php'),
     'utf8',

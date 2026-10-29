@@ -1,8 +1,14 @@
 {
   "name": "@pagesquire/server",
   "version": "0.1.0-beta.0",
-  "private": true,
   "description": "Server-owned PageSquire conversations and secure Node Web Request integration.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/naufaldenta/pagesquire.git",
+    "directory": "packages/server"
+  },
+  "homepage": "https://github.com/naufaldenta/pagesquire/tree/main/packages/server#readme",
+  "bugs": "https://github.com/naufaldenta/pagesquire/issues",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -21,5 +27,8 @@
   "dependencies": {
     "@pagesquire/protocol": "0.1.0-beta.0",
     "ajv": "8.20.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

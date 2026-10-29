@@ -1,8 +1,14 @@
 {
   "name": "@pagesquire/client",
   "version": "0.1.0-beta.0",
-  "private": true,
   "description": "PageSquire conversation client and accessible chat widget.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/naufaldenta/pagesquire.git",
+    "directory": "packages/client"
+  },
+  "homepage": "https://github.com/naufaldenta/pagesquire/tree/main/packages/client#readme",
+  "bugs": "https://github.com/naufaldenta/pagesquire/issues",
   "type": "module",
   "license": "MIT",
   "files": [
@@ -19,5 +25,8 @@
   "dependencies": {
     "@pagesquire/core": "0.1.0-beta.0",
     "@pagesquire/protocol": "0.1.0-beta.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

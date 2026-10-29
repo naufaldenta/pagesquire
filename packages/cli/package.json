@@ -1,8 +1,14 @@
 {
   "name": "@pagesquire/cli",
   "version": "0.1.0-beta.0",
-  "private": true,
   "description": "Local hybrid onboarding and explicit discovery for PageSquire.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/naufaldenta/pagesquire.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/naufaldenta/pagesquire/tree/main/packages/cli#readme",
+  "bugs": "https://github.com/naufaldenta/pagesquire/issues",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -35,5 +41,8 @@
     "playwright": {
       "optional": true
     }
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

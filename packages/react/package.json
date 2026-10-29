@@ -1,8 +1,14 @@
 {
   "name": "@pagesquire/react",
   "version": "0.1.0-beta.0",
-  "private": true,
   "description": "React lifecycle and Inertia navigation adapters for PageSquire.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/naufaldenta/pagesquire.git",
+    "directory": "packages/react"
+  },
+  "homepage": "https://github.com/naufaldenta/pagesquire/tree/main/packages/react#readme",
+  "bugs": "https://github.com/naufaldenta/pagesquire/issues",
   "type": "module",
   "license": "MIT",
   "files": [
@@ -29,5 +35,8 @@
   },
   "peerDependencies": {
     "react": "^19.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

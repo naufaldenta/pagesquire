@@ -21,8 +21,8 @@
     }
   },
   "registries": {
-    "npm": "deferred",
-    "packagist": "deferred",
+    "npm": "enabled",
+    "packagist": "enabled",
     "wordpress": "deferred"
   }
 }

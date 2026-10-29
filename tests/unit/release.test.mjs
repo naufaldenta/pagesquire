@@ -495,6 +495,8 @@ async function betaFixture(t) {
   for (const name of [
     'packages/wordpress/pagesquire.php',
     'packages/wordpress/readme.txt',
+    'packages/laravel/composer.json',
+    'composer.json',
     'docs/release-notes.md',
   ]) {
     const file = path.join(root, name);
@@ -568,10 +570,18 @@ test('beta readiness CLI is read-only, offline and fails while current candidate
 test('metadata checks reject drift in versions, licenses, dependencies and registry guards', async (t) => {
   const root = await fixture(t);
   await mutateJson(root, 'packages/core/package.json', (item) => {
-    item.private = false;
+    item.private = true;
     item.version = '1.0.0';
     item.license = 'UNLICENSED';
     item.dependencies['@pagesquire/protocol'] = '*';
+    delete item.publishConfig;
+    item.repository.url = 'git+https://github.com/someone-else/pagesquire.git';
+  });
+  await mutateJson(root, 'packages/laravel/composer.json', (item) => {
+    item.require['pagesquire/server'] = '@dev';
+  });
+  await mutateJson(root, 'composer.json', (item) => {
+    item.repositories[0].options.versions['pagesquire/server'] = '9.9.9';
   });
   await mutateJson(root, 'release.config.json', (item) => {
     item.registries.npm = 'publish';
@@ -583,9 +593,13 @@ test('metadata checks reject drift in versions, licenses, dependencies and regis
   assert.equal(result.valid, false);
   for (const text of [
     'identity/version',
-    'private/MIT',
+    'publishable/MIT',
+    'publishConfig',
+    'repository metadata',
     'internal dependency',
-    'deferred',
+    'internal Composer dependency',
+    'path repository versions',
+    'deferred or enabled',
     'Compatibility npm',
   ])
     assert.ok(
