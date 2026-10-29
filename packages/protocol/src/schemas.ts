@@ -134,6 +134,14 @@ export const responseSchema = {
       maxItems: 5,
       items: { type: 'string', minLength: 1, maxLength: 200 },
     },
+    handoff: {
+      type: 'object',
+      required: ['url'],
+      properties: {
+        url: { type: 'string', maxLength: 2048, pattern: '^https?://' },
+      },
+      additionalProperties: false,
+    },
   },
   additionalProperties: false,
 };
@@ -348,12 +356,53 @@ export const chatRequestSchema = {
       uniqueItems: true,
       items: capabilityId,
     },
+    linkCode: { type: 'string', pattern: '^[A-Za-z0-9_-]{22}$' },
+    handoff: {
+      type: 'object',
+      required: ['callId'],
+      properties: { callId: identifier },
+      additionalProperties: false,
+    },
   },
   oneOf: [
-    { required: ['message'], properties: { message: true, result: false } },
+    {
+      required: ['message'],
+      properties: {
+        message: true,
+        result: false,
+        linkCode: false,
+        handoff: false,
+      },
+    },
     {
       required: ['result', 'conversationId'],
-      properties: { result: true, conversationId: true, message: false },
+      properties: {
+        result: true,
+        conversationId: true,
+        message: false,
+        linkCode: false,
+        handoff: false,
+      },
+    },
+    {
+      required: ['linkCode'],
+      properties: {
+        linkCode: true,
+        conversationId: false,
+        message: false,
+        result: false,
+        handoff: false,
+      },
+    },
+    {
+      required: ['handoff', 'conversationId'],
+      properties: {
+        handoff: true,
+        conversationId: true,
+        message: false,
+        result: false,
+        linkCode: false,
+      },
     },
   ],
   additionalProperties: false,

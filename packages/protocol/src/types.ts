@@ -166,6 +166,8 @@ export interface AssistantResponse {
   toolCalls: ActionCall[];
   /** Planned steps shown with the first action of a turn; not a claim of progress. */
   plan?: string[];
+  /** PageSquire Link: where the visitor continues after approving a handoff. */
+  handoff?: { url: string };
 }
 
 export interface ChatRequest {
@@ -177,6 +179,10 @@ export interface ChatRequest {
   snapshot: PageSnapshot;
   capabilityIds: string[];
   appContext?: AppContextSnapshot;
+  /** PageSquire Link: a handoff code from the URL fragment; starts the conversation from the partner's ticket. */
+  linkCode?: string;
+  /** PageSquire Link: the visitor approved the pending link.handoff call. */
+  handoff?: { callId: string };
 }
 
 export interface ChatReply {
