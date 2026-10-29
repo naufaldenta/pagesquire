@@ -8,6 +8,7 @@ import {
   createLinkHandler,
   createSigningKey,
   siteDeclaration,
+  verifyAgentCard,
 } from '@pagesquire/server';
 
 const origin = 'http://127.0.0.1:4177';
@@ -128,6 +129,54 @@ test('an owner pairs WordPress with a Node partner, approves and revokes', async
       skills: [findRoom],
     });
 
+    // AI agents (A2A): no Agent Card until the owner opens skills to them.
+    expect(
+      (await request.get(`${origin}/.well-known/agent-card.json`)).headers()[
+        'content-type'
+      ],
+    ).not.toContain('application/json');
+    await page.getByLabel('Let AI agents send requests (A2A)').check();
+    await page
+      .getByLabel('Skill IDs open to AI agents (comma-separated)')
+      .fill('find_room');
+    await page.getByRole('button', { name: 'Save Link settings' }).click();
+    await expect(status).toContainText('PageSquire Link enabled.');
+    const agentCard = await (
+      await request.get(`${origin}/.well-known/agent-card.json`)
+    ).json();
+    const keys = await (
+      await request.get(`${origin}/.well-known/pagesquire-keys.json`)
+    ).json();
+    expect(verifyAgentCard(agentCard, keys)).toBe(true);
+    expect(agentCard.skills.map((skill) => skill.id)).toEqual(['find_room']);
+    expect(agentCard.supportedInterfaces).toEqual([
+      {
+        url: `${origin}/index.php?rest_route=/pagesquire/v1/a2a`,
+        protocolBinding: 'JSONRPC',
+        protocolVersion: '1.0',
+      },
+    ]);
+    const agentAnswer = await (
+      await request.post(agentCard.supportedInterfaces[0].url, {
+        headers: { 'Content-Type': 'application/json', 'A2A-Version': '1.0' },
+        data: {
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'SendMessage',
+          params: {
+            message: {
+              messageId: 'm-1',
+              role: 'ROLE_USER',
+              parts: [{ text: 'A room for two nights from 1 November.' }],
+            },
+          },
+        },
+      })
+    ).json();
+    expect(agentAnswer.result.message.parts[1].data.url).toMatch(
+      new RegExp(`^${origin}/rooms#psq-agent=[\\w-]{22}$`),
+    );
+
     // The partner endpoint answers malformed messages with JSON errors.
     const junk = await request.post(linkRoute, {
       headers: { 'Content-Type': 'application/json' },
@@ -183,6 +232,37 @@ test('an owner pairs WordPress with a Node partner, approves and revokes', async
       'Status: active. They accept: book_table.',
     );
 
+    // The overview groups partner services; counts follow a handoff in.
+    await expect(
+      page.getByRole('region', {
+        name: 'Partner services your assistant may offer',
+      }),
+    ).toContainText(
+      `Book a table (book_table): Restoran Node (${partner.origin})`,
+    );
+    await expect(
+      page.getByRole('region', {
+        name: 'Our skills partners may hand visitors into',
+      }),
+    ).toContainText(
+      `Find a room (find_room): Restoran Node (${partner.origin})`,
+    );
+    await partner.manager.handoff(link.id, {
+      skill: 'find_room',
+      goal: 'A room for two nights',
+      fields: { checkIn: '2026-11-01' },
+    });
+    await page.reload();
+    await expect(page.locator('.pagesquire-link-totals')).toContainText(
+      'Visitors sent: 0, received: 1.',
+    );
+    await expect(page.locator('.pagesquire-link-agents')).toHaveText(
+      'AI agents (A2A) may send requests into: find_room. Requests received: 1.',
+    );
+    await expect(card).toContainText(
+      'Handoffs per skill: find_room 0 sent, 1 received. Last:',
+    );
+
     page.once('dialog', (dialog) => void dialog.accept());
     await card.getByRole('button', { name: 'Revoke Restoran Node' }).click();
     await expect(status).toContainText('Link revoked.');
@@ -198,6 +278,7 @@ test('an owner pairs WordPress with a Node partner, approves and revokes', async
     await expect(status).toContainText('not a valid invitation');
   } finally {
     await page.getByLabel('Enable PageSquire Link').uncheck();
+    await page.getByLabel('Let AI agents send requests (A2A)').uncheck();
     await page.getByRole('button', { name: 'Save Link settings' }).click();
     await expect(status).toContainText('Link is off.');
     partner.server.close();

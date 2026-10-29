@@ -104,6 +104,8 @@ final class Plugin
             ['/ability', 'POST', $this->ability(...), $public],
             // PageSquire Link: partner servers sign their messages; owners manage partners from the dashboard.
             ['/link', 'POST', fn (\WP_REST_Request $request): \WP_REST_Response => Partners::receive($request, $this->ipHash()), Partners::permission(...)],
+            // The optional A2A interface: any A2A agent, rate-limited per address.
+            ['/a2a', 'POST', fn (\WP_REST_Request $request): \WP_REST_Response => Partners::answer($request, $this->ipHash()), Partners::a2aPermission(...)],
             ['/link/admin', 'GET', fn (): array => Partners::state(), $admin],
             ['/link/settings', 'PUT', fn (\WP_REST_Request $request): array => Partners::save($this->input($request)), $admin],
             ['/link/invite', 'POST', fn (\WP_REST_Request $request): array => Partners::manager()->createInvitation($this->int($this->input($request)['hours'] ?? 24)), $admin],
@@ -242,6 +244,7 @@ final class Plugin
         $links = Partners::enabled() ? Partners::manager() : null;
         if ($links !== null) {
             $manifest['capabilities'][] = Link::handoffCapability();
+            $manifest['capabilities'][] = Link::returnCapability();
         }
         $endpoint = new ChatEndpoint(new ConversationEngine($provider, $validator, $manifest, locale: self::locale($settings), links: $links), $validator, $store, Settings::origin());
         $result = $endpoint->handle($request->get_method(), ['origin' => $request->get_header('origin'), 'content-type' => $request->get_header('content-type'), 'x-csrf-token' => $request->get_header('x-csrf-token')], $request->get_body(), $session);

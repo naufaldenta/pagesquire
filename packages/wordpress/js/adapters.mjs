@@ -30,7 +30,7 @@ export function createRuntime(
     capabilities: manifest.capabilities.filter(
       (entry) =>
         config.mapping.capabilityIds.includes(entry.id) ||
-        (entry.id === 'link.handoff' && config.link === true),
+        (entry.id.startsWith('link.') && config.link === true),
     ),
   };
   const allowed = (value) => {

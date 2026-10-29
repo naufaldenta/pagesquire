@@ -1,9 +1,11 @@
 import { api } from './api.mjs';
 
-// PageSquire Link: Link settings, invitations and each partner's approval.
+// PageSquire Link: Link settings, invitations, an overview of who offers
+// what, and each partner's approval and counts.
 export function setupPartners(config, notice, handle) {
   const form = document.querySelector('#pagesquire-link-form');
   const list = document.querySelector('#pagesquire-link-partners');
+  const summary = document.querySelector('#pagesquire-link-overview');
   if (!form || !list) return;
   const element = (tag, properties = {}, children = []) => {
     const node = Object.assign(document.createElement(tag), properties);
@@ -15,8 +17,76 @@ export function setupPartners(config, notice, handle) {
       element('input', { type: 'checkbox', name, value, checked }),
       ` ${label}`,
     ]);
+  const partnerNames = (partners) =>
+    partners.map((partner) => `${partner.name} (${partner.origin})`).join(', ');
+  const services = (title, entries, empty, several) =>
+    element('section', { ariaLabel: title }, [
+      element('h4', { textContent: title }),
+      entries.length
+        ? element(
+            'ul',
+            {},
+            entries.map((entry) =>
+              element('li', {
+                textContent: `${entry.name} (${entry.skill}): ${partnerNames(entry.partners) || 'no partner yet'}${several && entry.partners.length > 1 ? '. Visitors choose between them.' : ''}`,
+              }),
+            ),
+          )
+        : element('p', { textContent: empty }),
+    ]);
+  const renderOverview = () => {
+    const { overview } = config.state.link;
+    summary?.replaceChildren();
+    if (!summary) return;
+    if (!overview) {
+      summary.append(
+        element('p', { textContent: 'Enable Link to see the overview.' }),
+      );
+      return;
+    }
+    summary.append(
+      element('p', {
+        className: 'pagesquire-link-totals',
+        textContent: `Partners: ${overview.links.active} active, ${overview.links.pending} pending, ${overview.links.revoked} revoked. Visitors sent: ${overview.totals.sent}, received: ${overview.totals.received}.`,
+      }),
+      services(
+        'Partner services your assistant may offer',
+        overview.offered,
+        'None yet. Approve a partner skill below.',
+        true,
+      ),
+      services(
+        'Our skills partners may hand visitors into',
+        overview.accepted,
+        'This site lists no skills.',
+        false,
+      ),
+      ...(overview.agents
+        ? [
+            element('p', {
+              className: 'pagesquire-link-agents',
+              textContent: `AI agents (A2A) may send requests into: ${overview.agents.skills.join(', ') || 'no skills yet'}. Requests received: ${overview.agents.received}.`,
+            }),
+          ]
+        : []),
+    );
+  };
+  const activity = (stats) => {
+    if (!stats) return '';
+    const skills = Object.entries(stats.skills ?? {})
+      .map(
+        ([id, counts]) =>
+          `${id} ${counts.sent} sent, ${counts.received} received`,
+      )
+      .join('; ');
+    const last = stats.lastAt
+      ? ` Last: ${new Date(stats.lastAt).toISOString().slice(0, 16).replace('T', ' ')} UTC.`
+      : '';
+    return `${skills ? ` Handoffs per skill: ${skills}.` : ''}${last}`;
+  };
   const render = () => {
     const { links, settings } = config.state.link;
+    renderOverview();
     list.replaceChildren();
     if (!links.length)
       list.append(element('p', { textContent: 'No partner sites yet.' }));
@@ -31,7 +101,7 @@ export function setupPartners(config, notice, handle) {
         element('h4', { textContent: partner }),
         element('p', {
           className: 'pagesquire-partner-status',
-          textContent: `Status: ${link.status}. They accept: ${link.theirs.approved ? link.theirs.accept.join(', ') || 'nothing' : 'not approved yet'}.`,
+          textContent: `Status: ${link.status}. They accept: ${link.theirs.approved ? link.theirs.accept.join(', ') || 'nothing' : 'not approved yet'}. Visitors sent: ${link.stats?.sent ?? 0}, received: ${link.stats?.received ?? 0}.${activity(link.stats)}`,
         }),
       );
       if (link.status !== 'revoked') {
@@ -150,6 +220,13 @@ export function setupPartners(config, notice, handle) {
           enabled: form.elements.enabled.checked,
           name: form.elements.name.value,
           skills,
+          a2a: {
+            enabled: form.elements.a2a.checked,
+            skills: form.elements.a2aSkills.value
+              .split(',')
+              .map((id) => id.trim())
+              .filter(Boolean),
+          },
         },
       });
       render();

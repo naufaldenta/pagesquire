@@ -18,7 +18,7 @@ final class OptionLinkStore implements LinkStore
         $locks = new DatabaseLock($wpdb);
         $token = $locks->acquire(self::OPTION.'_lock', 20);
         try {
-            $data = ['links' => [], 'invitations' => [], 'nonces' => [], 'tickets' => []];
+            $data = ['links' => [], 'invitations' => [], 'nonces' => [], 'tickets' => [], 'returns' => []];
             $encoded = get_option(self::OPTION, null);
             if ($encoded !== null) {
                 if (! is_string($encoded) || strlen($encoded) > 1048576) {

@@ -18,5 +18,9 @@ if (! username_exists('fixture-reader')) {
     (new WP_User($id))->set_role('subscriber');
 }
 update_option('permalink_structure', '');
+// PageSquire Link starts empty on every run, so a failed earlier run leaves no partners behind.
+foreach (['pagesquire_link', 'pagesquire_links'] as $option) {
+    delete_option($option);
+}
 switch_theme('pagesquire-fixture');
 WP_CLI::success('Seeded synthetic public/private pages and a reader; assistant remains opt-in.');

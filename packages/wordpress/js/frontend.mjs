@@ -38,7 +38,8 @@ async function boot() {
       return JSON.parse(await readText(response, 32768)).output;
     },
     // PageSquire Link: the client is created below, before any handoff runs.
-    approveHandoff: (callId, signal) => client.approveHandoff(callId, signal),
+    approveHandoff: (callId, signal, skill) =>
+      client.approveHandoff(callId, signal, skill),
     visitor: createVisitorPrompt(container, {
       locale: config.locale ?? 'auto',
     }),

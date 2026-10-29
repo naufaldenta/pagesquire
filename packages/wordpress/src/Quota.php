@@ -52,6 +52,13 @@ final class Quota
         }
     }
 
+    public function a2a(string $ipHash): void
+    {
+        if (! $this->counter->consume('a2a', self::minute(), 30, $ipHash)) {
+            throw new AssistantException('RATE_LIMITED', 'Too many A2A requests. Try again later.', 429);
+        }
+    }
+
     public function provider(int $maximum): void
     {
         if (! $this->counter->consume('provider', self::day(), $maximum)) {
