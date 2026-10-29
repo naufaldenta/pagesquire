@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="440" height="96" viewBox="0 0 440 96" role="img" aria-label="PageSquire">
+  <title>PageSquire</title>
+  <g transform="translate(8 8)">
+    <path d="M10 0h40l22 22v54a8 8 0 0 1-8 8H10a8 8 0 0 1-8-8V8a8 8 0 0 1 8-8z" fill="#3B5BDB"/>
+    <path d="M50 0v14a8 8 0 0 0 8 8h14z" fill="#91A7FF"/>
+    <path d="M20 22v40l10-9 7 15 7-3-7-15h14z" fill="#FFFFFF"/>
+    <circle cx="58" cy="66" r="15" fill="#F59F00" stroke="#FFFFFF" stroke-width="4"/>
+    <path d="M51 66l5 5 9-10" fill="none" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="104" y="64" textLength="328" lengthAdjust="spacingAndGlyphs" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="52" font-weight="700" letter-spacing="-1"><tspan fill="#0F172A">Page</tspan><tspan fill="#3B5BDB">Squire</tspan></text>
+</svg>
