@@ -4,7 +4,14 @@
 
 export const PROTOCOL = 1;
 export const FEATURES = ['trustedInput'];
-export const KNOWN_FEATURES = ['trustedInput', 'frames', 'tabs', 'screenshots'];
+// "link" is a server-to-server feature (PageSquire Link); the extension accepts and ignores it.
+export const KNOWN_FEATURES = [
+  'trustedInput',
+  'frames',
+  'tabs',
+  'screenshots',
+  'link',
+];
 export const MAX_MANIFEST_BYTES = 16384;
 export const ACTIONS_PER_MINUTE = 60;
 export const IDLE_DETACH_MS = 30000;
@@ -50,6 +57,7 @@ export function validateSiteManifest(value) {
     'publicKey',
     'frames',
     'features',
+    'link',
   ]);
   for (const key of Object.keys(value))
     if (!allowed.has(key)) errors.push(`Unknown field "${key}".`);
@@ -84,6 +92,11 @@ export function validateSiteManifest(value) {
           errors.push(`"frames" entry "${String(frame)}" is not an origin.`);
       }
   }
+  if (
+    value.link !== undefined &&
+    (!value.link || typeof value.link !== 'object' || Array.isArray(value.link))
+  )
+    errors.push('"link" must be an object.');
   const features = value.features ?? ['trustedInput'];
   if (
     !Array.isArray(features) ||

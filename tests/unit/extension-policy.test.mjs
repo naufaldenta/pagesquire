@@ -99,6 +99,23 @@ test('site manifests are validated strictly and must publish a key', () => {
     }).valid,
     true,
   );
+  // A PageSquire Link section is for partner servers: accepted, then left out.
+  assert.deepEqual(
+    validateSiteManifest({
+      version: 1,
+      endpoint: '/chat',
+      publicKey: key,
+      features: ['trustedInput', 'link'],
+      link: { endpoint: '/pagesquire/link', name: 'Shop', skills: [] },
+    }).value,
+    {
+      version: 1,
+      endpoint: '/chat',
+      publicKey: key,
+      frames: [],
+      features: ['trustedInput', 'link'],
+    },
+  );
   // Without a key a declaration is invalid; every other case fails even with one.
   assert.equal(
     validateSiteManifest({ version: 1, endpoint: '/chat' }).valid,
@@ -118,6 +135,8 @@ test('site manifests are validated strictly and must publish a key', () => {
     { version: 1, endpoint: '/chat', features: [] },
     { version: 1, endpoint: '/chat', features: ['everything'] },
     { version: 1, endpoint: '/chat', features: ['frames', 'frames'] },
+    { version: 1, endpoint: '/chat', link: 'yes' },
+    { version: 1, endpoint: '/chat', link: [] },
   ])
     assert.equal(
       validateSiteManifest({ publicKey: key, ...bad }).valid,
