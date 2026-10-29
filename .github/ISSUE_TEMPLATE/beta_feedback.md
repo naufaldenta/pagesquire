@@ -1,33 +1,33 @@
 ---
-name: Beta / independent onboarding feedback
-about: Share sanitized installation and verified-action results for a specific candidate
+name: Beta feedback
+about: Tell us how installing and using a beta candidate went on your site
 title: ''
 labels: ''
 assignees: ''
 ---
 
-## Candidate and environment
+## Version and environment
 
-- Exact PageSquire version, commit and candidate source:
-- Framework/plugin, runtime and browser versions:
-- Source / npm tarballs / Composer path archive / WordPress ZIP:
-- Disposable/staging site with synthetic data (do not include private URLs):
+- PageSquire version and commit:
+- Framework or plugin, runtime and browser versions:
+- Installed from (source, npm tarballs, Composer path archive, WordPress ZIP):
+- Test site (staging or throwaway with synthetic data; no private URLs):
 
-## Onboarding
+## Setup
 
-- Independent installation or maintainer-assisted laboratory:
-- Script/manual or optional coding-agent setup (and tool version):
-- Steps that needed clarification:
-- Any changes to PageSquire core required (not just site mappings):
+- Did you set it up yourself, or with help from the maintainer?
+- Manual setup or a coding agent (which one and version)?
+- Steps that were unclear:
+- Changes you had to make to PageSquire core (not just site mappings):
 
-## Actual results
+## Results
 
-Record capability IDs and observed postconditions for five separate messages, heading/body separation, confirmation, missing/ambiguous capabilities, failed verification, cancellation/recovery and navigation. List untested items explicitly. Assistant text alone is not a verified result.
+For each test, give the capability ID and what actually changed on the page. Try: five separate messages, heading versus body changes, confirmation, missing or ambiguous requests, failed verification, cancellation and recovery, and navigation. List anything you did not test.
 
-- Expected / actual / synthetic reproduction:
-- Offline deterministic checks versus real-model calls:
-- Provider/model ID and approved call count, if intentionally tested (no API keys):
+- Expected, actual, and steps to reproduce with synthetic data:
+- Which results came from offline checks and which from real model calls:
+- Provider, model ID and number of calls, if you used a real model (no API keys):
 
-## Privacy and blockers
+## Privacy
 
-Do not attach credentials, cookies, transcripts, real user content, raw website exports or unreviewed trace files. Report vulnerabilities through SECURITY.md's private channel instead. This feedback does not automatically approve beta, declare model accuracy or authorize publication.
+Do not attach credentials, cookies, transcripts, real user content, raw website exports or unreviewed trace files. Report security problems privately as described in SECURITY.md.

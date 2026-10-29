@@ -414,9 +414,7 @@ Node and PHP sign the shared vector in `tests/fixtures/a2a.json` byte for byte t
 | **6D** | Several partners per skill, choosing between them, owner dashboards                                                                           |
 | **6E** | Optional A2A interface and signed Agent Card                                                                                                  |
 
-## Decisions
-
-Taken with the owner on 2026-10-29:
+## Design decisions
 
 1. **Destination:** a new tab, so the visitor keeps site A.
 2. **On arrival:** one confirmation click on B, then B continues on its own.

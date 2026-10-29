@@ -1,88 +1,100 @@
-# Implementation roadmap
+# Roadmap
 
-PageSquire is the selected project name. This repository begins the roadmap designed with the JDIH pilot as an architectural reference. All canonical guides are English; runtime localization remains configurable.
+This page lists what is built and what comes next. Milestone labels (F0, B1, C2 and so on) are short names used in commits and the changelog.
 
-## Current development status — 2026-10-24
+## Where things stand
 
-The owner approved `0.1.0-beta.0` as a source/testing candidate after an owner-assisted Kabarin integration. The separate [public Kabarin demo](https://pagesquire-kabarin-demo.vercel.app/) records its own upstream revision and applies shared daily AI quotas. See [the acceptance record](beta.md): this is not independent B3 acceptance, a published/tagged beta release, stable support or broad provider certification. Beta/publication gates remain enforced. Milestone notes below describe the historical alpha work and do not override the current readiness report.
+PageSquire is at `0.1.0-beta.0`. Everything below works end to end and is covered by a large automated test suite, but it has not yet been tried on many real sites, models or browsers. Nothing is published to npm, Packagist or WordPress.org, and there is no GitHub release yet. The source is on [GitHub](https://github.com/naufaldenta/pagesquire).
 
-| Stage | Scope                                                                                  | Current status                                                                                                        |
-| ----- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| F0    | Local identity, independent source, MIT foundation, workspace, contract fixtures       | Implemented locally; public namespaces and release registration remain pending                                        |
-| F1    | Observer, registry, executor, verification, cancellation, navigation boundaries        | Implemented; verification results are recorded in progress.md                                                         |
-| F2    | Chat widget, backend PHP, Laravel/React/Inertia integration                            | Implemented locally as an alpha; live-provider and production-host evaluation pending                                 |
-| F3    | Hybrid init/scan/report/prepare-ai/validate workflow and English integration skill     | Implemented locally; static/DOM discovery, skill handoff and compiled fixture verification                            |
-| F4    | Standalone PHP and Node/Next.js integration with protocol conformance                  | Implemented locally as an alpha; shared conformance, native endpoints and browser/package verification complete       |
-| F5    | WordPress plugin, dashboard onboarding, context export/import, basic adapters          | Implemented locally as an alpha; real ZIP, guided setup and WordPress backend/browser verification complete           |
-| F6    | Compatibility evidence, community materials, local release tooling and public releases | GitHub-first preparation in progress; stable 1.0/remote CI/public release not yet complete; other registries deferred |
+Two public demos run on PageSquire: the [Kabarin demo](https://pagesquire-kabarin-demo.vercel.app/) and [OFFBEAT](../examples/brutalist-demo/README.md). The Kabarin demo has a shared daily AI quota.
 
-## Next implementation milestone
+## Foundation (F0–F6)
 
-### C2-C4: Integration reliability after competitor source review
+| Stage | Scope                                                                         | Status                                                    |
+| ----- | ----------------------------------------------------------------------------- | --------------------------------------------------------- |
+| F0    | Project setup, MIT licensing, workspace, contract fixtures                    | Done                                                      |
+| F1    | Observer, registry, executor, verification, cancellation, navigation          | Done                                                      |
+| F2    | Chat widget, PHP backend, Laravel, React and Inertia                          | Done                                                      |
+| F3    | `init`/`scan`/`report`/`prepare-ai`/`validate` onboarding and the setup skill | Done                                                      |
+| F4    | Standalone PHP and Node/Next.js, with shared conformance tests                | Done                                                      |
+| F5    | WordPress plugin, dashboard setup, context export and import, basic adapters  | Done                                                      |
+| F6    | Compatibility records, community files, release tooling                       | Release tooling done; first GitHub prerelease not yet cut |
 
-The [static competitor source review](competitor-review.md) prioritizes an opt-in [capability inspector](capability-inspector.md), explicit semantic app context/contextual availability, then truthful action timelines. C2 provides expected-versus-registered coverage, target checks, schema/binding metadata and whitelisted diagnostics. C3 adds [public typed app context](app-context.md), per-turn untrusted state, future-proposal filtering and pre-handler availability checks across Node/PHP/Laravel, preserving pending-result authorization. C4 adds [factual action progress](action-progress.md), bounded client/widget timelines and fixed recovery guidance, with explicit cached/pending/unverified outcomes. These slices are implemented locally, not automatically deployed or beta-certified. They do not grant permission or certify every parameter/model. No competitor dependency, unrestricted browser agent, hidden paid retry or consequential approval bypass is introduced. The next acceptance step is independent-user retesting before beta/stable promotion, not another unrestricted execution layer.
+**F2** connects the chat widget to a server-side PHP conversation loop and adds a Laravel 13 endpoint plus React 19 and Inertia v3 adapters.
 
-### D1: Assistant-driving parity after a real host pilot
+**F3** adds the onboarding commands. Source scans export metadata only, and DOM scans stay within the pages you choose. The setup step installs an `assistant-setup` skill for Codex or Claude Code. See [onboarding](onboarding.md).
 
-The owner requested reusable reference-assistant behavior after the Kabarin pilot. [Assistant driving](assistant-driving.md) adds an optional cursor/outline/click presenter, nested scrolling, explicit menu/control preparation, private-aware bounded content reading, tours and opt-in local speech. Existing six-state emotion and navigation continuation remain in use. PHP/Node instructions preserve compound goals; WordPress offers three optional inspected public-content capabilities with unchanged defaults. Reference-site IDs/content, third-party accessibility UI and licensed Rive/TTS assets are not copied. Local regressions cover Node/PHP, framework/WordPress/OFFBEAT browsers, production builds and independent package consumers. Exact-commit CI and deployment must be checked for each delivery; earlier source b22321e's passing checks do not attest a later commit. Live-model understanding, arbitrary site/assistive-technology support and independent B3 acceptance are not implied. Version and publication gates remain alpha.
+**F4** adds [standalone PHP](standalone-php.md) and [Node/Next.js](node-next.md) endpoints with native provider transports, session-bound endpoints and pluggable storage. PHP and Node share one set of conformance tests. The Next.js adapter waits for the destination page to be ready before verifying an action.
 
-### L1: PageSquire Link — implemented locally (6A–6E)
+**F5** adds the [WordPress plugin](../packages/wordpress/README.md): a self-contained ZIP, page inspection, mapping import, optional setup skills, basic accessibility adapters and full-page navigation. The assistant stays off until the site owner finishes setup and turns it on.
 
-[PageSquire Link](link.md) lets two PageSquire sites with different owners and stacks pair with a one-time invitation and owner-approved scopes. One site's assistant can then hand a visitor to the partner site in a new tab, carrying only the goal and fields the visitor gave and approved. The partner continues with its own capabilities after one click. Messages between servers are Ed25519-signed, short-lived and single use. The skill catalog uses A2A's skill shape. Phase 6A pairing is implemented for Node, native PHP, Laravel and WordPress: invitations, signed envelopes, approval, revocation and link stores, tested across stacks over real HTTP. Handoffs (6B) work end to end: the visitor approves on one site, the partner opens in a new tab and its assistant continues after one click. The partner can then send the visitor back once with a one-line outcome (6C). When several partners offer the same skill, the visitor chooses between them, and owners get an overview with local counts (6D). An optional A2A interface (6E) publishes a signed Agent Card and lets any A2A agent send a request into the skills an owner opens; the agent receives only a single-use link where the person continues. This is local, test-verified work: it has not been tried between two real HTTPS sites with a live model, or with a third-party A2A client.
+**F6** adds the [compatibility record](compatibility.md), issue and PR templates, adapter authoring docs, the changelog and the [release tooling](releasing.md). Private vulnerability reporting is enabled on the GitHub repository.
 
-### R1: Release candidate to stable — local foundations, promotion gated
+## Beta work (B1–B5)
 
-The owner selected R1 preparation while independent beta acceptance is pending. The [API inventory/drift baseline](api-contract.md), [upgrade/recovery evidence](upgrading.md) and [maintenance policy](maintenance.md) establish local review boundaries. Baseline checks run after build in CI and candidate preparation; synthetic same-format Node file-store tests cover checkpoint/replay/authorization/accounting recovery. They do not certify historical-release migration, distributed restore or production rollback. API freeze, pilot findings, released-candidate upgrade matrices, stable maintenance commitments and RC/stable policy approval remain outstanding. Version stays alpha and the existing B3/B5/publication gates are not bypassed.
+**B1 – Stabilization.** Fixed a WordPress login autofocus race on Windows and cancellation before queued browser handlers start. Added regression tests for separate chat turns, timeouts, late replies and navigation continuation.
 
-### B5: Public beta — preparation in progress, publication gated
+**B2 – Model evaluation.** Built the evaluator, a 246-case English/Indonesian contract matrix and a five-scenario real-browser smoke test. A live run against Sumopod passed all five scenarios in twelve calls. Other provider presets are checked against their official documentation and with synthetic tests. See [model evaluation](model-evaluation.md).
 
-The owner selected B5. Release tooling now accepts canonical `0.x.y-alpha.n` and `0.x.y-beta.n` previews with matching GitHub channels, explicit beta review records and a failing-until-ready beta check. See [beta testing, evidence and promotion](beta.md). B4 local fixes and beta tooling do not replace independent B3 acceptance, final-candidate CI, support/security/redistribution reviews or owner publication approval. Version remains alpha. B5 is complete only when exact verified clean-checkout artifacts are published as an authorized GitHub prerelease; no registry or stable release is included.
+**B3 – Outside testers.** Next up: website owners installing PageSquire on their own sites without help from the maintainer. See the [beta guide](beta.md).
 
-### B4: Security and operations
+**B4 – Security and operations.** Added adversarial Node and PHP tests for authorization, schemas and cost limits, transcript erasure that keeps budgets intact, and a fix for PostgreSQL cleanup racing with session renewal. See the [operations runbook](operations.md).
 
-B4 can proceed while B3 independent-user acceptance is pending. Local implementation adds adversarial Node/PHP authorization/schema/cost regressions, budget-preserving server-only conversation erasure, and concurrent PostgreSQL cleanup/renewal coverage. Cleanup now locks expired candidates and rechecks deletion eligibility instead of deleting newly active sessions or renewed budget rows. See the [operations and data-erasure runbook](operations.md). This is local implementation evidence, not a production deployment, independent penetration test or beta promotion; exact-commit CI and release approval remain separate gates.
+**B5 – Public beta.** The release tooling understands `alpha` and `beta` versions and checks the beta review records. What remains is the outside-tester round, CI on the final commit, and publishing the first GitHub prerelease. See the [beta guide](beta.md).
 
-### B3: External onboarding — independent acceptance pending
+## Integration reliability (C2–C4)
 
-Maintainer-assisted local pilots do not replace installation by genuinely independent website owners. That acceptance remains open and can run in parallel with B4. Private pilot fixtures/results are not bundled in this repository. No beta readiness is inferred from generated setup skills, static validation or the absence of an external bug report.
+These came out of a [review of similar open-source projects](competitor-review.md).
 
-### B2: Scoped model evaluation
+- **C2 – [Capability inspector](capability-inspector.md).** An opt-in developer panel that compares expected capabilities with registered ones, checks targets and shows schemas.
+- **C3 – [App context](app-context.md).** Hosts can share typed public state each turn and hide actions that do not apply right now. Works across Node, PHP and Laravel. Server permissions still decide.
+- **C4 – [Action progress](action-progress.md).** A factual timeline of each action (checking, executing, verifying) with clear outcomes and recovery hints.
 
-At the owner's request, B2 live access is limited to Sumopod; other presets receive current official-documentation review and synthetic checks. The reproducible evaluator, 246-case EN/ID contract matrix and five-case real-browser smoke are implemented. The owner-approved live Sumopod campaign used all twelve permitted attempts and passed its five scenarios. See [evaluation scope, commands and sanitized evidence](model-evaluation.md). This closes the requested bounded B2 implementation, not the broader multi-provider/large-sample beta accuracy gate. Version and publication channel remain alpha; outside-user onboarding trials and release/security gates remain separate work.
+All three are done. The next step is feedback from outside testers rather than more features.
 
-### B1: Stabilization before beta
+## Assistant driving (D1)
 
-The owner selected B1 as the next implementation step. Version and release channel remain alpha. B1 addresses the Windows WordPress login autofocus race, cancellation before queued browser handlers/verifiers start, and regression coverage for independent chat turns, timeout/cancellation recovery, late replies and navigation continuation. It does not expand the provider/platform support matrix or certify live-model accuracy.
+[Assistant driving](assistant-driving.md) adds an optional on-screen cursor and target outline, nested scrolling, menu and control preparation, scoped content reading that skips private areas, guided tours and opt-in local speech. WordPress gets three optional public-content capabilities, off by default. Tests cover Node, PHP, the framework fixtures, WordPress, OFFBEAT and production builds. This has not been measured with live models or assistive technology.
 
-Promotion requires all required remote jobs on the exact candidate commit, passing clean-consumer artifacts and no unresolved critical defects in the declared support scope. A local fix or passing component test is not remote CI evidence. Live-model evaluation and outside-user installation trials remain subsequent beta-readiness work; registry publication and version promotion need separate review and owner approval.
+## PageSquire Link (L1)
 
-F2 now connects the chat widget to a bounded server-owned PHP loop, supplies a Laravel 13 endpoint/provider adapter, and includes React 19/Inertia v3 adapters. Neutral heading-color, link-highlight, and font-weight conversations are verified. The JDIH application is not modified; its routes, identity, and licensed assets belong in a separate site adapter. Live-model evaluation and deployment are not part of the completed local alpha.
+[PageSquire Link](link.md) lets two PageSquire sites with different owners and stacks pair with a one-time invitation and owner-approved scopes. One site's assistant can then hand a visitor to the partner site in a new tab, carrying only the goal and fields the visitor gave and approved. The partner continues with its own capabilities after one click. Messages between servers are Ed25519-signed, short-lived and single use. The skill catalog uses A2A's skill shape.
 
-F3 now provides local init/scan/report/prepare-ai/validate onboarding. Source scans export bounded metadata; opt-in DOM scans stay within an explicit page scope. The coding-agent step installs an English `assistant-setup` skill for Codex and/or Claude Code without contacting either host. Manual and handoff-artifact workflows are tested with compiled browser capabilities. Separate coding-agent adherence and production-site coverage are not certified. See [hybrid onboarding](onboarding.md).
+- **6A – Pairing.** Invitations, signed envelopes, approval, revocation and link stores for Node, native PHP, Laravel and WordPress, tested across stacks over real HTTP.
+- **6B – Handoffs.** The visitor approves on one site, the partner opens in a new tab and its assistant continues after one click.
+- **6C – Returns.** The partner can send the visitor back once with a one-line outcome.
+- **6D – Partner choice.** When several partners offer the same skill, the visitor chooses. Owners get an overview with local counts.
+- **6E – A2A interface.** An optional signed Agent Card lets any A2A agent send a request into the skills an owner opens. The agent receives only a single-use link where the person continues.
 
-F4 now supplies [standalone PHP](standalone-php.md) and [Node/Next.js](node-next.md) integrations: bounded native provider transports, session/principal-bound endpoints, injectable atomic storage and shared PHP/Node conformance cases. The Next.js adapter waits for actual destination readiness and then runs the registered verifier. Opt-in full-document conversations resume verified navigation without replaying the handler or persisting browser transcripts. English onboarding skills cover these framework boundaries.
+All of this is covered by tests but has not yet been tried between two real HTTPS sites with a live model, or with a third-party A2A client.
 
-F5 now provides the [WordPress plugin and English dashboard workflow](../packages/wordpress/README.md): a self-contained ZIP, selected public-page metadata/DOM inspection, configuration-only mappings, optional Codex/Claude setup skills, basic accessibility adapters and exact-page full-document navigation. Administrator authorization, separate chat CSRF, durable database locks and site-wide provider budgets are enforced. The assistant stays disabled until the owner completes verification and explicitly enables it.
+## Toward 1.0 (R1)
 
-F6 now prepares GitHub-first alpha releases: [compatibility evidence](compatibility.md), English community templates, adapter authoring, changelog, [release instructions](releasing.md), metadata/source-freshness gates and locally verified artifact/checksum preparation. The owner-authorized [public development repository](https://github.com/naufaldenta/pagesquire) exists with private vulnerability reporting enabled. Packages stay private. npm, Packagist and WordPress.org are deferred by the owner. No tagged release has been published; remote CI evidence, redistribution review and owner release approval remain release gates. This is not completion of the original stable-1.0/publication criteria.
+The groundwork is in place: an [API inventory and drift check](api-contract.md), [upgrade and recovery guidance](upgrading.md) and a [maintenance policy](maintenance.md). The API check runs after every build in CI. Synthetic tests cover recovering a Node file store from a checkpoint.
 
-## F5 verification scope
+Still to do before a release candidate:
 
-The WordPress fixture uses WordPress 7.1.3, PHP 8.3, the official SQLite Database Integration 3.1.0 compatibility layer and Chromium. All 14 WordPress scenarios passed against the installed ZIP. They exercise dashboard setup, administrator/reader/guest boundaries, nonce/Origin/CSRF checks, private-content exclusion, both setup-skill exports, closed mapping import, content/theme invalidation, classic/core block themes, computed style verification, mobile composer visibility, one-shot full-page continuation, request/provider budgets and lock collision/owner protection. All 75 PHP tests passed with 269 assertions. Node, framework-browser, distribution and optimized Next.js build checks supplement these feature checks; verification is performed as component runs, not a claim that an interrupted monolithic test run completed.
+- freeze the public API
+- test upgrades and rollbacks between real released versions
+- act on feedback from outside testers
+- decide the support and maintenance commitments for stable releases
 
-These are local tests with synthetic content/accounts and a deterministic provider, not live-model accuracy or universal WordPress compatibility. MySQL/MariaDB production topology, multi-worker load, persistent object caches, multisite, Elementor, WooCommerce, assistive technologies and live-host deployment are not certified. The combined WordPress package is GPL-3.0-or-later with isolated Apache-2.0 dependencies and corresponding sources; shared PageSquire packages remain MIT.
+## Next
 
-## F4 verification scope
+- Outside-tester round (B3) and the first GitHub prerelease (B5).
+- Broader live-model testing across providers, with a set call budget.
+- Try Link between two real HTTPS sites and with a third-party A2A client.
+- Based on tester feedback: reusable capability packs, turning recorded sessions into test fixtures, source cards for read results, and curated site knowledge with citations.
+- Approvals, undo, persistent threads and MCP/AG-UI bridges each need their own protocol and security design first.
 
-The local target at the F4 checkpoint was Windows/Chromium with Node.js 24, PHP 8.3, React 19, Laravel 13/Inertia v3 and Next.js 16.4.2 App Router. Verification passed 173 tests: 75 Node unit tests, 59 PHPUnit tests (239 assertions), 37 real-browser scenarios and two clean offline distribution consumers. Production Next.js fixture build, package type checks and format checks also passed. The browser Next.js conversation runs on its development fixture; a build is not a production-host certification. Remote CI had not yet run at that historical checkpoint; F6 [current commit checks](https://github.com/naufaldenta/pagesquire/actions/workflows/ci.yml) are separate evidence.
+## Test coverage notes
 
-Remaining alpha limitations include one conversation slot per session, no cross-tab/general transcript restoration, no bundled Rive renderer, and no live-provider/assistive-technology/production-host certification. File stores are single-host only; multi-instance/serverless deployments require host-supplied shared atomic durable storage. Host authentication, global quotas, retention and deployment hardening remain required. Callback-based six-state emotion integration is available. See [the Laravel guide](laravel-react.md) and [security scope](../SECURITY.md).
+**WordPress (F5).** WordPress 7.1.3, PHP 8.3 and the SQLite Database Integration 3.1.0 plugin, in Chromium. All 14 WordPress scenarios pass against the installed ZIP. They cover dashboard setup, administrator, reader and guest access, nonce, Origin and CSRF checks, private-content exclusion, setup-skill export, mapping import, classic and block themes, style verification, the mobile composer, full-page continuation, request and provider budgets, and lock collisions. The 75 PHP tests pass with 269 assertions. Tests use synthetic content and a deterministic provider. MySQL/MariaDB, persistent object caches, multisite, Elementor and WooCommerce are not tested.
 
-## Publication gates
+**Frameworks (F4).** Windows and Chromium with Node.js 24, PHP 8.3, React 19, Laravel 13, Inertia v3 and Next.js 16.4.2 App Router. At that point 173 tests passed: 75 Node unit tests, 59 PHPUnit tests (239 assertions), 37 browser scenarios and two clean offline package installs. The Next.js production build also passed. Current results are on the [CI page](https://github.com/naufaldenta/pagesquire/actions/workflows/ci.yml).
 
-- Select and control repository/package accounts and namespaces.
-- Resolve source and asset redistribution rights for each added integration.
-- Smoke-test release artifacts on clean consumers and tested hosts.
-- Preserve package-specific WordPress licensing, corresponding sources and dependency notices in release artifacts.
-- Review English public documentation and current implementation limitations.
-- Publish only after the owner authorizes the external release.
+**Known limits.** One conversation per session, no cross-tab transcript restore, and no bundled Rive renderer. File stores work on a single host only; multi-instance or serverless setups need a shared atomic store. Hosts are responsible for authentication, global quotas, retention and deployment hardening. See the [Laravel guide](laravel-react.md) and [security notes](../SECURITY.md).
+
+## Licensing
+
+The packages are MIT-licensed. The WordPress plugin bundles them under GPL-3.0-or-later, with the Apache-2.0 dependency notices and corresponding source included.

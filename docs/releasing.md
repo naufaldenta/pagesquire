@@ -1,12 +1,12 @@
-# GitHub-first releases
+# Releasing
 
-The owner authorized the public development repository [naufaldenta/pagesquire](https://github.com/naufaldenta/pagesquire). Account access, repository creation and enabled private vulnerability reporting were verified on 2026-10-20. npm, Packagist and WordPress.org are explicitly deferred. The local release tooling does not create credentials, repositories, tags or releases; repository setup was a separate owner-authorized action.
+PageSquire is released on GitHub first. The repository is [naufaldenta/pagesquire](https://github.com/naufaldenta/pagesquire), with private vulnerability reporting enabled. Publishing to npm, Packagist and WordPress.org is planned for later. The release tooling never creates credentials, repositories, tags or releases on its own.
 
-The current version is **0.1.0-beta.0**, not 1.0. Package namespaces are provisional. Never remove `private: true` merely to share GitHub downloads; [npm documents this as a publication guard](https://docs.npmjs.com/cli/v11/configuring-npm/package-json/#private).
+The current version is **0.1.0-beta.0**. Package names may still change. Keep `private: true` in the npm manifests even when sharing GitHub downloads; [npm treats it as a publish guard](https://docs.npmjs.com/cli/v11/configuring-npm/package-json/#private).
 
-## Local candidate workflow
+## Building a candidate locally
 
-Use the contributor prerequisites, then run from the repository root:
+Set up the contributor prerequisites, then run from the repository root:
 
 ```sh
 npm run release:check
@@ -18,56 +18,56 @@ npm run release:prepare
 npm run release:verify -- <candidate-directory>
 ```
 
-`release:check` checks metadata, lockfile versions, compatibility evidence, local guide links and fenced JSON examples. It succeeds for a valid **local preview** even when it reports `publicationReady: false`. `release:check -- --publication` fails until all public-release gates are satisfied. Neither mode contacts a registry or proves remote settings.
+`release:check` checks metadata, lockfile versions, the compatibility record, local doc links and fenced JSON examples. It passes for a valid local preview even when it reports `publicationReady: false`. `release:check -- --publication` fails until every public-release item is done. Neither mode contacts a registry or checks GitHub settings.
 
-`npm run release:check -- --beta` additionally requires a beta version/channel and the independent-onboarding, support-scope and security/operations review records in `release.config.json`, with existing sanitized evidence references. Missing beta approvals do not prevent a valid local preview, but do prevent beta publication readiness. [B5 instructions](beta.md) explain evidence, tester feedback and the staged owner-approved promotion. These records are human attestations, not automatic proof of remote CI or independent acceptance.
+`release:check -- --beta` also requires a beta version and channel, plus the three beta review records in `release.config.json` (outside-tester onboarding, support scope, security and operations) with existing evidence files. Missing beta approvals do not block a local preview, only a beta release. See the [beta guide](beta.md).
 
-`release:prepare` requires the build input/output fingerprint from `npm run build`, built packages and a WordPress ZIP whose embedded corresponding source exactly matches current distributable sources. Changed sources or compiled outputs invalidate that fingerprint. It performs local `npm pack --offline --ignore-scripts`, creates PHP/source ZIPs and copies the plugin ZIP. It creates a fresh directory under `dist/releases/` without overwriting candidates. Source manifests are not modified. It does not run tests or attest that they passed: keep their logs separately. Rebuild after changing any included source or guide. Failed candidate directories are incomplete and must not be distributed.
+`release:prepare` needs a fresh `npm run build`: it checks the build fingerprint, the built packages, and that the WordPress ZIP's bundled source matches the current sources. Any change to sources or compiled output invalidates the fingerprint, so rebuild after editing anything included. It runs `npm pack --offline --ignore-scripts`, builds the PHP and source ZIPs and copies the plugin ZIP into a new directory under `dist/releases/`. It never overwrites an earlier candidate or modifies source manifests. It does not run tests, so keep their logs yourself. Do not distribute a directory from a failed run.
 
-R1 also enforces the [API review baseline](api-contract.md) before candidate creation, even if the build stamp is fresh. `npm test`/CI run `api:check` after build. An intentional contract/host/package-version change requires explicit compatibility review and a reviewed baseline update, not an automatic overwrite. New candidate manifests record `apiReview` as `review-baseline-not-frozen`; this is drift evidence, not API freeze, semantic compatibility or stable-readiness approval. Review [upgrade/recovery](upgrading.md) and [maintenance](maintenance.md) before changing a host.
+`release:prepare` also runs the [API check](api-contract.md). `npm test` and CI run `api:check` after the build. An intentional change to the API, host requirements or package version needs a compatibility review and a deliberate baseline update. Manifests record `apiReview` as `review-baseline-not-frozen`: the check spots drift, but the API is not frozen yet. Read [upgrading](upgrading.md) and [maintenance](maintenance.md) before changing a host.
 
-Every complete candidate includes a manifest and checksums. Verification rejects changed/missing/extra files, unsafe filenames, duplicate inventory entries and linked artifacts. Verify before extracting. Do not treat an archive or checksum from an untrusted channel as authenticated. Packaging runs in a trusted owner-controlled checkout; exclusion patterns are not a secret scanner or protection against hostile concurrent filesystem changes. Review source and artifact inventories manually for secrets and rights.
+Every candidate includes a manifest and checksums. Verification rejects changed, missing or extra files, unsafe filenames, duplicate entries and linked files. Verify before extracting, and do not trust an archive or checksum that came through an untrusted channel. Build candidates only in a trusted checkout. The exclusion patterns are not a secret scanner, so review the source and artifact lists for secrets and licensing yourself.
 
-New manifests record `channel` and beta readiness alongside source/gates. The verifier requires a matching explicit channel for beta; legacy alpha manifests without that field remain readable. Verification checks inventory integrity, not publication permission, CI results, package runtime compatibility or review authenticity. A beta archive may be a blocked local preview; inspect the manifest and trusted release context rather than inferring readiness from its filename.
+Manifests record the `channel` and beta readiness. The verifier requires a matching channel for beta candidates; older alpha manifests without that field still verify. Verification checks file integrity only, not CI results, runtime compatibility or the reviews. A beta-named archive can still be a blocked local preview, so read its manifest.
 
 ## Using the local or GitHub artifacts
 
 ### WordPress
 
-Upload only `pagesquire-0.1.0-beta.0.zip` in **Plugins → Add New → Upload Plugin**. No user-side build is required. Follow the [WordPress guide](../packages/wordpress/README.md). Keep bundled GPL/MIT/Apache notices and `corresponding-source.zip`; do not replace it with an unrelated GitHub auto-generated archive. [WordPress's guidelines](https://developer.wordpress.org/plugins/wordpress-org/detailed-plugin-guidelines/) require compatible licensing and access to readable sources/build tools. Directory submission is a separate future workflow, not a side effect of a GitHub release.
+Upload `pagesquire-0.1.0-beta.0.zip` in **Plugins → Add New → Upload Plugin**. No build step is needed. Follow the [WordPress guide](../packages/wordpress/README.md). Keep the bundled GPL, MIT and Apache notices and `corresponding-source.zip`; do not swap it for GitHub's automatic source archive. [WordPress's guidelines](https://developer.wordpress.org/plugins/wordpress-org/detailed-plugin-guidelines/) require compatible licensing and readable sources. Submitting to the WordPress.org directory is a separate, later step.
 
 ### JavaScript/TypeScript
 
-Download the candidate's tarballs into a directory, then install required PageSquire dependencies together using local file paths. For example, a browser client needs these three tarballs:
+Download the tarballs into one directory and install the PageSquire packages you need together from local paths. A browser client needs these three:
 
 ```sh
 npm install ./pagesquire-protocol-0.1.0-beta.0.tgz ./pagesquire-core-0.1.0-beta.0.tgz ./pagesquire-client-0.1.0-beta.0.tgz
 ```
 
-React additionally needs the React tarball and a compatible React peer. The CLI needs its tarball plus core/protocol; Node server needs its tarball plus protocol. Install all six together when following the complete demo. These are file installs, not `npm install @pagesquire/...` registry availability claims. Normal third-party dependencies may require internet/cache. Follow the [runtime](runtime.md), [onboarding](onboarding.md) and [Node/Next.js](node-next.md) guides.
+React also needs the React tarball and a compatible React peer. The CLI needs its tarball plus core and protocol. The Node server needs its tarball plus protocol. Install all six for the full demo. The packages are not on the npm registry, so `npm install @pagesquire/...` will not work. Third-party dependencies still come from the internet or your cache. See the [runtime](runtime.md), [onboarding](onboarding.md) and [Node/Next.js](node-next.md) guides.
 
 ### Standalone PHP and Laravel
 
-Extract `pagesquire-server-0.1.0-beta.0.zip` and, for Laravel, `pagesquire-laravel-0.1.0-beta.0.zip` outside the web root. They contain directories `pagesquire-server` and `pagesquire-laravel`. Merge the supplied `composer-repositories.json` fragment into the **host application's root** `composer.json`; adjust the relative paths to these extracted directories. For standalone PHP use only the server repository/require entry. Preserve your application's existing entries; do not replace its entire file.
+Extract `pagesquire-server-0.1.0-beta.0.zip` and, for Laravel, `pagesquire-laravel-0.1.0-beta.0.zip` outside the web root. They contain the directories `pagesquire-server` and `pagesquire-laravel`. Merge the supplied `composer-repositories.json` fragment into your application's root `composer.json` and adjust the relative paths. Standalone PHP needs only the server entry. Keep your existing entries; do not replace the whole file.
 
-The fragment supplies explicit path-package versions and disables symlinks. Source manifests retain the local alpha's `@dev` internal constraint; do not mistake this for a tagged Packagist release. Run the host's normal Composer update/install and follow [standalone PHP](standalone-php.md) or [Laravel](laravel-react.md). [Composer documents root-only repositories and versioned path packages](https://getcomposer.org/doc/05-repositories.md#path). The monorepo root is a development workspace, not the server/adapter package; do not submit it as one package to Packagist.
+The fragment sets explicit path-package versions and disables symlinks. The source manifests keep an `@dev` internal constraint; that is not a Packagist release. Run your normal Composer install or update, then follow [standalone PHP](standalone-php.md) or [Laravel](laravel-react.md). Composer documents [path repositories](https://getcomposer.org/doc/05-repositories.md#path). The monorepo root is a development workspace, not a package, so do not submit it to Packagist.
 
-## Owner-controlled GitHub publication
+## Publishing a GitHub prerelease
 
-Before publishing, review and truthfully update the gates in `release.config.json`:
+Update the items in `release.config.json` as each one is actually done:
 
-1. Confirm account access and permission to create the intended public repository. Review all source/assets for redistribution and sensitive data. Establish private conduct reporting.
-2. Create/configure the repository only with owner authorization. Enable [private vulnerability reporting](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository); verify it actually works, then update SECURITY.md with the real channel. A JSON flag cannot enable a GitHub setting.
-3. Review the source inventory, create the initial commit and configure `origin` for the selected repository. Ignore generated candidates, dependencies, local planning logs and fixture caches. Never commit credentials.
-4. Push the reviewed source only with authorization. Observe both Windows/Ubuntu checks and clean-consumer tests on the **exact commit**. Resolve failures before marking `remoteCiPassed`. Any new commit needs fresh evidence; `release:check` is a local consistency gate, not a GitHub attestation.
-5. Update the [changelog](../CHANGELOG.md), release notes, evidence and version if needed. Obtain owner release approval. Commit any such changes, rerun CI/build/package checks, and produce the final candidate from a clean checkout with matching `origin`. Confirm `release:check -- --publication` succeeds.
-6. Create a **draft prerelease**, never a stable/latest release. Use the exact approved alpha or beta version tag on the verified commit. Attach the full tested candidate inventory, inspect it, then publish as prerelease and note all limitations. [GitHub releases](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases) support manually attached artifacts alongside source archives. A beta additionally requires `release:check -- --beta` and the [B5 reviews](beta.md).
-7. Re-download and verify the published artifacts. Record URLs/commit/digests per file. If interrupted, inspect the existing draft/tag/assets first; resume missing uploads only. Never silently replace different bytes under an already public version or recreate a conflicting tag. Changed public bytes require a new prerelease version and checks.
+1. Make sure you can create and manage the repository. Review all source and assets for licensing and sensitive data. Set up a private conduct contact.
+2. Enable [private vulnerability reporting](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository), check that it works, and point SECURITY.md at it. A flag in the config file cannot turn on a GitHub setting.
+3. Review the source list, commit, and set `origin` to the repository. Ignore generated candidates, dependencies, local notes and fixture caches. Never commit credentials.
+4. Push and wait for the Windows and Ubuntu jobs and the clean-install tests to pass on the exact commit before setting `remoteCiPassed`. Any new commit needs a fresh run. `release:check` checks local consistency only.
+5. Update the [changelog](../CHANGELOG.md), release notes and version if needed. Commit, rerun CI and the build and package checks, and build the final candidate from a clean checkout with the right `origin`. `release:check -- --publication` must pass.
+6. Create a **draft prerelease**, never a stable or latest release, tagged with the exact alpha or beta version on the verified commit. Attach the full candidate, check the list, then publish it as a prerelease with its known limitations. [GitHub releases](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases) can carry attached files next to the source archives. A beta also needs `release:check -- --beta` and the [beta reviews](beta.md).
+7. Download the published files again and verify them. Record the URLs, commit and per-file digests. If a release was interrupted, look at the existing draft, tag and assets and upload only what is missing. Never replace files under a public version or recreate a tag; changed files need a new prerelease version.
 
-No automatic publisher or write-enabled release workflow is installed. The CI workflow only tests and verifies local candidates. External release approval remains a human decision even if every local flag is true.
+There is no automatic publisher, and CI only tests and verifies candidates. Publishing is always a manual decision, even when every check passes.
 
 ## Versioning and 1.0
 
-Keep all six npm packages, root/lockfile, WordPress header/readme, compatibility record, release notes and internal dependencies synchronized. PHP packages take a release version through path metadata today; eventual split repositories must use matching reviewed tags and bounded dependency constraints. Protocol `schemaVersion` is separate; incompatible wire changes require an explicit contract/migration review.
+Keep the six npm packages, the root manifest and lockfile, the WordPress header and readme, the compatibility record, the release notes and internal dependencies on the same version. PHP packages get their version from path metadata for now; split repositories later will need matching tags and bounded constraints. The protocol `schemaVersion` is versioned separately, and incompatible wire changes need a contract and migration review.
 
-Use a new prerelease number for changed public bytes. The reviewed development formats are `0.x.y-alpha.n` / `github-alpha` and `0.x.y-beta.n` / `github-beta`, with canonical numeric identifiers and matching channel/version across metadata. The current checkout remains alpha until deliberately promoted with evidence and approval. Stable promotion requires the [1.0 criteria](compatibility.md#known-limits-and-the-10-gate), not just changing a version field. Stable, RC and build-metadata aliases are intentionally refused; R1 needs a separate policy review. A future npm/Packagist/WordPress.org workflow needs separately authorized accounts, namespace ownership and channel-specific checks.
+Changed public files always get a new prerelease number. Supported formats are `0.x.y-alpha.n` on `github-alpha` and `0.x.y-beta.n` on `github-beta`, with no leading zeroes and the same version and channel everywhere. A stable release needs the [1.0 criteria](compatibility.md#known-limits-and-the-10-gate), not just a version change. The tooling refuses stable, release-candidate and build-metadata versions until the release-candidate policy (R1) is settled. Publishing to npm, Packagist or WordPress.org will need its own accounts, namespaces and checks.

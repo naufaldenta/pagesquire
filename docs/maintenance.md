@@ -1,25 +1,25 @@
-# Maintenance and compatibility policy
+# Maintenance policy
 
-## Current development policy
+## Current policy
 
-PageSquire is an alpha with local R1 foundations, not a supported stable/LTS line. There is no guaranteed response time, security-fix deadline, uptime, commercial support or long-term backport promise. Public source availability, provider presets, passing fixtures or API fingerprints are not a production-support commitment.
+PageSquire is in beta and has no stable or long-term-support line yet. There is no guaranteed response time, security-fix deadline, uptime, commercial support or backport promise.
 
-Canonical guides, public technical messages and contribution instructions are English. Integrations may provide runtime translations separately. Use the [compatibility matrix](compatibility.md) for exact measured hosts; untested providers/models, themes, browsers and storage topologies remain experimental or unsupported as documented, not implicitly supported by a dependency range.
+Docs, public technical messages and contribution instructions are in English. Integrations can add runtime translations separately. The [compatibility matrix](compatibility.md) lists what is tested; untested providers, models, themes, browsers and storage setups are experimental, whatever a dependency range allows.
 
-Changes go through focused review, meaningful failing regressions, API/wire/behavior/security analysis, changelog/guides and matching consumer verification. Follow [API review](api-contract.md) and [upgrade/recovery](upgrading.md). The API baseline is a conservative review aid; nobody should refresh it automatically to conceal an incompatible change.
+Every change gets a focused review, a regression test that failed before the fix, a look at its API, wire, behavior and security impact, changelog and doc updates, and a check against real consumers. Follow [API review](api-contract.md) and [upgrading](upgrading.md). Never refresh the API baseline just to hide an incompatible change.
 
-## Version and deprecation decisions
+## Versions and deprecations
 
-Package release versions and protocol `0.1` are separate. During `0.x` prereleases, APIs/configuration may change, but intentional incompatibilities must be explicit in notes and migration guidance. Changed public artifact bytes need a new version, never a replaced asset/tag. Current tooling accepts only reviewed alpha/beta development formats and keeps registries deferred.
+Package versions and protocol version `0.1` are separate. During `0.x` prereleases APIs and configuration may change, but every intentional break is called out in the notes with migration steps. Changed public files always get a new version; assets and tags are never replaced. The tooling currently accepts alpha and beta versions only, and registries are not used yet.
 
-For any removed/renamed export, option/environment alias, capability schema or behavior, record the reason, affected integration/version, replacement and upgrade instructions in the changelog and guide. Where safe, retain a bounded compatibility path with regressions and an explicit removal decision. Do not add silent fallback, broad permissions or relaxed validation just to preserve a deprecated behavior. Security corrections may require immediately disabling an unsafe feature with a clear advisory; they are not a promise of indefinite compatibility.
+When an export, option, environment alias, capability schema or behavior is removed or renamed, the changelog and guide record why, what is affected, the replacement and how to upgrade. Where it is safe, a compatibility path stays for a while, with tests and a planned removal. Deprecated behavior is never kept alive through silent fallbacks, broader permissions or looser validation. A security fix may switch off an unsafe feature immediately, with a clear advisory.
 
-No universal fixed deprecation period is promised during alpha. Before stable, the owner must approve a precise public API, breaking-change/version rules, supported release lines, deprecation/removal windows, security response process and backport scope. Do not advertise those future commitments as established. [SemVer](https://semver.org/spec/v2.0.0.html) ties stable versioning to a declared public API; R1 must first define and test that actual scope.
+There is no fixed deprecation period yet. Before 1.0 the project will define the public API, versioning and breaking-change rules, supported release lines, deprecation windows, the security response process and backport scope. [SemVer](https://semver.org/spec/v2.0.0.html) ties stable versions to a declared public API, so that has to be settled first.
 
 ## Issues, vulnerabilities and releases
 
-Use [contribution guidance](../CONTRIBUTING.md) and the sanitized bug/beta feedback templates for exact versions, synthetic reproduction, actual postconditions and explicitly untested targets. Do not post raw transcripts, credentials, private URLs, user exports or unreviewed traces. Security vulnerabilities belong in [private reporting](../SECURITY.md), not public bugs.
+See [contributing](../CONTRIBUTING.md) and use the bug and beta feedback templates with exact versions, a synthetic reproduction, what actually happened on the page, and what you did not test. Do not post raw transcripts, credentials, private URLs, user exports or unreviewed traces. Report vulnerabilities [privately](../SECURITY.md), not as public bugs.
 
-Maintainers triage data exposure, authorization bypass, unsafe verified-success claims, cost/serialization defects and data loss as potential release blockers rather than averaging them into model scores. Unknown outcomes must not become automatic retries, budget resets or success claims. Contain incidents using [operations](operations.md); continued feature access is secondary to preserving the boundary.
+Data exposure, authorization bypass, false "verified" claims, cost or serialization bugs and data loss are treated as release blockers, not as noise in model scores. Unknown outcomes never turn into automatic retries, budget resets or success messages. During an incident, follow [operations](operations.md) and keep the boundary intact, even if that means turning features off.
 
-Beta delivery still requires independent onboarding, scoped support/security/redistribution reviews, exact-candidate CI and owner approval. RC/stable additionally require resolved pilot findings, explicit API freeze/upgrade/rollback evidence and maintenance decisions. Local preparation does not mark any of these gates complete. Publication, deployments, paid evaluations and registry submissions require their own authorization.
+A beta release still needs outside testers, support, security and licensing reviews, and CI on the final commit. A release candidate or stable version additionally needs tester feedback addressed, a frozen API, tested upgrades and rollbacks, and the maintenance decisions above.

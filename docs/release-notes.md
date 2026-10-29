@@ -1,31 +1,33 @@
-# PageSquire 0.1.0-beta.0 — development beta candidate
+# PageSquire 0.1.0-beta.0 — development beta
 
-This is an owner-approved GitHub-first beta source candidate, not a tagged/published beta release or stable 1.0. The owner-assisted Kabarin trial succeeded, but independent onboarding and final-candidate reviews remain pending; see [beta evidence and gates](beta.md). The owner-authorized development repository is [naufaldenta/pagesquire](https://github.com/naufaldenta/pagesquire). Private vulnerability reporting is enabled there. Source publication is distinct from a tagged release or registry publication.
+This is the first beta version of PageSquire. It works end to end and has a large automated test suite, but it has not yet been tried on many real sites, models or browsers. There is no tagged GitHub release yet, and nothing is published to npm, Packagist or WordPress.org. The source is at [naufaldenta/pagesquire](https://github.com/naufaldenta/pagesquire), where private vulnerability reporting is enabled. See the [beta guide](beta.md) for testing.
 
 ## Included
 
-C4 adds [truthful action progress](action-progress.md): runtime lifecycle hooks, a bounded in-memory client timeline, fixed recovery copy and shared-widget rendering. Cached work and pending navigation are not fresh verification; cancellation/timeouts do not promise rollback. Rebuild matching assets and update hand-authored ChatState/busy selectors. No protocol/storage/permission or provider-budget change is introduced.
+Registered, verified browser capabilities, a chat widget, six-state emotion hooks, PHP and Node conversation engines, Laravel, React, Inertia and Next.js integrations, hybrid onboarding and an installable WordPress plugin. The test fixtures use deterministic providers and synthetic content. Full details are in the [changelog](../CHANGELOG.md), [compatibility](compatibility.md) and [security](../SECURITY.md).
 
-C3 adds [public app context and contextual availability](app-context.md), with strict JS/PHP limits, per-round state, pre-handler checks and Laravel validated-input support. It is opt-in and requires coordinated browser/server rollout. It neither grants permission nor rejects authorized pending results after state changes. Structured context is not automatically stored in transcripts; model answers/custom logging retain their own privacy boundaries.
+[PageSquire Link](link.md) pairs two PageSquire sites so one assistant can hand a visitor to the other, with an optional A2A interface.
 
-C2 adds the optional [capability inspector](capability-inspector.md) for protected developer/admin surfaces: coverage, sampled target readiness, schema disclosures and metadata-only diagnostics. It runs no actions or inference; server permission and real verification remain separate. Closed native `details` controls now require explicit preparation. No live-model certification or beta promotion is implied.
+[Action progress](action-progress.md) shows each action's stages in the widget, with recovery hints. Cached results and pending navigation are shown as such, and a cancel or timeout does not undo work already done. Rebuild matching assets and update hand-written `ChatState` fixtures and busy selectors. The protocol, storage, permissions and provider budgets are unchanged.
 
-Registered and verified browser capabilities, a conversation widget, six-state emotion hooks, bounded PHP/Node engines, Laravel/React/Inertia/Next.js integrations, hybrid onboarding and an installation-ready WordPress plugin. The neutral fixtures use deterministic providers and synthetic content. Full details: [changelog](../CHANGELOG.md), [compatibility](compatibility.md) and [security](../SECURITY.md).
+[App context](app-context.md) lets hosts send typed public state each turn and hide actions that do not apply. It is opt-in, so deploy matching browser and server versions together. It does not grant permissions and is not stored in transcripts.
 
-Each complete candidate directory contains six npm tarballs, two PHP source ZIPs, a WordPress installation ZIP, the full editable source ZIP, a Composer path-repository example, these notes, `release-manifest.json` and `SHA256SUMS`. npm, Packagist and WordPress.org accounts are not needed for local files. Third-party dependencies still need normal installation; this is not a complete offline dependency mirror.
+The [capability inspector](capability-inspector.md) is an optional developer panel for checking coverage, targets and schemas. It never runs actions or model calls. Controls inside closed `details` elements now need explicit preparation.
 
-B4 adds budget-preserving host-only transcript erasure and a PostgreSQL cleanup concurrency correction. B5 adds beta-aware release checks, explicit review gates and [independent tester guidance](beta.md); this candidate itself remains alpha and no beta release is published. These changes are not automatically deployed by creating a local archive.
+Transcript erasure keeps quota counters intact, and a PostgreSQL cleanup race is fixed. The release tooling now supports beta versions and checks the beta review records.
 
-R1 adds a reviewed [API inventory/drift baseline](api-contract.md), CI/candidate enforcement and same-format synthetic Node checkpoint recovery checks, with [upgrade](upgrading.md) and [maintenance](maintenance.md) guidance. No API freeze, historical-release upgrade certification, RC/stable version or production restore is implied.
+An [API inventory and drift check](api-contract.md) runs in CI and before preparing a release, along with synthetic Node checkpoint recovery tests. See [upgrading](upgrading.md) and [maintenance](maintenance.md).
+
+Each release directory contains six npm tarballs, two PHP source ZIPs, a WordPress installation ZIP, the full source ZIP, a Composer path-repository example, these notes, `release-manifest.json` and `SHA256SUMS`. You do not need npm, Packagist or WordPress.org accounts to use these files. Third-party dependencies still install the normal way.
 
 ## Before using a download
 
-Verify every checksum with `npm run release:verify -- <candidate-directory>` from a trusted source checkout. Checksums detect corruption; they are not signatures or proof of publisher identity. Confirm the candidate/version with the owner through a trusted channel. The built WordPress ZIP is the installable plugin; neither GitHub's automatic source ZIP nor `pagesquire-source-*.zip` is a ready-to-upload plugin.
+Check every file with `npm run release:verify -- <candidate-directory>` from a trusted source checkout. Checksums catch corruption but are not signatures, so confirm the version with the maintainer through a channel you trust. Upload the built WordPress ZIP to install the plugin. GitHub's automatic source ZIP and `pagesquire-source-*.zip` are not installable plugins.
 
-Follow [GitHub-only installation](releasing.md#using-the-local-or-github-artifacts) and the framework-specific guides. The assistant requires explicitly reviewed capabilities and host authorization. Keep provider secrets server-only, disclose external data transfer and costs, and configure retention and quotas before enabling inference. WordPress stays disabled until setup and verification are complete.
+Follow the [installation steps](releasing.md#using-the-local-or-github-artifacts) and the guide for your framework. Review each capability and set up host authorization. Keep provider secrets on the server, tell visitors that chat goes to an external provider, and set retention and quotas before turning on the model. The WordPress assistant stays off until setup and verification are done.
 
-## Not yet certified
+## Known gaps
 
-Live-model accuracy, production hosting, broad browser/assistive-technology coverage, WordPress MySQL/cache/multi-worker/multisite deployments, Elementor and WooCommerce. No Rive renderer/artwork or hosted speech service is included; optional local-first browser speech is available. Remote CI/public security reporting and owner approval are release gates, not claims made by the local build.
+Not yet tested: live-model accuracy at scale, production hosting, browsers other than Chromium, assistive technology, WordPress on MySQL, with object caches, multiple workers or multisite, Elementor and WooCommerce. There is no Rive renderer or artwork and no hosted speech service; optional local browser speech is available.
 
-See the bundled source archive's `docs/releasing.md` for the complete process. Relative source-document links in these standalone notes are intended for that extracted checkout, not as promises about files beside the notes.
+The links in these notes point to files in the source archive. For the full release process, see `docs/releasing.md` in that archive.

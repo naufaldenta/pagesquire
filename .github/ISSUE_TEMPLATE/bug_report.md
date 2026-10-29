@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a reproducible problem using synthetic data
+about: Report a problem you can reproduce with synthetic data
 title: ''
 labels: ''
 assignees: ''
@@ -8,22 +8,22 @@ assignees: ''
 
 ## Summary
 
-Describe the problem. Do not post vulnerabilities or sensitive data; read SECURITY.md for the private reporting policy.
+What went wrong? For security problems, use private reporting instead (see SECURITY.md).
 
 ## Environment
 
-- PageSquire version/commit:
-- Integration and exact host/framework/PHP/Node/browser versions:
-- Installation method (source, local tarballs, or plugin ZIP):
+- PageSquire version or commit:
+- Integration and host, framework, PHP, Node and browser versions:
+- Installed from (source, local tarballs or plugin ZIP):
 
-## Minimal reproduction
+## Steps to reproduce
 
-Provide synthetic steps or a minimal public fixture. Exclude credentials, private URLs, transcripts, user data and raw website exports.
+Synthetic steps or a minimal public example. Leave out credentials, private URLs, transcripts, user data and website exports.
 
 ## Expected and actual behavior
 
-Include the action/capability ID and verification result when relevant, not just the assistant's success message.
+Include the capability ID and verification result if relevant, not just the assistant's reply.
 
-## Checks and scope
+## What you checked
 
-List commands/results, whether the issue reproduces in the documented fixture, and any targets you have not tested.
+Commands you ran and their results, whether it reproduces in the bundled fixtures, and anything you did not test.

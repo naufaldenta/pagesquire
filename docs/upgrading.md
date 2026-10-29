@@ -1,35 +1,37 @@
-# Upgrade and recovery guidance
+# Upgrading and recovery
 
-C4 adds [runtime/client action progress](action-progress.md) without changing protocol/storage envelopes. Rebuild matching core/client/widget assets. Manually authored `ChatState` fixtures now need `actionProgress: []`; widget busy checks use `data-busy`, with `aria-busy` limited to messages so live status can update. Custom UIs must opt into rendering progress. Navigation checkpoints still contain no timeline/history; no backfilled execution stages or implicit retry/rollback is introduced.
+There is no published release yet, so there are no tested upgrade paths between versions. The current version is `0.1.0-beta.0`. This page covers what to check before changing a host and how to recover safely. Nothing here changes databases, restores backups, revokes tokens or resets usage counters for you. Read [API boundaries](api-contract.md), [operations](operations.md) and the [beta guide](beta.md) first.
 
-C3 is an opt-in [public-context request extension](app-context.md), not automatic mixed-version migration. Rebuild/deploy matching protocol/core/client and Node/PHP/Laravel/WordPress artifacts before setting `RuntimeOptions.appContext`; leave it unset for older servers. Updated servers accept old requests. Never silently strip context/retry inference on a schema error. Context changes no stored format, principal permission, accounting or pending-result authorization. Availability is checked for fresh handlers, not retroactively for completed work.
+## Changes that need attention
 
-C2 adds opt-in [capability inspection](capability-inspector.md) in core/client without changing existing constructor requirements, wire/storage formats or authorization. Mount it only on a host-protected developer/admin surface. Browser visibility now correctly rejects content inside closed native `details` while allowing the first summary: handlers must explicitly prepare hidden controls rather than relying on their layout rectangles. Rebuild browser packages/assets together; no automatic plugin mount or permission expansion is introduced.
+**Action progress (C4).** [Action progress](action-progress.md) changes no protocol or storage format. Rebuild the core, client and widget assets together. Hand-written `ChatState` fixtures now need `actionProgress: []`. Widget busy checks use `data-busy`; `aria-busy` is now only on messages so live status can update. Custom UIs have to render progress themselves. Navigation checkpoints still hold no timeline or history.
 
-D1 adds optional [driving/read/control/tour/speech APIs](assistant-driving.md). Existing real runtime contexts provide `present`; typed hand-built contexts/mocks must add it. WordPress's three new content capabilities are opt-in and require fresh inspection, not automatic permission expansion. Rebuild browser assets and the corresponding PHP/WordPress catalog together. No protocol field or stored-state format changes are introduced; no live-model accuracy or version-pair migration is certified by these additions.
+**App context (C3).** [App context](app-context.md) is an opt-in request extension. Deploy matching protocol, core, client and Node/PHP/Laravel/WordPress builds before setting `RuntimeOptions.appContext`, and leave it unset for older servers. Updated servers still accept old requests. If you hit a schema error, fix the mismatch; do not strip the context and retry. App context changes no stored format, permission, accounting or pending-result handling. Availability is checked before new handlers run, not for work already done.
 
-This is R1 **local preparation**, not a certified version-to-version migration or production rollback procedure. No public beta/RC/stable release is recorded yet; the current version is `0.1.0-beta.0`. No command here automatically changes databases, restores backups, revokes tokens or resets usage counters. Review [API boundaries](api-contract.md), [operations](operations.md) and [beta gates](beta.md) first.
+**Capability inspector (C2).** The [capability inspector](capability-inspector.md) is opt-in and changes no constructors, wire or storage formats or authorization. Only mount it on a protected developer or admin page. Content inside a closed `details` element is now treated as hidden, apart from its summary, so handlers must open hidden controls explicitly. Rebuild browser packages together.
+
+**Assistant driving (D1).** The [driving, reading, control, tour and speech APIs](assistant-driving.md) are optional. Real runtime contexts already provide `present`; hand-built typed contexts and mocks must add it. The three new WordPress content capabilities are opt-in and need a fresh page inspection. Rebuild browser assets together with the PHP and WordPress catalog. No protocol fields or stored state changed.
 
 ## Before changing a host
 
-1. Obtain owner approval, identify the exact old/new commits and verify trusted artifact checksums/source inventories. Record the integration/runtime/browser/model versions actually in use and open blockers. Do not replace public bytes under an existing version/tag.
-2. Review the changelog, API-baseline diff, config/legacy aliases, capability IDs/schemas, host requirements and store lifecycle. A matching wire `0.1` does not promise interchangeable private engine state. Unknown/new schemas or required options must fail closed until explicitly supported.
-3. Use a disposable or authorized staging clone with synthetic data. Keep local environment files/CA/private keys and customer exports out of the repository, archive and issue tracker. Do not upload raw provider transcripts or browser traces without reviewing them.
-4. Arrange bounded owner-approved provider spend separately, or use deterministic providers. Source builds, API checks, synthetic tests and candidate preparation grant no paid-call allowance. No automatic billable retries or model/provider fallback.
-5. Establish host-specific backup, maintenance window, data-retention and writer control. A backup is not recovery evidence until its format and restoration are tested safely. Keep shared request/IP/provider budget accounting current and independent of any transcript restore.
+1. Identify the exact old and new commits and verify the artifact checksums. Note the integration, runtime, browser and model versions you run, and any open bugs. Never replace files under an existing version or tag.
+2. Read the changelog, the API baseline diff, configuration aliases, capability IDs and schemas, host requirements and the store lifecycle. Wire protocol `0.1` on both sides does not mean the engines' private state is interchangeable. Unknown schemas or new required options should fail closed until supported.
+3. Use a throwaway or staging copy with synthetic data. Keep environment files, certificates, private keys and customer exports out of the repository, archives and issues. Review provider transcripts and browser traces before sharing them.
+4. Set a provider spending limit for testing, or use the deterministic providers. PageSquire makes no automatic paid retries and never falls back to another model or provider.
+5. Set up backups, a maintenance window, retention and control over which processes write. A backup only counts once you have restored it successfully in a safe place. Keep request, IP and provider budget accounting separate from any transcript restore.
 
-## Integration-specific deployment review
+## Per-integration notes
 
-- **JavaScript/Node/React:** update matching PageSquire dependencies together from the verified artifact set; keep host locks and declared peers. Rebuild the host's browser and server bundles, and test SSR/import boundaries. Do not copy a single new package into a mixed old dependency graph or serve an old cached client against an unreviewed server contract.
-- **PHP/Laravel:** preserve host Composer entries and configuration; merge reviewed changes rather than overwriting config. Keep protocol validators and dependencies aligned. Rebuild the host's normal route/config assets through its own reviewed workflow. Native `principal/state/rate` and Laravel `principal/engine` cache entries are different; no cross-store automatic migration is supplied.
-- **WordPress:** back up the authorized site's configuration through its real administrative process, verify the installation ZIP and corresponding source, and stage the update before replacing plugin files. Re-inspect selected pages/mappings/themes and verify actual controls before enabling assistance. Do not delete all `pagesquire_*` options or assume an uninstall clears only transcripts; they include security/configuration/budget data. No multisite/MySQL/persistent-cache upgrade certification is claimed.
-- **OFFBEAT/PostgreSQL:** deployment and migrations require separate production authorization. The B4 cleanup correction needs no schema migration. Do not use the disposable test connector on a hosted/application database or restore old budget/session tables to bypass charged usage. Older binaries are not guaranteed compatible with future schemas or fences.
+- **JavaScript/Node/React:** update all PageSquire packages together from the same verified set, keeping your host's lockfile and peers. Rebuild browser and server bundles and test SSR and import boundaries. Do not mix a single new package into an old dependency set, and do not serve an old cached client against a new server.
+- **PHP/Laravel:** keep your Composer entries and configuration, and merge changes rather than overwriting config. Keep protocol validators and dependencies aligned. Rebuild route and config caches the way you normally do. Native PHP stores `principal/state/rate` and Laravel stores `principal/engine`; there is no automatic migration between them.
+- **WordPress:** back up the site configuration through its admin tools, verify the installation ZIP and its corresponding source, and try the update on staging before replacing plugin files. Re-inspect pages, mappings and themes and check the actual controls before turning the assistant back on. Do not delete all `pagesquire_*` options: they hold security settings, configuration and budgets, not just transcripts. Multisite, MySQL and persistent object caches are untested.
+- **OFFBEAT/PostgreSQL:** the B4 cleanup fix needs no schema migration. Never point the test database connector at a hosted or application database, and never restore old budget or session tables to undo charged usage. Older builds may not work with newer schemas or fences.
 
-## Staging acceptance
+## Testing on staging
 
-Run source checks and the documented integration tests for the candidate. In the actual host, verify independent chat turns, heading versus body actions, confirmation/ambiguity, unavailable capabilities, navigation, cancellation/timeout/recovery, authorization changes, private-content exclusion, quotas and real postconditions. Explicitly test deployment restarts and simultaneous writers using the host's genuine shared atomic store before claiming that topology. Browser success messages are not postcondition evidence.
+Run the source checks and the integration tests for the candidate. On the real host, check separate chat turns, heading versus body changes, confirmation and ambiguity, unavailable capabilities, navigation, cancellation, timeouts and recovery, permission changes, private-content exclusion, quotas and what actually changed on the page. Test restarts and simultaneous writers with your real shared store before relying on that setup. A success message in the browser does not prove the change happened.
 
-For a source checkout:
+From a source checkout:
 
 ```sh
 npm run build
@@ -40,24 +42,24 @@ npm run test:php
 npm run test:package
 ```
 
-These do not replace the full relevant browser/security/release suite or exact-candidate CI. See [releasing](releasing.md) for complete gates.
+These are a subset. Run the browser, security and release suites too, and check CI for the exact commit. See [releasing](releasing.md).
 
-## Current synthetic recovery evidence
+## What the recovery tests cover
 
-`tests/unit/upgrade-recovery.test.mjs` uses private temporary directories, a deterministic provider, the current Node native endpoint and actual serialized file-store bytes. It quiesces the old fixture before copying a single completed same-format checkpoint to a fresh directory and recreating the handler/engine/store. It covers:
+`tests/unit/upgrade-recovery.test.mjs` uses private temporary directories, a deterministic provider, the current Node endpoint and real file-store bytes. It stops the old instance, copies a completed checkpoint to a fresh directory and recreates the handler, engine and store. It checks:
 
-- Pending/cached call IDs, one result continuation and exact replay without duplicate inference.
+- Pending and cached call IDs, one result continuation and exact replay without a second model call.
 - Revoked capabilities and changed principals after reopening.
-- Persisted failed-provider attempts/request counts without an extra call after exhaustion.
-- Legacy-shaped server-owned assistant-history normalization without reset/replayed tools.
-- A transcript-erasure quota shell reopening without resurrecting erased messages or pending actions.
+- Failed provider attempts and request counts that persist, with no extra call after the limit.
+- Older-shaped assistant history being normalized without resetting or replaying tools.
+- An erased transcript staying erased after reopening, with quotas kept and no pending actions brought back.
 
-This is **same-build/same-format synthetic recovery**, not a historical-release pair, real browser action execution, power-loss/fsync durability proof, distributed failover, arbitrary corrupted-state support, PHP/WordPress store migration or hosted backup restoration. Existing protocol/conformance/browser tests provide separate evidence. No stale backup with newer usage is restored by these tests. The fixtures are not a general database/file-backup product.
+All of this is the same build and the same storage format. It does not cover upgrades between released versions, real browser actions, power loss, failover, corrupted state, PHP or WordPress stores, or restoring hosted backups.
 
-## Recovery or downgrade decision
+## Recovering or downgrading
 
-Disable the assistant route and stop/drain **all** writers before a controlled host restore. Identify unknown/in-flight actions; do not automatically replay or claim to undo them. Preserve charged request/provider budgets and audit metadata. Never break a live file/OS/database lock or replace state underneath a successor lease.
+Turn off the assistant route and stop **every** writer before restoring anything. Find actions whose outcome is unknown; do not replay them automatically or claim to undo them. Keep charged request and provider budgets and audit records. Never break a live file, OS or database lock, or replace state under a newer lease.
 
-Only return to a prior verified binary/config if its schema, current permissions, locks/fences and storage are demonstrably compatible. A stale checkpoint can resurrect erased data, replay state or reduce usage counts: restoring it verbatim is not a safe universal rollback. Follow host-reviewed privacy and accounting reconciliation; do not erase/reset counters to make recovery work. If safe compatibility is unknown, keep assistance disabled and seek operator review rather than guessing a migration.
+Only go back to an earlier build and configuration if its schema, current permissions, locks and storage are known to be compatible. An old checkpoint can bring back erased data, replay state or lower usage counts, so restoring one as-is is not a safe rollback. Reconcile privacy and accounting by hand, and do not reset counters to make recovery easier. If you are not sure it is compatible, keep the assistant off and get someone to review it.
 
-R1 completion still requires explicit old/new released-candidate upgrade/downgrade fixtures, retained-usage/privacy verification, real pilot feedback, frozen API/support decisions and owner-approved release/maintenance policy. RC/stable version formats remain disabled in tooling until that separate review. No restore/deployment is performed by reading this guide.
+Before a stable release, the project still needs upgrade and downgrade tests between real released versions, checks that usage and privacy survive them, feedback from outside testers, a frozen API and a maintenance policy. The release tooling refuses release-candidate and stable versions until then.

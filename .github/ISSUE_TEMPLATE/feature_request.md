@@ -1,23 +1,23 @@
 ---
 name: Feature or integration proposal
-about: Propose a capability, adapter or evidence-backed compatibility target
+about: Suggest a capability, adapter or new supported platform
 title: ''
 labels: ''
 assignees: ''
 ---
 
-## User need
+## What is missing
 
-What outcome is currently missing? Which users/website integrations are affected?
+What can't users or site owners do today? Which integrations are affected?
 
-## Proposed boundary
+## Proposal
 
-Describe the capability, permissions, risk level, expected side effects and observable postcondition. Identify any external service, cost, data transfer or new dependency.
+Describe the capability, who may use it, how risky it is, what it changes and how the change can be checked afterwards. Mention any external service, cost, data sent elsewhere or new dependency.
 
-## Compatibility and verification
+## How to test it
 
-Which exact versions/fixtures would prove this works? How should denial, ambiguity, stale pages, cancellation and failure be tested?
+Which versions or fixtures would show it works? How should denial, ambiguity, stale pages, cancellation and failure be tested?
 
 ## Alternatives
 
-Describe existing adapters/manual configuration and why they are insufficient. Do not include proprietary code or assets without permission.
+What existing adapters or manual configuration did you try, and why are they not enough? Do not include code or assets you do not have permission to share.

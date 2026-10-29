@@ -1,8 +1,10 @@
 # Contributing to PageSquire
 
-This is a multi-framework/WordPress alpha with F6 GitHub-first release preparation. Keep pull requests focused on a documented capability, verified behavior, or a concrete compatibility gap. Read the [code of conduct](CODE_OF_CONDUCT.md), [compatibility evidence](docs/compatibility.md) and [security policy](SECURITY.md) first.
+Thanks for helping. Keep pull requests focused: one capability, one behavior fix or one compatibility gap at a time. Please read the [code of conduct](CODE_OF_CONDUCT.md), the [compatibility notes](docs/compatibility.md) and the [security policy](SECURITY.md) first.
 
-## Local workflow
+## Getting set up
+
+You need Node.js 24 or later and PHP 8.3.
 
 ```sh
 npm ci
@@ -12,29 +14,32 @@ npm test
 npm run format:check
 ```
 
-Use Node.js 24 or later and PHP 8.3. `npm test` includes PHP engine/Laravel tests, browser conversations, type checks and offline package installation. Add meaningful tests for changed contracts or behavior. Browser changes need a real DOM/postcondition test rather than only a mocked successful tool response. PHP tests use PHPUnit classes and faked providers; never add a live-key requirement. Run Pint on changed PHP sources and Prettier on supported source/docs.
+`npm test` builds everything, then runs the API check, type checks, the Node and PHP tests (including Laravel), browser, extension and WordPress tests, an offline package install and the release checks. Format changed sources and docs with Prettier (`npm run format`) and changed PHP files with Pint (`vendor/bin/pint`).
 
-R1 adds `npm run api:check` after build in the test/CI workflow and during candidate preparation. Follow [API review](docs/api-contract.md), [upgrade/recovery](docs/upgrading.md) and [maintenance](docs/maintenance.md); do not blindly refresh the fingerprint baseline to hide drift. Current synthetic serialized-state tests are not a stable-format or production-rollback guarantee.
+## Writing tests
+
+- Add tests for any contract or behavior you change.
+- Browser changes need a real DOM test that checks what actually changed on the page, not only a mocked success response.
+- PHP tests use PHPUnit classes and fake providers. Never add a test that needs a live API key.
+- If you change the public API, `npm run api:check` will flag it. Update the baseline on purpose and explain why; see [API review](docs/api-contract.md), [upgrading](docs/upgrading.md) and [maintenance](docs/maintenance.md).
 
 ## Project conventions
 
-- Write canonical documentation, setup instructions, comments, and public technical messages in English.
-- Keep protocol changes versioned and consistent with their exported schemas.
+- Write docs, setup instructions, code comments and public technical messages in English. Runtime translations are welcome separately.
+- Keep protocol changes versioned and in line with the exported schemas.
 - Keep the core independent of frameworks and model providers.
-- Register execution and verification together. Prefer idempotent desired-state operations over blind toggles.
-- Do not add credentials, real user data, government documents, third-party branding, or assets without redistribution rights.
-- Do not claim framework or browser compatibility without a corresponding fixture and test.
-
-Runtime translations may be contributed separately from the canonical English guides. The development repository and public issue tracker are at [naufaldenta/pagesquire](https://github.com/naufaldenta/pagesquire). Use private vulnerability reporting for security issues, never the public bug template.
+- Register execution and verification together. Prefer idempotent "set to this state" operations over blind toggles.
+- Do not add credentials, real user data, government documents, third-party branding, or assets you do not have the right to redistribute.
+- Do not claim framework or browser support without a fixture and a test for it.
 
 ## Issues and pull requests
 
-Use the English bug/feature templates once the repository opens. Include the exact PageSquire/host versions, minimal synthetic reproduction, expected/actual behavior and relevant test output. Redact transcripts, URLs, credentials and website exports; do not report security exploits publicly.
+The repository and issue tracker are at [naufaldenta/pagesquire](https://github.com/naufaldenta/pagesquire). Use the bug, feature and beta feedback templates. Include exact PageSquire and host versions, a minimal reproduction with synthetic data, expected and actual behavior, and relevant test output. Remove transcripts, private URLs, credentials and website exports. Report security problems through [private vulnerability reporting](SECURITY.md), never in a public issue.
 
-Before a substantial change, describe the integration boundary and compatibility claim. Add a fixture and failing regression test, implement the smallest safe change, then run the affected tests plus type/format/release checks. The PR template requests actual commands/results and explicitly untested targets. Full CI targets Windows and Ubuntu; inspect the [exact commit's checks](https://github.com/naufaldenta/pagesquire/actions/workflows/ci.yml), not just the workflow configuration. Maintainer review is required before merging; contributors must not self-approve security boundaries.
+For a bigger change, describe the integration boundary and what compatibility you are claiming before you start. Then add a fixture and a failing test, make the smallest safe change, and run the affected tests plus type, format and release checks. The PR template asks for the commands you ran, their results and anything you did not test. CI runs on Windows and Ubuntu; check the [results for your commit](https://github.com/naufaldenta/pagesquire/actions/workflows/ci.yml). A maintainer reviews every PR before merge.
 
-Contributions must be your own or carry compatible redistribution rights. Shared packages are MIT; the combined WordPress plugin is GPL-3.0-or-later and preserves dependency notices/corresponding source. Do not change licenses or add dependencies without maintainer review. No CLA, funding commitment or response-time guarantee is established.
+Contributions must be your own work or come with compatible licensing. The packages are MIT-licensed. The WordPress plugin bundles them under GPL-3.0-or-later and keeps the dependency notices and corresponding source. Ask before changing licenses or adding dependencies.
 
-See [adapter authoring](docs/adapter-authoring.md) for capability contracts and [releasing](docs/releasing.md) for package/version/approval gates. Local artifact preparation is not permission to publish, register namespaces or deploy examples.
+See [adapter authoring](docs/adapter-authoring.md) for capability contracts and [releasing](docs/releasing.md) for versions and release steps.
 
-For independent onboarding trials, follow the [beta testing guide](docs/beta.md) and [sanitized feedback template](.github/ISSUE_TEMPLATE/beta_feedback.md). Distinguish independent owners from maintainer-assisted labs, and real postconditions from model text. The current alpha is not a published beta; feedback does not grant publication approval or a paid-call allowance.
+To try PageSquire on your own site as a beta tester, follow the [beta guide](docs/beta.md) and report back with the [beta feedback template](.github/ISSUE_TEMPLATE/beta_feedback.md). Say whether you set it up yourself or with help, and report what actually changed on the page rather than what the assistant said.

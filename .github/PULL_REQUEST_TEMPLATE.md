@@ -1,20 +1,19 @@
-## Change and reason
+## What and why
 
-Describe the user-visible outcome, affected packages and relevant issue (if one exists).
+What changes for users, which packages are affected, and the related issue if there is one.
 
-## Verification
+## Testing
 
-- Commands and actual results:
-- Exact framework/runtime/browser versions exercised:
-- Targets not tested:
+- Commands run and results:
+- Framework, runtime and browser versions used:
+- Not tested:
 
-## Review checklist
+## Checklist
 
-- [ ] Regression tests cover success, denial/failure and relevant stale/ambiguous/cancellation cases.
-- [ ] Actions are explicitly registered and have real postcondition verification; UI text alone does not establish success.
-- [ ] Server authorization/CSRF/origin/budget controls remain enforced; secrets and user data are absent.
-- [ ] Canonical docs/comments/generated guidance are English and compatibility claims have fixture evidence.
-- [ ] Version/schema changes and migration implications are documented where applicable.
-- [ ] Dependency/asset rights and MIT/GPL/third-party notices/corresponding sources are preserved.
-- [ ] Affected tests, formatting and `npm run release:check` passed; unrun checks are stated honestly.
-- [ ] No registry publication, production deployment or dangerous action is included without explicit owner review.
+- [ ] Tests cover success, denial or failure, and stale, ambiguous or cancelled cases where relevant.
+- [ ] New actions are registered and verified by checking the page, not by UI text.
+- [ ] Server authorization, CSRF, origin and budget checks still apply; no secrets or user data are included.
+- [ ] Docs and comments are in English, and new compatibility claims have a fixture.
+- [ ] Version, schema and migration changes are documented.
+- [ ] Licenses, third-party notices and corresponding sources are kept intact.
+- [ ] Affected tests, formatting and `npm run release:check` pass, or the PR says which were not run.
