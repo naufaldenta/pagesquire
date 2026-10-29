@@ -6,11 +6,21 @@
   "repositories": [
     {
       "type": "path",
-      "url": "packages/php"
+      "url": "packages/php",
+      "options": {
+        "versions": {
+          "pagesquire/server": "0.1.0-beta.0"
+        }
+      }
     },
     {
       "type": "path",
-      "url": "packages/laravel"
+      "url": "packages/laravel",
+      "options": {
+        "versions": {
+          "pagesquire/laravel": "0.1.0-beta.0"
+        }
+      }
     }
   ],
   "require": {

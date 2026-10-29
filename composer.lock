@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "4c3bceabb1627cc5f5699665c4c80778",
+    "content-hash": "3b71176d560550c3afdc28d96810e4cb",
     "packages": [
         {
             "name": "brick/math",
@@ -2617,17 +2617,17 @@
         },
         {
             "name": "pagesquire/laravel",
-            "version": "dev-main",
+            "version": "0.1.0-beta.0",
             "dist": {
                 "type": "path",
                 "url": "packages/laravel",
-                "reference": "c8cbdf956670e34fbbb0f82066a3f7a6b1dd0985"
+                "reference": "8f581361bd921fd65b080c2fa14b9556f04e1d95"
             },
             "require": {
                 "illuminate/http": "^13.0",
                 "illuminate/routing": "^13.0",
                 "illuminate/support": "^13.0",
-                "pagesquire/server": "@dev",
+                "pagesquire/server": "0.1.0-beta.0",
                 "php": "^8.3"
             },
             "type": "library",
@@ -2653,15 +2653,19 @@
         },
         {
             "name": "pagesquire/server",
-            "version": "dev-main",
+            "version": "0.1.0-beta.0",
             "dist": {
                 "type": "path",
                 "url": "packages/php",
-                "reference": "c42929fd78b95a5da05711e292b3eb522539fef3"
+                "reference": "425b0c90ddea48638901947985e30c74fb586271"
             },
             "require": {
                 "opis/json-schema": "^2.6",
                 "php": "^8.3"
+            },
+            "suggest": {
+                "ext-curl": "Required by the native HTTPS provider transport.",
+                "ext-sodium": "Required to sign action calls for the companion extension."
             },
             "type": "library",
             "autoload": {

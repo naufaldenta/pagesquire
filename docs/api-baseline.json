@@ -43,7 +43,7 @@
     "packages/core/dist/types.d.ts": "761c6103a0ed3691d82a826b84ca420f2bf29443595475181407cf36611d7ea6",
     "packages/core/dist/webmcp.d.ts": "4efbab17e7e680d51034fd0b60c42e4afd39c1f8a7f1ebc9e27b97afa186178b",
     "packages/core/package.json": "3a6a848ed093f825e658b0531b2c37221ec9111360a0c4975638f6f2135d0d9e",
-    "packages/laravel/composer.json": "643fb701cb9223dca6a56e1e546661162c641df6e20d9536c0dd2ea4f56b5202",
+    "packages/laravel/composer.json": "491719b26da102bf6f81b42914a7ba06e9a51169844418b1086603c52ba731aa",
     "packages/laravel/src/CacheTrajectoryCache.php": "9160ce84146d8e039fb9021ed6d8f119b4e18f5953759844774b5da951701e4c",
     "packages/laravel/src/CapabilityCatalog.php": "4d8ce81f3899695ddbb1fd48c0529863a772888f7cb9ec7ed681d39898964b31",
     "packages/laravel/src/Console/LinkAcceptCommand.php": "177e13bcdbbf744a4d721238f61a6828add998a999406808b898aaaab5bc6ef4",

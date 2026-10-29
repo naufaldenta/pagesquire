@@ -5,7 +5,7 @@
   "license": "MIT",
   "require": {
     "php": "^8.3",
-    "pagesquire/server": "@dev",
+    "pagesquire/server": "0.1.0-beta.0",
     "illuminate/support": "^13.0",
     "illuminate/http": "^13.0",
     "illuminate/routing": "^13.0"
