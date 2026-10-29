@@ -1,0 +1,35 @@
+name: Split PHP packages
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  split:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        package:
+          - { directory: php, repository: pagesquire-php }
+          - { directory: laravel, repository: pagesquire-laravel }
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      # The PHP package reads its JSON Schemas from resources/schemas, which is generated.
+      - run: npx tsc -b packages/protocol && node scripts/build-protocol.mjs
+      - uses: danharrin/monorepo-split-github-action@v2.4.5
+        env:
+          GITHUB_TOKEN: ${{ secrets.SPLIT_TOKEN }}
+        with:
+          package_directory: packages/${{ matrix.package.directory }}
+          repository_organization: naufaldenta
+          repository_name: ${{ matrix.package.repository }}
+          branch: main
+          tag: ${{ github.ref_name }}
+          user_name: naufaldenta
+          user_email: naufaldenta.e.n@gmail.com
