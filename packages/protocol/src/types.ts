@@ -181,8 +181,11 @@ export interface ChatRequest {
   appContext?: AppContextSnapshot;
   /** PageSquire Link: a handoff code from the URL fragment; starts the conversation from the partner's ticket. */
   linkCode?: string;
-  /** PageSquire Link: the visitor approved the pending link.handoff call. */
-  handoff?: { callId: string };
+  /**
+   * PageSquire Link: the visitor approved the pending link.handoff call.
+   * `skill` names the partner they chose among its alternatives.
+   */
+  handoff?: { callId: string; skill?: string };
 }
 
 export interface ChatReply {

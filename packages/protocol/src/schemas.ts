@@ -360,7 +360,10 @@ export const chatRequestSchema = {
     handoff: {
       type: 'object',
       required: ['callId'],
-      properties: { callId: identifier },
+      properties: {
+        callId: identifier,
+        skill: { type: 'string', minLength: 3, maxLength: 200 },
+      },
       additionalProperties: false,
     },
   },
