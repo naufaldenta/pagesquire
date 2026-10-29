@@ -6,3 +6,4 @@ export * from './store.js';
 export * from './privacy.js';
 export * from './signing.js';
 export * from './link.js';
+export * from './a2a.js';

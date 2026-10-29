@@ -74,7 +74,7 @@ async function sites() {
   const { id } = await hotel.acceptInvitation(
     (await resto.createInvitation()).code,
   );
-  return { hotel, resto, id, sent };
+  return { hotel, resto, id, sent, add };
 }
 
 /** A provider that answers from a script and records what it was sent. */
@@ -150,6 +150,22 @@ test('the protocol keeps message, result, arrival and consent requests apart', (
   );
   assert.equal(
     validateChatRequest({ ...base, handoff: { callId: 'call' } }).valid,
+    false,
+  );
+  assert.equal(
+    validateChatRequest({
+      ...base,
+      conversationId: 'c',
+      handoff: { callId: 'call', skill: 'resto.test/book_table' },
+    }).valid,
+    true,
+  );
+  assert.equal(
+    validateChatRequest({
+      ...base,
+      conversationId: 'c',
+      handoff: { callId: 'call', skill: 'x', extra: true },
+    }).valid,
     false,
   );
   assert.equal(
@@ -395,12 +411,281 @@ test('handoff proposals outside the offers or carrying unrequested data are refu
   );
 });
 
-test('PHP and core define link.handoff identically', async () => {
+test('PHP and core define link.handoff and link.return identically', async () => {
   const { execFile } = await import('node:child_process');
   const { promisify } = await import('node:util');
   const { stdout } = await promisify(execFile)('php', [
     '-r',
-    "require 'vendor/autoload.php'; echo json_encode(PageSquire\\Server\\Link\\Link::handoffCapability());",
+    "require 'vendor/autoload.php'; use PageSquire\\Server\\Link\\Link; echo json_encode([Link::handoffCapability(), Link::returnCapability()]);",
   ]);
-  assert.deepEqual(JSON.parse(stdout), createLinkCapabilities()[0]);
+  assert.deepEqual(JSON.parse(stdout), createLinkCapabilities());
+});
+
+test('a visitor sent here is sent back once, with the outcome, to the page they left', async () => {
+  const { hotel, resto, id, sent } = await sites();
+  await hotel.approve(id, {
+    offer: { book_table: ['date', 'people'] },
+    accept: [],
+  });
+  await resto.approve(id, { offer: {}, accept: ['book_table'] });
+  const all = ['link.handoff', 'link.return'];
+  const askAll = (message, extra) => ({
+    ...ask(message, extra),
+    capabilityIds: all,
+  });
+  const fullManifest = {
+    schemaVersion: '0.1',
+    capabilities: createLinkCapabilities(),
+  };
+  const hotelEngine = new ConversationEngine({
+    provider: scripted(
+      handoff({ skill: 'resto.test/book_table', goal: 'A table for four' }),
+    ),
+    manifest: fullManifest,
+    links: hotel,
+  });
+  const first = await hotelEngine.handle(
+    askAll('Book a table for 4'),
+    null,
+    all,
+  );
+  const [call] = first.reply.response.toolCalls;
+  const approved = await hotelEngine.handle(
+    askAll(undefined, {
+      conversationId: first.state.id,
+      handoff: { callId: call.callId },
+      snapshot: { ...snapshot, url: 'http://hotel.test/rooms' },
+    }),
+    first.state,
+    all,
+  );
+  const code = approved.reply.response.handoff.url.split('#psq-link=')[1];
+
+  const outcome = 'Table for 4 booked for 29 October, 19:00.';
+  const restoProvider = scripted(
+    {
+      text: 'Booked. Taking you back.',
+      emotion: 'happy',
+      finished: false,
+      toolCalls: [{ capabilityId: 'link.return', parameters: { outcome } }],
+    },
+    said('Enjoy your stay.'),
+  );
+  const restoEngine = new ConversationEngine({
+    provider: restoProvider,
+    manifest: fullManifest,
+    links: resto,
+  });
+  const arrived = await restoEngine.handle(
+    askAll(undefined, { linkCode: code }),
+    null,
+    all,
+  );
+  assert.deepEqual(restoProvider.calls[0].capabilities, ['link.return']);
+  assert.match(
+    restoProvider.calls[0].messages[0].content,
+    /link\.return sends/,
+  );
+  const [back] = arrived.reply.response.toolCalls;
+  assert.deepEqual(back.parameters, {
+    outcome,
+    partner: { origin: 'http://hotel.test', name: 'Hotel Nusa' },
+  });
+  const consent = await restoEngine.handle(
+    askAll(undefined, {
+      conversationId: arrived.state.id,
+      handoff: { callId: back.callId },
+    }),
+    arrived.state,
+    all,
+  );
+  const url = consent.reply.response.handoff.url;
+  assert.match(url, /^http:\/\/hotel\.test\/rooms#psq-link=[\w-]{22}$/);
+  assert.deepEqual(
+    sent.filter((type) => type === 'return'),
+    ['return'],
+  );
+
+  // Back on the hotel: a fresh conversation from the outcome; no further return.
+  const hotelBack = scripted(said('Welcome back! Your table is booked.'));
+  await new ConversationEngine({
+    provider: hotelBack,
+    manifest: fullManifest,
+    links: hotel,
+  }).handle(
+    askAll(undefined, { linkCode: url.split('#psq-link=')[1] }),
+    null,
+    all,
+  );
+  assert.equal(
+    hotelBack.calls[0].messages.at(-2).content,
+    `Back from Restoran Laut (resto.test): ${outcome}`,
+  );
+  assert.equal(hotelBack.calls[0].capabilities.includes('link.return'), false);
+  const { lastAt, ...stats } = (await hotel.get(id)).stats;
+  assert.equal(typeof lastAt, 'number');
+  assert.deepEqual(stats, {
+    sent: 1,
+    received: 1,
+    skills: { book_table: { sent: 1, received: 0 } },
+  });
+
+  // After the return, link.return is no longer offered here.
+  const done = await restoEngine.handle(
+    askAll(undefined, {
+      conversationId: arrived.state.id,
+      result: {
+        protocolVersion: '0.1',
+        callId: back.callId,
+        capabilityId: 'link.return',
+        status: 'success',
+        code: 'VERIFIED',
+        message: 'Opened Hotel Nusa.',
+        evidence: {},
+      },
+    }),
+    consent.state,
+    all,
+  );
+  assert.equal(done.reply.response.text, 'Enjoy your stay.');
+  assert.deepEqual(restoProvider.calls[1].capabilities, []);
+});
+
+// Phase 6D: several partners per skill.
+
+test('when two partners offer the same skill, the visitor chooses where to continue', async () => {
+  const { hotel, resto, id, sent, add } = await sites();
+  const warung = add('http://warung.test', 'Warung Sari', [
+    {
+      ...bookTable,
+      fields: { people: { type: 'integer', minimum: 1, maximum: 8 } },
+      startPath: '/booking',
+    },
+  ]);
+  const { id: second } = await hotel.acceptInvitation(
+    (await warung.createInvitation()).code,
+  );
+  await hotel.approve(id, {
+    offer: { book_table: ['date', 'people'] },
+    accept: [],
+  });
+  await resto.approve(id, { offer: {}, accept: ['book_table'] });
+  await hotel.approve(second, {
+    offer: { book_table: ['people'] },
+    accept: [],
+  });
+  await warung.approve(second, { offer: {}, accept: ['book_table'] });
+
+  const provider = scripted(
+    handoff({
+      skill: 'resto.test/book_table',
+      goal: 'A table for four',
+      fields: { date: '2026-10-29', people: 4 },
+    }),
+  );
+  const engine = new ConversationEngine({ provider, manifest, links: hotel });
+  const first = await engine.handle(
+    ask('Book a table for 4 on 2026-10-29'),
+    null,
+    ids,
+  );
+  assert.equal(lastData(provider.calls[0]).partnerSkills.length, 2);
+  assert.match(
+    provider.calls[0].messages[0].content,
+    /the visitor chooses between them/,
+  );
+  // Each partner carries only what its own scope and schema allow.
+  const [call] = first.reply.response.toolCalls;
+  assert.deepEqual(call.parameters, {
+    skill: 'resto.test/book_table',
+    goal: 'A table for four',
+    fields: { date: '2026-10-29', people: 4 },
+    partner: { origin: 'http://resto.test', name: 'Restoran Laut' },
+    alternatives: [
+      {
+        skill: 'warung.test/book_table',
+        partner: { origin: 'http://warung.test', name: 'Warung Sari' },
+        fields: { people: 4 },
+      },
+    ],
+  });
+
+  // Only a partner the visitor was shown can be chosen.
+  await assert.rejects(
+    engine.handle(
+      ask(undefined, {
+        conversationId: first.state.id,
+        handoff: { callId: call.callId, skill: 'evil.test/book_table' },
+      }),
+      structuredClone(first.state),
+      ids,
+    ),
+    { code: 'RESULT_MISMATCH', status: 409 },
+  );
+  const approved = await engine.handle(
+    ask(undefined, {
+      conversationId: first.state.id,
+      handoff: { callId: call.callId, skill: 'warung.test/book_table' },
+    }),
+    first.state,
+    ids,
+  );
+  const url = approved.reply.response.handoff.url;
+  assert.match(url, /^http:\/\/warung\.test\/booking#psq-link=[\w-]{22}$/);
+  assert.deepEqual(
+    sent.filter((type) => type === 'handoff'),
+    ['handoff'],
+  );
+  const ticket = await warung.redeem(url.split('#psq-link=')[1]);
+  assert.deepEqual(ticket.fields, { people: 4 });
+  assert.equal((await hotel.get(id)).stats, undefined);
+  assert.deepEqual((await hotel.get(second)).stats.skills, {
+    book_table: { sent: 1, received: 0 },
+  });
+
+  // The owner's overview groups both partners under the one skill.
+  assert.deepEqual(await hotel.overview(), {
+    links: { active: 2, pending: 0, revoked: 0 },
+    totals: { sent: 1, received: 0 },
+    offered: [
+      {
+        skill: 'book_table',
+        name: 'Book a table',
+        partners: [
+          { link: id, origin: 'http://resto.test', name: 'Restoran Laut' },
+          { link: second, origin: 'http://warung.test', name: 'Warung Sari' },
+        ],
+      },
+    ],
+    accepted: [],
+  });
+  assert.deepEqual(await warung.overview(), {
+    links: { active: 1, pending: 0, revoked: 0 },
+    totals: { sent: 0, received: 1 },
+    offered: [],
+    accepted: [
+      {
+        skill: 'book_table',
+        name: 'Book a table',
+        partners: [
+          { link: second, origin: 'http://hotel.test', name: 'Hotel Nusa' },
+        ],
+      },
+    ],
+  });
+
+  // Once one partner's link is revoked, the other is offered alone.
+  await hotel.revoke(second);
+  const alone = scripted(
+    handoff({ skill: 'resto.test/book_table', goal: 'A table for four' }),
+  );
+  const later = await new ConversationEngine({
+    provider: alone,
+    manifest,
+    links: hotel,
+  }).handle(ask('Book a table for 4'), null, ids);
+  assert.equal(
+    later.reply.response.toolCalls[0].parameters.alternatives,
+    undefined,
+  );
 });

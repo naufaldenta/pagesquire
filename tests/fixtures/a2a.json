@@ -1,0 +1,135 @@
+{
+  "comment": "Synthetic A2A Agent Card vector shared by the Node and PHP tests: RFC 8785 canonical JSON and the EdDSA JWS over a card, with the key from signing.json. Never use this key.",
+  "canonical": [
+    {
+      "input": {
+        "b": [1, true, null, "x"],
+        "a": {
+          "é": "\u0001\n\"/",
+          "A": -2,
+          "B": 0.5
+        },
+        "": {}
+      },
+      "output": "{\"\":{},\"a\":{\"A\":-2,\"B\":0.5,\"é\":\"\\u0001\\n\\\"/\"},\"b\":[1,true,null,\"x\"]}"
+    },
+    {
+      "input": {
+        "z": [],
+        "y": " ",
+        "x": "emoji 😀",
+        "w": 10
+      },
+      "output": "{\"w\":10,\"x\":\"emoji 😀\",\"y\":\" \",\"z\":[]}"
+    }
+  ],
+  "origin": "https://resto.test",
+  "name": "Restoran Laut",
+  "skills": [
+    {
+      "id": "book_table",
+      "name": "Book a table",
+      "description": "Reserve a table for a date and party size.",
+      "tags": ["restaurant"],
+      "examples": ["A table for 4 tonight"],
+      "fields": {
+        "date": {
+          "type": "string",
+          "format": "date"
+        },
+        "people": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        }
+      },
+      "startPath": "/reservations"
+    },
+    {
+      "id": "order_catering",
+      "name": "Order catering",
+      "description": "Ask for a catering quote.",
+      "tags": ["catering"],
+      "fields": {},
+      "startPath": "/catering"
+    }
+  ],
+  "a2a": {
+    "endpoint": "/pagesquire/a2a",
+    "skills": ["book_table", "order_catering"]
+  },
+  "jwk": {
+    "kty": "OKP",
+    "crv": "Ed25519",
+    "x": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+    "kid": "1IG2tMH7J2wbJZnOf8LJzQitKf7LMvoAElsuDMVM54Y",
+    "use": "sig",
+    "alg": "EdDSA"
+  },
+  "card": {
+    "name": "Restoran Laut",
+    "description": "Continue a request on Restoran Laut with its PageSquire assistant. Each answer is a single-use link where the person confirms on the site.",
+    "supportedInterfaces": [
+      {
+        "url": "https://resto.test/pagesquire/a2a",
+        "protocolBinding": "JSONRPC",
+        "protocolVersion": "1.0"
+      }
+    ],
+    "version": "1.0.0",
+    "capabilities": {
+      "streaming": false,
+      "pushNotifications": false,
+      "extensions": [
+        {
+          "uri": "https://github.com/naufaldenta/pagesquire/blob/main/docs/link.md#a2a-interface-phase-6e",
+          "description": "PageSquire handoff: send a data part { skill, goal, fields } with the fields listed here. The answer is a single-use link where the person continues on this site.",
+          "required": false,
+          "params": {
+            "skills": {
+              "book_table": {
+                "fields": {
+                  "date": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "people": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20
+                  }
+                }
+              },
+              "order_catering": {
+                "fields": {}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "defaultInputModes": ["text/plain", "application/json"],
+    "defaultOutputModes": ["text/plain", "application/json"],
+    "skills": [
+      {
+        "id": "book_table",
+        "name": "Book a table",
+        "description": "Reserve a table for a date and party size.",
+        "tags": ["restaurant"],
+        "examples": ["A table for 4 tonight"]
+      },
+      {
+        "id": "order_catering",
+        "name": "Order catering",
+        "description": "Ask for a catering quote.",
+        "tags": ["catering"]
+      }
+    ],
+    "signatures": [
+      {
+        "protected": "eyJhbGciOiJFZERTQSIsImprdSI6Imh0dHBzOi8vcmVzdG8udGVzdC8ud2VsbC1rbm93bi9wYWdlc3F1aXJlLWtleXMuanNvbiIsImtpZCI6IjFJRzJ0TUg3SjJ3Ykpabk9mOExKelFpdEtmN0xNdm9BRWxzdURNVk01NFkiLCJ0eXAiOiJKT1NFIn0",
+        "signature": "wzcNw7udtg1tng2mdmt-cLYde6Tsoa3G0usIo9YGjX_zRnKYpzaIVBCmiErp3jfrBeyLQYq330trzXifEdYeCw"
+      }
+    ]
+  }
+}

@@ -5,6 +5,17 @@ import {
   timingSafeEqual,
 } from 'node:crypto';
 import { readFile, rename, writeFile } from 'node:fs/promises';
+import {
+  A2A_EXTENSION,
+  A2A_KEYS_PATH,
+  A2A_PROTOCOL_VERSION,
+  A2A_TICKET_SECONDS,
+  signAgentCard,
+  siteJwk,
+  type AgentCard,
+  type AgentRequest,
+  type SiteJwk,
+} from './a2a.js';
 import { AssistantError, fail } from './engine.js';
 import {
   signWithSiteKey,
@@ -33,6 +44,9 @@ const CONTROL = /[\u0000-\u001f\u007f]/;
 const LOCALE = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{1,8}){0,3}$/;
 /** How long a handoff code stays redeemable. */
 export const LINK_TICKET_SECONDS = 120;
+/** How long the partner may send a visitor back after a handoff. */
+const RETURN_HOURS = 24;
+const RETURN_ID = /^ret_[A-Za-z0-9_-]{22}$/;
 
 export type LinkFieldSchema =
   | {
@@ -91,6 +105,79 @@ export interface LinkRecord {
   createdAt: number;
   updatedAt: number;
   revokedBy?: 'us' | 'partner';
+  /** Local counts for the owner. */
+  stats?: LinkStats;
+}
+
+/** What one link carried, counted on this site only. */
+export interface LinkStats {
+  /** Handoffs and returns sent to the partner. */
+  sent: number;
+  /** Handoffs and returns received from the partner. */
+  received: number;
+  /** Handoffs per skill: the partner's skill when sent, this site's when received. */
+  skills?: Record<string, { sent: number; received: number }>;
+  /** When the last handoff or return went either way. */
+  lastAt?: number;
+}
+
+/** A partner skill the assistant may offer now: active link, offered here and accepted there. */
+export interface LinkOffer {
+  /** `host/skill`, the value the model names. */
+  ref: string;
+  link: string;
+  partner: { origin: string; name: string };
+  skill: LinkSkill;
+  /** Fields this site's scope lets the handoff carry. */
+  fields: string[];
+}
+
+/** Owner dashboard data: who offers what, and what was carried. */
+export interface LinkOverview {
+  links: { active: number; pending: number; revoked: number };
+  totals: { sent: number; received: number };
+  /**
+   * Partner skills the assistant may offer now, grouped by skill ID. When
+   * several partners share an ID, the visitor chooses between them.
+   */
+  offered: {
+    skill: string;
+    name: string;
+    partners: { link: string; origin: string; name: string }[];
+  }[];
+  /** This site's skills and the active partners that may hand visitors into each. */
+  accepted: {
+    skill: string;
+    name: string;
+    partners: { link: string; origin: string; name: string }[];
+  }[];
+  /** With the A2A interface on: the open skills and the requests agents sent. */
+  agents?: { skills: string[]; received: number; lastAt?: number };
+}
+
+/**
+ * The partner skills an assistant may offer: active links, offered by this
+ * site's scope and accepted by the partner, in link order.
+ */
+export function linkOffers(records: readonly LinkRecord[]): LinkOffer[] {
+  const offers = new Map<string, LinkOffer>();
+  for (const link of records) {
+    if (link.status !== 'active') continue;
+    const host = new URL(link.partner.origin).host;
+    for (const skill of link.partner.skills) {
+      const fields = link.ours.offer[skill.id];
+      const ref = `${host}/${skill.id}`;
+      if (fields && link.theirs.accept.includes(skill.id) && !offers.has(ref))
+        offers.set(ref, {
+          ref,
+          link: link.id,
+          partner: { origin: link.partner.origin, name: link.partner.name },
+          skill,
+          fields,
+        });
+    }
+  }
+  return [...offers.values()];
 }
 
 export interface LinkInvitation {
@@ -107,16 +194,39 @@ export interface LinkHandoff {
   goal: string;
   fields?: Record<string, string | number | boolean>;
   locale?: string;
+  /**
+   * The page on this site where the partner may send the visitor back
+   * (Phase 6C), as an absolute URL; other origins are ignored.
+   */
+  returnUrl?: string;
 }
 
-/** A handoff the partner sent, waiting for the visitor to arrive with its code. */
+/** What the assistant sends back to the site the visitor came from (Phase 6C). */
+export interface LinkReturn {
+  /** The return reference from the arrival ticket. */
+  returnId: string;
+  /** What was done here, in a sentence of at most 300 characters. */
+  outcome: string;
+  locale?: string;
+}
+
+/**
+ * A handoff or return the partner sent, or a request an A2A agent sent
+ * (Phase 6E), waiting for the visitor to arrive with its code. A return's
+ * `goal` is the outcome the partner reported.
+ */
 export interface LinkTicket {
+  kind: 'handoff' | 'return' | 'agent';
+  /** The link ID; `a2a` for an agent's request. */
   link: string;
-  partner: { origin: string; name: string };
+  /** The partner site; absent on an agent's request. */
+  partner?: { origin: string; name: string };
   skill: string;
   goal: string;
   fields: Record<string, string | number | boolean>;
   locale?: string;
+  /** On a handoff the partner may answer: the reference to send back with. */
+  returnId?: string;
   expiresAt: number;
 }
 
@@ -127,6 +237,13 @@ export interface LinkData {
   nonces: Record<string, number>;
   /** Open handoffs, keyed by the base64url SHA-256 of their code. */
   tickets: Record<string, LinkTicket>;
+  /** Handoffs this site sent that the partner may still answer with a return. */
+  returns: Record<
+    string,
+    { link: string; skill: string; path: string; expiresAt: number }
+  >;
+  /** Requests A2A agents sent into open skills (Phase 6E), counted locally. */
+  agents?: { received: number; lastAt?: number };
 }
 
 /** Durable storage for one site's links. Operations run one at a time. */
@@ -139,6 +256,7 @@ const emptyData = (): LinkData => ({
   invitations: {},
   nonces: {},
   tickets: {},
+  returns: {},
 });
 
 /** Process memory only: for tests and single-process demos. */
@@ -271,6 +389,46 @@ function field(value: unknown): LinkFieldSchema | undefined {
   return undefined;
 }
 
+/** A checked return body: the reference, a one-line outcome and an optional locale. */
+function checkReturn(value: unknown): {
+  return: string;
+  outcome: string;
+  locale?: string;
+} {
+  if (
+    !isRecord(value) ||
+    Object.keys(value).some(
+      (key) =>
+        !['return', 'outcome', 'locale'].includes(key) &&
+        value[key] !== undefined,
+    ) ||
+    typeof value.return !== 'string' ||
+    !RETURN_ID.test(value.return)
+  )
+    fail('RETURN_INVALID', 'The return is malformed.', 400);
+  if (
+    typeof value.outcome !== 'string' ||
+    value.outcome.trim() === '' ||
+    [...value.outcome].length > 300 ||
+    CONTROL.test(value.outcome)
+  )
+    fail(
+      'RETURN_INVALID',
+      'A return needs an outcome of at most 300 characters.',
+      400,
+    );
+  if (
+    value.locale !== undefined &&
+    (typeof value.locale !== 'string' || !LOCALE.test(value.locale))
+  )
+    fail('RETURN_INVALID', 'The return locale is invalid.', 400);
+  return {
+    return: value.return,
+    outcome: value.outcome,
+    ...(value.locale !== undefined ? { locale: value.locale as string } : {}),
+  };
+}
+
 /** Whether a value fits a skill field's schema. PHP applies the same rules. */
 export function linkValueAllowed(
   schema: LinkFieldSchema,
@@ -390,7 +548,14 @@ export function readLinkDeclaration(
 }
 
 export type LinkMessageType =
-  'accept' | 'accepted' | 'approve' | 'revoke' | 'ack' | 'handoff' | 'ticket';
+  | 'accept'
+  | 'accepted'
+  | 'approve'
+  | 'revoke'
+  | 'ack'
+  | 'handoff'
+  | 'ticket'
+  | 'return';
 
 export interface LinkEnvelope {
   /** JSON text of LinkClaims, signed as written. */
@@ -419,6 +584,7 @@ const TYPES: readonly LinkMessageType[] = [
   'ack',
   'handoff',
   'ticket',
+  'return',
 ];
 
 /** Signs one link message with the site key. */
@@ -573,6 +739,12 @@ export interface LinkOptions {
   /** Network access to partners (default: global fetch). */
   fetch?: typeof fetch;
   now?: () => number;
+  /**
+   * The optional A2A interface (Phase 6E): its JSON-RPC endpoint path, the
+   * profile skills any A2A agent may send requests into, and the Agent
+   * Card's description.
+   */
+  a2a?: { endpoint: string; skills: string[]; description?: string };
 }
 
 /**
@@ -580,8 +752,9 @@ export interface LinkOptions {
  * the partner endpoint (`receive`, or `createLinkHandler`).
  */
 export class LinkManager {
-  readonly #options: Required<Omit<LinkOptions, 'fetch'>> & {
+  readonly #options: Required<Omit<LinkOptions, 'fetch' | 'a2a'>> & {
     fetch: typeof fetch;
+    a2a?: LinkOptions['a2a'];
   };
   readonly #refreshed = new Map<string, number>();
 
@@ -604,8 +777,32 @@ export class LinkManager {
         'The link profile needs an endpoint path, a name and valid skills.',
         500,
       );
+    const a2a = options.a2a;
+    if (
+      a2a &&
+      (!path(a2a.endpoint) ||
+        !Array.isArray(a2a.skills) ||
+        a2a.skills.some((id) => !skills.some((skill) => skill.id === id)) ||
+        (a2a.description !== undefined && !text(a2a.description, 300)))
+    )
+      fail(
+        'INVALID_OPTIONS',
+        'The A2A interface needs an endpoint path, skills from the profile and a description of at most 300 characters.',
+        500,
+      );
     this.#options = {
       ...options,
+      ...(a2a
+        ? {
+            a2a: {
+              endpoint: a2a.endpoint,
+              skills: [...new Set(a2a.skills)],
+              ...(a2a.description !== undefined
+                ? { description: a2a.description }
+                : {}),
+            },
+          }
+        : {}),
       profile: {
         endpoint: options.profile.endpoint,
         name: options.profile.name,
@@ -627,6 +824,182 @@ export class LinkManager {
 
   async get(id: string): Promise<LinkRecord | undefined> {
     return this.#options.store.transaction((data) => data.links[id]);
+  }
+
+  /** What an owner dashboard shows: link counts, offered services and totals. */
+  async overview(): Promise<LinkOverview> {
+    const records = await this.list();
+    const links = { active: 0, pending: 0, revoked: 0 };
+    const totals = { sent: 0, received: 0 };
+    for (const link of records) {
+      links[link.status]++;
+      totals.sent += link.stats?.sent ?? 0;
+      totals.received += link.stats?.received ?? 0;
+    }
+    const offered = new Map<string, LinkOverview['offered'][number]>();
+    for (const offer of linkOffers(records)) {
+      const entry = offered.get(offer.skill.id) ?? {
+        skill: offer.skill.id,
+        name: offer.skill.name,
+        partners: [],
+      };
+      entry.partners.push({ link: offer.link, ...offer.partner });
+      offered.set(offer.skill.id, entry);
+    }
+    const accepted = this.#options.profile.skills.map((skill) => ({
+      skill: skill.id,
+      name: skill.name,
+      partners: records
+        .filter(
+          (link) =>
+            link.status === 'active' && link.ours.accept.includes(skill.id),
+        )
+        .map((link) => ({
+          link: link.id,
+          origin: link.partner.origin,
+          name: link.partner.name,
+        })),
+    }));
+    const agents = this.#options.a2a
+      ? await this.#options.store.transaction((data) => ({
+          skills: [...this.#options.a2a!.skills],
+          received: data.agents?.received ?? 0,
+          ...(data.agents?.lastAt !== undefined
+            ? { lastAt: data.agents.lastAt }
+            : {}),
+        }))
+      : undefined;
+    return {
+      links,
+      totals,
+      offered: [...offered.values()],
+      accepted,
+      ...(agents ? { agents } : {}),
+    };
+  }
+
+  /**
+   * This site's A2A Agent Card (Phase 6E), for `/.well-known/agent-card.json`:
+   * the open skills, the JSON-RPC interface, and a signature with the site
+   * key that `agentKeys()` verifies.
+   */
+  agentCard(): AgentCard {
+    const a2a = this.#a2a();
+    const { name, skills } = this.#options.profile;
+    const open = skills.filter((skill) => a2a.skills.includes(skill.id));
+    return signAgentCard(
+      {
+        name,
+        description:
+          a2a.description ??
+          `Continue a request on ${name} with its PageSquire assistant. Each answer is a single-use link where the person confirms on the site.`,
+        supportedInterfaces: [
+          {
+            url: `${this.#options.origin}${a2a.endpoint}`,
+            protocolBinding: 'JSONRPC',
+            protocolVersion: A2A_PROTOCOL_VERSION,
+          },
+        ],
+        version: '1.0.0',
+        capabilities: {
+          streaming: false,
+          pushNotifications: false,
+          extensions: [
+            {
+              uri: A2A_EXTENSION,
+              description:
+                'PageSquire handoff: send a data part { skill, goal, fields } with the fields listed here. The answer is a single-use link where the person continues on this site.',
+              required: false,
+              params: {
+                skills: Object.fromEntries(
+                  open.map((skill) => [skill.id, { fields: skill.fields }]),
+                ),
+              },
+            },
+          ],
+        },
+        defaultInputModes: ['text/plain', 'application/json'],
+        defaultOutputModes: ['text/plain', 'application/json'],
+        skills: open.map(({ id, name, description, tags, examples }) => ({
+          id,
+          name,
+          description,
+          tags,
+          ...(examples ? { examples } : {}),
+        })),
+      },
+      this.#options.signingKey,
+      `${this.#options.origin}${A2A_KEYS_PATH}`,
+    );
+  }
+
+  /** The JWK Set at A2A_KEYS_PATH that verifies the Agent Card. */
+  agentKeys(): { keys: SiteJwk[] } {
+    this.#a2a();
+    return { keys: [siteJwk(this.#options.signingKey)] };
+  }
+
+  /**
+   * An A2A agent's request into an open skill (Phase 6E): checked like a
+   * partner's handoff, then stored under a fresh code for
+   * A2A_TICKET_SECONDS. Returns the single-use link to give the person.
+   */
+  async agentHandoff(
+    request: AgentRequest,
+  ): Promise<{ url: string; expiresAt: number; name: string }> {
+    const a2a = this.#a2a();
+    const { skills } = this.#options.profile;
+    const open = skills.filter((skill) => a2a.skills.includes(skill.id));
+    const skill =
+      request.skill ?? (open.length === 1 ? open[0]!.id : undefined);
+    if (skill === undefined)
+      fail(
+        'A2A_INVALID',
+        'Name one of the skills on the Agent Card in a data part.',
+        400,
+      );
+    const goal = typeof request.goal === 'string' ? request.goal.trim() : '';
+    // A visitor reads the goal as their own request; it may not send them elsewhere.
+    if (/https?:|www\./i.test(goal))
+      fail('A2A_INVALID', 'The goal must not contain links.', 400);
+    const body = this.#checkHandoff(
+      { skill, goal, fields: request.fields ?? {} },
+      skills,
+      (entry) =>
+        a2a.skills.includes(entry.id) ? Object.keys(entry.fields) : undefined,
+    );
+    const code = random(16);
+    const now = this.#options.now();
+    const expiresAt = now + A2A_TICKET_SECONDS * 1000;
+    await this.#options.store.transaction((data) => {
+      this.#prune(data);
+      // Agents may hold at most half of the open codes, so partners' handoffs keep room.
+      const tickets = Object.values(data.tickets);
+      if (
+        tickets.length >= 1000 ||
+        tickets.filter((ticket) => ticket.kind === 'agent').length >= 500
+      )
+        fail('LINK_BUSY', 'Too many open handoffs. Try again shortly.', 429);
+      data.tickets[ticketKey(code)] = {
+        kind: 'agent',
+        link: 'a2a',
+        ...body,
+        expiresAt,
+      };
+      data.agents = { received: (data.agents?.received ?? 0) + 1, lastAt: now };
+    });
+    const start = skills.find((entry) => entry.id === body.skill)!.startPath;
+    return {
+      url: `${this.#options.origin}${start}#psq-agent=${code}`,
+      expiresAt,
+      name: this.#options.profile.name,
+    };
+  }
+
+  #a2a(): NonNullable<LinkOptions['a2a']> {
+    const a2a = this.#options.a2a;
+    if (!a2a) fail('A2A_DISABLED', 'This site takes no A2A requests.', 404);
+    return a2a;
   }
 
   /** A single-use invitation for another owner; only a hash of its secret is kept. */
@@ -771,14 +1144,36 @@ export class LinkManager {
     const link = await this.get(id);
     if (!link) fail('LINK_UNKNOWN', 'No such link.', 404);
     this.#active(link);
-    const body = this.#checkHandoff(handoff, link.partner.skills, (skill) =>
+    const { returnUrl, ...requested } = isRecord(handoff)
+      ? handoff
+      : ({} as LinkHandoff);
+    const body = this.#checkHandoff(requested, link.partner.skills, (skill) =>
       link.theirs.accept.includes(skill.id)
         ? link.ours.offer[skill.id]
         : undefined,
     );
+    // The partner may send the visitor back once, to the page they left from.
+    const back = this.#returnPath(returnUrl);
+    const returnId = back ? `ret_${random(16)}` : undefined;
+    if (returnId)
+      await this.#options.store.transaction((data) => {
+        this.#prune(data);
+        if (Object.keys(data.returns).length >= 1000)
+          fail('LINK_BUSY', 'Too many open handoffs. Try again shortly.', 429);
+        data.returns[returnId] = {
+          link: id,
+          skill: body.skill,
+          path: back!,
+          expiresAt: this.#options.now() + RETURN_HOURS * 3_600_000,
+        };
+      });
     const answer = await this.#send(
       link.partner,
-      { type: 'handoff', link: id, body },
+      {
+        type: 'handoff',
+        link: id,
+        body: { ...body, ...(returnId ? { return: returnId } : {}) },
+      },
       'ticket',
     );
     const skill = link.partner.skills.find((entry) => entry.id === body.skill)!;
@@ -795,7 +1190,47 @@ export class LinkManager {
         'The partner answered with an invalid ticket.',
         502,
       );
+    await this.#count(id, 'sent', body.skill);
     return { url, expiresAt };
+  }
+
+  /**
+   * Sends the visitor back to the site they came from (Phase 6C), once per
+   * handoff and within RETURN_HOURS, with a one-line outcome. Returns the URL
+   * on the partner where the visitor continues.
+   */
+  async sendBack(
+    id: string,
+    back: LinkReturn,
+  ): Promise<{ url: string; expiresAt: number }> {
+    const link = await this.get(id);
+    if (!link) fail('LINK_UNKNOWN', 'No such link.', 404);
+    this.#active(link);
+    const body = checkReturn({
+      ...(isRecord(back) ? back : {}),
+      return: isRecord(back) ? back.returnId : undefined,
+      returnId: undefined,
+    });
+    const answer = await this.#send(
+      link.partner,
+      { type: 'return', link: id, body },
+      'ticket',
+    );
+    const { url, expiresAt } = answer.body;
+    const code = typeof url === 'string' ? url.split('#psq-link=') : [];
+    if (
+      code.length !== 2 ||
+      !code[0]!.startsWith(`${link.partner.origin}/`) ||
+      !CODE.test(code[1]!) ||
+      typeof expiresAt !== 'number'
+    )
+      fail(
+        'PARTNER_INVALID',
+        'The partner answered with an invalid ticket.',
+        502,
+      );
+    await this.#count(id, 'sent');
+    return { url: url as string, expiresAt };
   }
 
   /**
@@ -810,6 +1245,9 @@ export class LinkManager {
       const ticket = data.tickets[key];
       if (!ticket) return undefined;
       delete data.tickets[key];
+      // An agent's request lives while the A2A interface is on; a partner's, while its link is active.
+      if (ticket.kind === 'agent')
+        return this.#options.a2a ? ticket : undefined;
       return data.links[ticket.link]?.status === 'active' ? ticket : undefined;
     });
   }
@@ -824,7 +1262,8 @@ export class LinkManager {
     if (
       claims.type !== 'approve' &&
       claims.type !== 'revoke' &&
-      claims.type !== 'handoff'
+      claims.type !== 'handoff' &&
+      claims.type !== 'return'
     )
       fail('LINK_INVALID', 'Unexpected link message.', 400);
     const known = claims.link ? await this.get(claims.link) : undefined;
@@ -832,6 +1271,7 @@ export class LinkManager {
       fail('LINK_UNKNOWN', 'No such link with this partner.', 404);
     await this.#verifyFromPartner(known, envelope, claims.type);
     if (claims.type === 'handoff') return this.#ticket(known, claims);
+    if (claims.type === 'return') return this.#returned(known, claims);
     await this.#options.store.transaction((data) => {
       this.#useNonce(data, claims);
       const link = data.links[known.id]!;
@@ -931,11 +1371,13 @@ export class LinkManager {
       if (Object.keys(data.tickets).length >= 1000)
         fail('LINK_BUSY', 'Too many open handoffs. Try again shortly.', 429);
       data.tickets[ticketKey(code)] = {
+        kind: 'handoff',
         link: link.id,
         partner: { origin: link.partner.origin, name: link.partner.name },
         ...body,
         expiresAt,
       };
+      this.#tally(link, 'received', body.skill);
       return this.#options.profile.skills.find(
         (entry) => entry.id === body.skill,
       )!;
@@ -944,6 +1386,81 @@ export class LinkManager {
       url: `${this.#options.origin}${skill.startPath}#psq-link=${code}`,
       expiresAt,
     });
+  }
+
+  /** A partner sends the visitor back: one return per handoff this site sent. */
+  async #returned(
+    known: LinkRecord,
+    claims: LinkClaims,
+  ): Promise<LinkEnvelope> {
+    const code = random(16);
+    const expiresAt = this.#options.now() + LINK_TICKET_SECONDS * 1000;
+    const path = await this.#options.store.transaction((data) => {
+      this.#prune(data);
+      this.#useNonce(data, claims);
+      const link = data.links[known.id]!;
+      this.#active(link);
+      const body = checkReturn(claims.body);
+      const back = data.returns[body.return];
+      if (!back || back.link !== link.id)
+        fail('RETURN_UNKNOWN', 'No open handoff to return from.', 404);
+      delete data.returns[body.return];
+      if (Object.keys(data.tickets).length >= 1000)
+        fail('LINK_BUSY', 'Too many open handoffs. Try again shortly.', 429);
+      data.tickets[ticketKey(code)] = {
+        kind: 'return',
+        link: link.id,
+        partner: { origin: link.partner.origin, name: link.partner.name },
+        skill: back.skill,
+        goal: body.outcome,
+        fields: {},
+        ...(body.locale !== undefined ? { locale: body.locale } : {}),
+        expiresAt,
+      };
+      this.#tally(link, 'received');
+      return back.path;
+    });
+    return this.#sign(known.partner.origin, known.id, 'ticket', {
+      url: `${this.#options.origin}${path}#psq-link=${code}`,
+      expiresAt,
+    });
+  }
+
+  /** The same-origin path and query of a return URL on this site, if usable. */
+  #returnPath(value: unknown): string | undefined {
+    if (typeof value !== 'string') return undefined;
+    let url: URL;
+    try {
+      url = new URL(value);
+    } catch {
+      return undefined;
+    }
+    const target = `${url.pathname}${url.search}`;
+    return url.origin === this.#options.origin && path(target)
+      ? target
+      : undefined;
+  }
+
+  async #count(id: string, direction: 'sent' | 'received', skill?: string) {
+    await this.#options.store
+      .transaction((data) => {
+        const link = data.links[id];
+        if (link) this.#tally(link, direction, skill);
+      })
+      .catch(() => {});
+  }
+
+  /** Counts one handoff (with its skill) or return on a stored link record. */
+  #tally(link: LinkRecord, direction: 'sent' | 'received', skill?: string) {
+    const stats = link.stats ?? { sent: 0, received: 0 };
+    stats[direction]++;
+    if (skill !== undefined) {
+      const skills = (stats.skills ??= {});
+      const counts = (skills[skill] ??= { sent: 0, received: 0 });
+      counts[direction]++;
+    }
+    stats.lastAt = this.#options.now();
+    link.stats = stats;
   }
 
   #active(link: LinkRecord) {
@@ -961,11 +1478,11 @@ export class LinkManager {
     value: unknown,
     skills: LinkSkill[],
     scope: (skill: LinkSkill) => string[] | undefined,
-  ): Omit<LinkTicket, 'link' | 'partner' | 'expiresAt'> {
+  ): Omit<LinkTicket, 'kind' | 'link' | 'partner' | 'expiresAt'> {
     if (
       !isRecord(value) ||
       Object.keys(value).some(
-        (key) => !['skill', 'goal', 'fields', 'locale'].includes(key),
+        (key) => !['skill', 'goal', 'fields', 'locale', 'return'].includes(key),
       )
     )
       fail('HANDOFF_INVALID', 'The handoff is malformed.', 400);
@@ -989,6 +1506,11 @@ export class LinkManager {
       (typeof value.locale !== 'string' || !LOCALE.test(value.locale))
     )
       fail('HANDOFF_INVALID', 'The handoff locale is invalid.', 400);
+    if (
+      value.return !== undefined &&
+      (typeof value.return !== 'string' || !RETURN_ID.test(value.return))
+    )
+      fail('HANDOFF_INVALID', 'The return reference is invalid.', 400);
     const fields = value.fields ?? {};
     if (!isRecord(fields))
       fail('HANDOFF_INVALID', 'Handoff fields must be an object.', 400);
@@ -1008,6 +1530,9 @@ export class LinkManager {
       goal: value.goal,
       fields: fields as LinkTicket['fields'],
       ...(value.locale !== undefined ? { locale: value.locale as string } : {}),
+      ...(value.return !== undefined
+        ? { returnId: value.return as string }
+        : {}),
     };
   }
 
@@ -1075,6 +1600,9 @@ export class LinkManager {
       if (invitation.expiresAt < now) delete data.invitations[key];
     for (const [key, ticket] of Object.entries(data.tickets))
       if (ticket.expiresAt < now) delete data.tickets[key];
+    data.returns ??= {};
+    for (const [key, back] of Object.entries(data.returns))
+      if (back.expiresAt < now) delete data.returns[key];
   }
 
   /** Verifies with the stored key; after a failure, re-reads the partner's declaration at most once a minute (key rotation). */

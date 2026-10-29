@@ -555,6 +555,7 @@ test('a handoff carries the goal and approved fields to the partner, redeemed on
   assert.ok(expiresAt >= before + 120_000 && expiresAt <= Date.now() + 120_000);
   const code = url.split('#psq-link=')[1];
   assert.deepEqual(await resto.manager.redeem(code), {
+    kind: 'handoff',
     link: id,
     partner: { origin: 'http://hotel.test', name: 'Hotel Nusa' },
     skill: 'book_table',
@@ -643,5 +644,98 @@ test('handoff codes expire, and die with their link', async () => {
   assert.equal(
     await resto.manager.redeem(second.url.split('#psq-link=')[1]),
     undefined,
+  );
+});
+
+// Phase 6C: returns.
+
+test('the partner sends the visitor back once, to the page they left from', async () => {
+  const { hotel, resto, id } = await handing();
+  const sent = await hotel.manager.handoff(id, {
+    ...tableForFour,
+    returnUrl: 'http://hotel.test/rooms?night=2',
+  });
+  const arrival = await resto.manager.redeem(sent.url.split('#psq-link=')[1]);
+  assert.match(arrival.returnId, /^ret_[\w-]{22}$/);
+
+  const back = await resto.manager.sendBack(id, {
+    returnId: arrival.returnId,
+    outcome: 'Table for 4 booked for 29 October, 19:00.',
+    locale: 'en',
+  });
+  assert.match(
+    back.url,
+    /^http:\/\/hotel\.test\/rooms\?night=2#psq-link=[\w-]{22}$/,
+  );
+  const ticket = await hotel.manager.redeem(back.url.split('#psq-link=')[1]);
+  assert.deepEqual(ticket, {
+    kind: 'return',
+    link: id,
+    partner: { origin: 'http://resto.test', name: 'Restoran Laut' },
+    skill: 'book_table',
+    goal: 'Table for 4 booked for 29 October, 19:00.',
+    fields: {},
+    locale: 'en',
+    expiresAt: back.expiresAt,
+  });
+  // Once per handoff.
+  await assert.rejects(
+    resto.manager.sendBack(id, {
+      returnId: arrival.returnId,
+      outcome: 'Again',
+    }),
+    { code: 'PARTNER_REJECTED' },
+  );
+  // Handoffs count per skill as well; a return counts in the totals only.
+  const counts = async (manager) => {
+    const { lastAt, ...stats } = (await manager.get(id)).stats;
+    assert.equal(typeof lastAt, 'number');
+    return stats;
+  };
+  assert.deepEqual(await counts(hotel.manager), {
+    sent: 1,
+    received: 1,
+    skills: { book_table: { sent: 1, received: 0 } },
+  });
+  assert.deepEqual(await counts(resto.manager), {
+    sent: 1,
+    received: 1,
+    skills: { book_table: { sent: 0, received: 1 } },
+  });
+});
+
+test('returns need a known reference, a valid outcome and a page on this site', async () => {
+  const { hotel, resto, id } = await handing();
+  // A return URL on another origin is ignored: no return is possible.
+  const elsewhere = await hotel.manager.handoff(id, {
+    ...tableForFour,
+    returnUrl: 'https://evil.example/phish',
+  });
+  const arrival = await resto.manager.redeem(
+    elsewhere.url.split('#psq-link=')[1],
+  );
+  assert.equal(arrival.returnId, undefined);
+  await assert.rejects(
+    resto.manager.sendBack(id, {
+      returnId: `ret_${'A'.repeat(22)}`,
+      outcome: 'Done',
+    }),
+    { code: 'PARTNER_REJECTED' },
+  );
+  const sent = await hotel.manager.handoff(id, {
+    ...tableForFour,
+    returnUrl: 'http://hotel.test/',
+  });
+  const { returnId } = await resto.manager.redeem(
+    sent.url.split('#psq-link=')[1],
+  );
+  for (const outcome of ['', 'x'.repeat(301), 'Line\nbreak'])
+    await assert.rejects(resto.manager.sendBack(id, { returnId, outcome }), {
+      code: 'RETURN_INVALID',
+    });
+  await resto.manager.revoke(id);
+  await assert.rejects(
+    resto.manager.sendBack(id, { returnId, outcome: 'Done' }),
+    { code: 'LINK_REVOKED' },
   );
 });
