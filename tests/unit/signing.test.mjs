@@ -102,6 +102,16 @@ test('the site declaration is what the extension accepts', () => {
     ...declaration,
     frames: [],
   });
+  // A Link partner's declaration still passes; the extension drops the link section.
+  const linked = siteDeclaration({
+    endpoint: '/pagesquire/chat',
+    signingKey: vector.signingKey,
+    link: { endpoint: '/pagesquire/link', name: 'Shop', skills: [] },
+  });
+  assert.deepEqual(validateSiteManifest(linked).value?.features, [
+    'trustedInput',
+    'link',
+  ]);
 });
 
 test('the engine signs proposed calls when configured', async () => {

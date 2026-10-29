@@ -78,6 +78,51 @@ export function signingPublicKey(signingKey: string): string {
   return `ed25519:${rawPublicKey(privateKey(signingKey)).toString('base64')}`;
 }
 
+/**
+ * Base64 Ed25519 signature over `context + text` with the site key. Every
+ * use has its own context prefix, so a signature for one never verifies as
+ * another (action calls, link messages).
+ */
+export function signWithSiteKey(
+  context: string,
+  text: string,
+  signingKey: string,
+): string {
+  return sign(
+    null,
+    Buffer.from(context + text),
+    privateKey(signingKey),
+  ).toString('base64');
+}
+
+/** Whether `value` is the site key's signature over `context + text`. */
+export function verifySiteSignature(
+  context: string,
+  text: string,
+  value: string,
+  publicKey: string,
+): boolean {
+  const match = /^ed25519:([A-Za-z0-9+/]{43}=)$/.exec(publicKey);
+  if (!match || !/^[A-Za-z0-9+/]{86}==$/.test(value)) return false;
+  try {
+    return verify(
+      null,
+      Buffer.from(context + text),
+      createPublicKey({
+        key: {
+          kty: 'OKP',
+          crv: 'Ed25519',
+          x: Buffer.from(match[1]!, 'base64').toString('base64url'),
+        },
+        format: 'jwk',
+      }),
+      Buffer.from(value, 'base64'),
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** Checks signing options once, at engine construction. */
 export function checkSigning(signing: ActionSigning): void {
   privateKey(signing.key);
@@ -175,13 +220,24 @@ export function siteDeclaration(options: {
   signingKey: string;
   /** Declare redacted screenshots (the visitor still has to allow them). */
   screenshots?: boolean;
-}): { version: 1; endpoint: string; publicKey: string; features: string[] } {
+  /** PageSquire Link: this site's partner endpoint, name and skills (LinkManager.declaration()). */
+  link?: { endpoint: string; name: string; skills: unknown[] };
+}): {
+  version: 1;
+  endpoint: string;
+  publicKey: string;
+  features: string[];
+  link?: { endpoint: string; name: string; skills: unknown[] };
+} {
   return {
     version: 1,
     endpoint: options.endpoint,
     publicKey: signingPublicKey(options.signingKey),
-    features: options.screenshots
-      ? ['trustedInput', 'screenshots']
-      : ['trustedInput'],
+    features: [
+      'trustedInput',
+      ...(options.screenshots ? ['screenshots'] : []),
+      ...(options.link ? ['link'] : []),
+    ],
+    ...(options.link ? { link: options.link } : {}),
   };
 }

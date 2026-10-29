@@ -100,17 +100,51 @@ final class ActionSigner
     /** Base64 Ed25519 signature over the context prefix and the claims text. */
     public function signClaims(string $claims): string
     {
-        return base64_encode(sodium_crypto_sign_detached(self::CONTEXT.$claims, $this->secretKey));
+        return $this->signText(self::CONTEXT, $claims);
+    }
+
+    /** Base64 Ed25519 signature over `$context.$text`; each use has its own context prefix. */
+    public function signText(string $context, string $text): string
+    {
+        return base64_encode(sodium_crypto_sign_detached($context.$text, $this->secretKey));
+    }
+
+    /** Whether `$value` is the signature of the "ed25519:…" key over `$context.$text`. */
+    public static function verifyText(string $publicKey, string $context, string $text, string $value): bool
+    {
+        if (! preg_match('/^ed25519:([A-Za-z0-9+\/]{43}=)$/', $publicKey, $match) || ! preg_match('/^[A-Za-z0-9+\/]{86}==$/', $value)) {
+            return false;
+        }
+        try {
+            return sodium_crypto_sign_verify_detached((string) base64_decode($value, true), $context.$text, (string) base64_decode($match[1], true));
+        } catch (\SodiumException) {
+            return false;
+        }
+    }
+
+    /** The site origin this key signs for. */
+    public function siteOrigin(): string
+    {
+        return $this->origin;
     }
 
     /**
-     * The /.well-known/pagesquire.json document for the companion extension.
+     * The /.well-known/pagesquire.json document for the companion extension and PageSquire Link.
      *
      * @param  bool  $screenshots  Declare redacted screenshots; the visitor still has to allow them.
-     * @return array{version: int, endpoint: string, publicKey: string, features: list<string>}
+     * @param  array{endpoint: string, name: string, skills: list<array<string, mixed>>}|null  $link  LinkManager::declaration()
+     * @return array<string, mixed>
      */
-    public function declaration(string $endpoint, bool $screenshots = false): array
+    public function declaration(string $endpoint, bool $screenshots = false, ?array $link = null): array
     {
-        return ['version' => 1, 'endpoint' => $endpoint, 'publicKey' => $this->publicKey(), 'features' => $screenshots ? ['trustedInput', 'screenshots'] : ['trustedInput']];
+        $features = ['trustedInput'];
+        if ($screenshots) {
+            $features[] = 'screenshots';
+        }
+        if ($link !== null) {
+            $features[] = 'link';
+        }
+
+        return ['version' => 1, 'endpoint' => $endpoint, 'publicKey' => $this->publicKey(), 'features' => $features] + ($link !== null ? ['link' => $link] : []);
     }
 }
