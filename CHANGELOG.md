@@ -1,131 +1,130 @@
 # Changelog
 
-All canonical release notes are English. PageSquire uses SemVer for packages and separately versioned protocol contracts. Nothing listed here implies that an artifact has been published.
+PageSquire follows semantic versioning for its packages. The protocol contracts have their own version numbers.
 
-## Unreleased — 0.1.0-beta.0 candidate
+## Unreleased: 0.1.0-beta.0
 
-### Changed
-
-- Owner-approved beta-candidate version after a successful owner-run Kabarin integration report. Package, lockfile, CLI and WordPress versions are synchronized without changing protocol or storage formats, dependencies, permissions or publication guards. The separate quota-protected Kabarin demo is linked. Independent onboarding, candidate-specific reviews and final-commit checks remain gates; no beta tag/download, stable API or registry publication is claimed.
+The first beta. Package, CLI and WordPress versions are now `0.1.0-beta.0`; protocol and storage formats did not change. Nothing is published to npm, Packagist or WordPress.org yet.
 
 ### Added
 
-- PageSquire Link pairing (Phase 6A, [design](docs/link.md)), off by default:
-  - Two sites of different owners pair with a single-use invitation (`psq1.…`, 24 hours by default; only a hash of its secret is stored). Each owner approves which partner skills to offer, with their fields, and which own skills to accept. Either owner can revoke at once.
-  - Server-to-server messages are Ed25519 envelopes signed with the existing site key under their own prefix (`pagesquire-link-v1.`), bound to sender, recipient and link, valid five minutes and accepted once. Partner keys come from the partner's own declaration and are re-read after a failed signature at most once a minute.
-  - Declarations gain an optional `link` section and feature (`siteDeclaration({ link })`, `ActionSigner::declaration(..., $link)`); skills use A2A's `AgentSkill` fields. The companion extension accepts and ignores it.
-  - Node: `LinkManager`, `createLinkHandler`, `MemoryLinkStore`, `FileLinkStore`. PHP: `Link\LinkManager`, `LinkEndpoint`, stores and `CurlLinkTransport`. Laravel: `PAGESQUIRE_LINK`, `POST /pagesquire/link` and the `pagesquire:link-*` commands. WordPress: step 6 of the dashboard (**Partner sites**), an encrypted site key or `PAGESQUIRE_SIGNING_KEY`, `/.well-known/pagesquire.json` and the REST route `pagesquire/v1/link`.
-  - Handoff tickets between servers (Phase 6B-1, Node and native PHP): `handoff()` sends a signed, scope-checked ticket with the visitor's goal and approved fields, and the partner answers with a start URL holding a single-use code that lasts two minutes. `redeem()` returns the ticket once. Field values follow shared rules (`linkValueAllowed`, `Link::valueAllowed`).
-  - The `link.handoff` tool (Phase 6B-2): `createLinkCapabilities()` and `Link::handoffCapability()`, and `EngineOptions.links` in the Node and PHP engines, wired into Laravel and WordPress. The engine offers only skills both owners approved. It drops out-of-scope and unrequested fields and sends the ticket only after `ChatRequest.handoff` reports the visitor's approval. The reply carries `response.handoff.url`. On the partner, `ChatRequest.linkCode` starts the conversation from the ticket once, with its fields as `untrustedHandoff`.
-  - Handoffs in the browser (Phase 6B-3): `createLinkBindings` (core) asks the visitor with a new `link` prompt kind (partner, origin, goal, fields; English and Indonesian). On Continue it opens the partner in a new tab without an opener, after `AssistantClient.approveHandoff` returns the ticket URL. `mountLinkArrival` and `AssistantClient.arrive` read and redeem `#psq-link=` on the partner after one click. The embed takes `data-link`, and WordPress turns it on while Link is enabled. A browser test runs the whole handoff between two sites with real engines.
-  - Returns (Phase 6C): `link.return` (`createLinkCapabilities`, `Link::returnCapability`) lets the partner send the visitor back once, within 24 hours, to the page they approved the handoff on. It carries a one-line, screened outcome and no fields, after a "Back to …?" prompt. `sendBack()` signs a `return` envelope against a single-use reference. Tickets gain `kind`, and the arrival starts with "Back from …". Link records count visitors sent and received (`stats`), shown in `pagesquire:link-list` and the WordPress Partners panel.
-  - Several partners per skill (Phase 6D): when partners publish the same skill ID, the engine adds up to three of them to a `link.handoff` call as `alternatives`, each with the fields its own scope and schema allow. The consent prompt shows one block per partner, and the visitor chooses where to continue. `ChatRequest.handoff.skill` reports the choice, and only a partner shown in that call is accepted. `linkOffers()` and `Link::offers()` share the offer rules. `LinkManager.overview()` (Node and PHP), `pagesquire:link-overview` and the WordPress Partners overview show who offers what. Stats gain per-skill handoff counts and the last activity time.
-  - Optional A2A interface (Phase 6E): `/.well-known/agent-card.json` publishes an A2A 1.0 Agent Card for the skills an owner opens. It is signed with the site key (RFC 8785 JCS and an EdDSA JWS whose `jku` names `/.well-known/pagesquire-keys.json`). A JSON-RPC `SendMessage` endpoint checks an agent's request like a handoff and answers with a single-use `#psq-agent=` link, valid for 10 minutes. It keeps no tasks. The arrival banner names the AI agent, and the conversation starts with "Request from an AI agent: …". Node (`createA2AHandler`, `LinkManager.agentCard()`), PHP (`A2A`, `A2AEndpoint`), Laravel (`PAGESQUIRE_A2A`) and WordPress (step 6) share one test vector.
-  - A shared vector (`tests/fixtures/link.json`) and a cross-stack test pair a Node site and a PHP site over real HTTP in both directions, including handoffs; a WordPress test pairs the plugin with a Node partner from the dashboard.
-- Redacted screenshots (Phase 4D-5), off by default for owner, server and visitor:
-  - Optional `ActionResult.screenshot` and `Screenshot` (JPEG, at most 100,000 base64 characters).
-  - Opt-in `ui.screenshot` (`createScreenshotCapabilities`, embed `data-screenshots`) through `InputDriver.screenshot`, with `Verification.screenshot`.
-  - Engine `screenshots` (Node and PHP) and Laravel `PAGESQUIRE_SCREENSHOTS` forward the image as an OpenAI-compatible `image_url` part to the next provider call only; it is never stored.
-  - `siteDeclaration({ screenshots })` and `ActionSigner::declaration(..., true)`.
-  - In the extension: a visitor switch per site. Before the image leaves, form fields, private regions and frames are painted black, measured in an isolated world. Hidden panel elements stay hidden.
-- Session tabs (Phase 4D-4):
-  - Optional `PageSnapshot.tabs` and `TabSnapshot`, observer `remoteTabs`, and the generic `ui.switch_tab` tool through `InputDriver.switchTab`.
-  - Tab targets (`tab2-target-3`) use the frame driver path. Companion driver `tabs()` and `switchTab`.
-  - In the extension: same-origin tabs the page opens (confirmed by the new page) or the visitor shares from the side panel join a labelled tab group. They are read and acted in through their own debugger session, signed per target. They leave on close, origin change or unshare. Stop or Esc in any tab stops the whole session.
-  - The page side also gained:
-    - a relay `hello-wait` notice, so a slow service worker is not mistaken for a missing extension;
-    - generic tools that no longer wait for animation frames in hidden pages;
-    - extension codes in companion error messages.
-  - The frame script is now the remote script (`dist/remote.js`), and extension tests run one browser at a time.
-- Cross-origin frames (Phase 4D-3):
-  - Optional `PageSnapshot.frames` and `FrameSnapshot`, observer `remoteFrames`.
-  - Generic `ui.click`/`ui.check`/`ui.type`/`ui.press_key` on frame targets (`frame1-target-3`) through `InputDriver.frameTarget`/`frameAct`.
-  - Companion driver `frames()` and frame calls.
-  - In the extension: a bundled frame script (`scripts/build-extension.mjs`) reads and prepares input only in frames the site declares and the visitor allows, with a deny list for payment and identity providers. Input goes through the frame's own CDP session with a hit test across frame owners. Signatures bind the frame target ID. Stop hides frames.
-- Signed action calls (Phase 4D-2): optional `ActionCall.signature` (Ed25519 over server-written `claims` text with origin, call, parameters and a 60-second expiry); Node engine `signing` with `createSigningKey`, `signingPublicKey`, `signActionCall`, `verifyActionCall` and `siteDeclaration`; PHP `ActionSigner` and engine `signer`; Laravel `PAGESQUIRE_SIGNING_KEY`/`PAGESQUIRE_SITE_ORIGIN` with an automatic `/.well-known/pagesquire.json`; `pagesquire signing-key`. The companion extension now requires a declared `publicKey` and runs only signed calls whose input matches, once each; unsigned calls keep synthetic events. Update browser bundles before enabling signing.
-- Companion extension development build (Phase 4D-1, `packages/extension`, local and `.test` sites only): Manifest V3, a visitor grant per origin in the side panel after checking the site's `/.well-known/pagesquire.json`, trusted main-frame click, text and keys through `chrome.debugger` with its own nonce lookup, hit test and reserved-target refusals, Esc/Stop/Resume, idle and out-of-origin detach, per-tab rate limit and a local audit log without typed text. Core `InputDriver` (`GenericOptions.driver`) and `createCompanionDriver`, and the embed's `data-companion`, fall back to synthetic events without it. See [companion extension](docs/companion-extension.md).
-- Phase 4D-0 spike checks in `tests/spike` with results in the companion extension design.
-- Visitor prompts: generic `ui.ask` (choose one of 2–5 options) and `ui.hand_off` ("Your turn" for sign-in, CAPTCHA, one-time codes or payment), runtime `visitor`/`visitorTimeoutMs`, `ExecutionContext.askVisitor`, client `createVisitorPrompt`, `VISITOR_*` codes, English/Indonesian copy, and embed wiring. See [generic actions](docs/generic-actions.md).
-- Opt-in visible plan (`plan` on Node/PHP engines, `limits.plan` in Laravel): one planner call per visitor message, a bounded optional `plan` on the first action reply, shown by the widget and fed back to later steps.
-- Opt-in action check (`checkActions`, `limits.check_actions`): a fail-closed reviewer call before each model-chosen action that is not read-only.
-- Observer `outline` and read-only same-origin `frames` text options, with `data-outline`/`data-frames` embed attributes.
-- Laravel streams fixed progress stages as NDJSON when asked.
-- Streamed server progress: opt-in NDJSON responses (`Accept: application/x-ndjson`) with fixed stages (`accepted`, `thinking`, `reviewing`, `replaying`) and a final validated reply or error line, in the Node handler and native PHP endpoint; engine `onProgress` callbacks; client transport streaming with plain-JSON fallback, `state.serverStage`, widget status and `server` trace events. Model text is never streamed. See [streaming](docs/streaming.md).
+#### PageSquire Link
 
-- Built-in English and Indonesian copy for the widget, action progress, approval prompt, guided tour, transport/client errors and engine fixed replies; `locale`/`messages` options (auto-detected from `<html lang>`), embed `data-locale`, engine `locale` (Node/PHP), Laravel `PAGESQUIRE_LOCALE`, WordPress site-language support. Default transport errors no longer mention the OFFBEAT demo. See [languages](docs/i18n.md).
+Lets two PageSquire sites work together, even when they have different owners and run on different stacks. Off by default. See [PageSquire Link](docs/link.md).
 
-- Phase 4C: native dialog capture during generic actions; verification of re-rendered elements by role and name; server typed-data screening for `ui.type` (Node/PHP); opt-in completion validator (`validateCompletion`, Laravel `limits.validate_completion`); trajectory cache (`TrajectoryCache`, `MemoryTrajectoryCache`, Laravel `trajectory_cache`) that replays verified turns without provider calls; evaluation `--validate`, `--cache`, `--repeat` and a stricter oracle self-check. See [generic actions](docs/generic-actions.md).
+- **Pairing.** One owner creates a single-use invitation (`psq1.…`, valid 24 hours by default) and the other accepts it. Each owner then approves which partner skills their assistant may offer, with which fields, and which of their own skills the partner may use. Either owner can revoke at any time.
+- **Signed messages.** Servers talk to each other with Ed25519-signed envelopes that are bound to the sender, recipient and link, expire after five minutes and are accepted once. Each site reads its partner's key from the partner's own `/.well-known/pagesquire.json`.
+- **Handoffs.** The assistant can offer a partner's service with the new `link.handoff` tool. The visitor sees the partner, the goal and every field before anything is sent. The partner opens in a new tab and continues after one click. Only the goal and the fields the visitor gave travel, and the engine drops anything outside the approved scope.
+- **Returns.** With `link.return`, the partner can send the visitor back once, within 24 hours, to the page they started from, with a one-line outcome.
+- **Several partners.** When more than one partner offers the same skill, the visitor chooses where to continue.
+- **Owner overview.** `LinkManager.overview()`, `pagesquire:link-overview` and the WordPress Partners panel show who offers what and how many visitors went each way, per skill.
+- **A2A interface.** Optional. A site can publish a signed A2A 1.0 Agent Card at `/.well-known/agent-card.json` and accept requests from any A2A agent into the skills its owner opens. The agent only gets a single-use link; the person continues on the site.
+- **Everywhere.** Node (`LinkManager`, `createLinkHandler`, `createA2AHandler`), native PHP (`Link\LinkManager`, `LinkEndpoint`, `A2AEndpoint`), Laravel (`PAGESQUIRE_LINK`, `PAGESQUIRE_A2A`, the `pagesquire:link-*` commands), WordPress (dashboard step 6) and the one-tag embed (`data-link`).
+- **Tests.** Node and PHP pass the same test vectors, and cross-stack tests pair a Node site with a PHP site and with WordPress over real HTTP.
 
-- Phase 4B: client `onTrace` events, `TraceRecorder` (bounded, redacted by default, JSON export) and `mountTraceViewer`; embed `data-trace`; a 36-task generic browser evaluation (`npm run test:eval-generic` oracle self-check in CI, `npm run eval:generic:live -- --max-calls N` for budgeted live models) graded from the final page state. Snapshots keep on-screen targets first when truncating, so overlays stay visible. See [traces and evaluation](docs/trace-and-eval.md).
+#### Companion browser extension (development build)
 
-- Phase 4A browser robustness: observation v2 (stable target IDs, element state flags, open shadow DOM, `new`/`removedTargets` diffs, `observer.find`); opt-in guarded generic `ui.*` tools with Playwright-style actionability checks, realistic events, DOM/network settling, built-in risk tiers and in-action approval; server-led recovery (`maxRecoveries` on Node/PHP engines, Laravel `max_recoveries`, client `allowRecovery`) with repeat detection; embed `data-generic`. See [generic actions](docs/generic-actions.md).
+A Chromium extension that gives generic tools real clicks and typing on local and `.test` sites. See [companion extension](docs/companion-extension.md).
 
-- Phase 3: `exposeToWebMcp` registers capabilities as WebMCP tools through the verified runtime; opt-in approval for consequential capabilities (`allowConsequential` on Node/PHP engines and `PAGESQUIRE_ALLOW_CONSEQUENTIAL` in Laravel, a runtime `approve` hook and `createApprovalPrompt`); WordPress `wordpress.run_ability` adapter for administrator-selected read-only WordPress Abilities, run server-side with the visitor's own permissions. See [WebMCP, approvals and WordPress Abilities](docs/webmcp-and-approval.md).
+- The visitor allows it per site in the side panel, after the extension checks the site's `/.well-known/pagesquire.json`. Esc or Stop ends the session at once.
+- **Signed action calls.** The server signs each call with a site key (Ed25519, 60-second expiry), and the extension runs only signed calls, once each. Use `createSigningKey`, `signActionCall` and `siteDeclaration` in Node, `ActionSigner` in PHP, `PAGESQUIRE_SIGNING_KEY` in Laravel, or `pagesquire signing-key`. Update browser bundles before you turn signing on.
+- **Frames.** Generic tools can act inside cross-origin frames that the site declares and the visitor allows. Payment and identity providers are always blocked.
+- **Tabs.** Same-origin tabs that the page opens, or that the visitor shares, join the session with the new `ui.switch_tab` tool.
+- **Screenshots.** Optional and off by default for the owner, the server and the visitor. `ui.screenshot` sends one redacted image to the next model call only: form fields, private areas and frames are painted black first, and the image is never stored.
+- Without the extension, everything falls back to synthetic events.
 
-- Phase 2 reliability: opt-in `tools` response mode (Node, native PHP, Laravel, WordPress) that offers approved capabilities as native function definitions and reads the first tool call as the single proposed action; provider diagnostics with outcome, HTTP status, latency and token usage but no content (`onDiagnostic` in Node/PHP, `ProviderCalled` event in Laravel).
+#### Generic tools and visitor prompts
 
-- Phase 1 stabilization: per-session hourly provider budgets (`attemptsPerHour`, default 60) in the Node and native PHP endpoints that survive new conversations and principal changes; `PageObserver` `observeUrl` (observation scope separate from navigation) and `redactUrl` (snapshot URL redaction); `BrowserRuntime.resetSession()`, called by `AssistantClient.reset()`, so the action budget and replay cache start fresh per conversation.
+See [generic actions](docs/generic-actions.md).
 
-- C4 metadata-only runtime progress, bounded immutable client action timelines and fixed recovery copy. The shared widget shows actual handler/verifier boundaries, distinguishes cached results and unverified navigation, ignores late/cancelled work, and scopes busy semantics to the message log. No chain of thought, automatic retry/rollback, permission expansion or wire/storage change is introduced.
+- **Generic `ui.*` tools.** Optional tools for page controls you have not mapped yourself. They use stable element references, page diffs and Playwright-style actionability checks, and they wait for the page to settle. Actions are sorted into risk tiers, with approval in the middle of an action when needed.
+- **Recovery.** With `maxRecoveries`, the server lets the model try another way after a failed step and detects repeated attempts.
+- **Visitor prompts.** `ui.ask` lets the visitor pick from two to five options. `ui.hand_off` shows a "Your turn" panel for sign-in, CAPTCHA, one-time codes or payment.
+- **Plan and checks.** An optional visible plan for each message (`plan`), an optional review before each action that changes something (`checkActions`), and an optional final completion check (`validateCompletion`).
+- **Trajectory cache.** Replays verified turns without calling the model (`TrajectoryCache`).
+- **Typed-data screening.** `ui.type` refuses to type contact details, links or long numbers the visitor never gave.
+- Native dialogs are captured during generic actions, and re-rendered elements are verified by role and name.
 
-- C3 optional public `AppContext`, flat typed state, fixed availability statuses and bounded/unique protocol envelope. Clients refresh per round; Node/PHP providers receive ephemeral untrusted state and filter future proposals, runtime handlers recheck availability and Laravel preserves validated context. Pending results, permissions, replay/accounting and default-off behavior remain intact. Coordinated browser/server rollout is required; no training, whole-store upload or inference retry is added.
+#### Approvals, WebMCP and WordPress Abilities
 
-- C2 optional `CapabilityInspector` and client `mountInspector`, with expected-versus-registered coverage, read-only host target probes, searchable/filterable schema disclosures, explicit refresh and metadata-only diagnostics. The neutral offline example and English guides distinguish target readiness from actual action verification/server permission. No competitor source, provider call, implicit execution or production debug mount is included.
+See [WebMCP and approvals](docs/webmcp-and-approval.md).
 
-- D1 framework-neutral `BrowserDriver`, runtime presentation context, desired-state control bindings, public reading/scroll/highlight capabilities with bounded truncation/offset evidence, guided tours and opt-in local-first speech. English parity/onboarding guidance and a neutral offline fixture preserve host permissions and licensed-asset boundaries. Node/PHP instructions retain compound goals after verified navigation; synthetic checks do not certify live-model accuracy. WordPress offers optional inspected public-content reading/scroll/highlight without changing default permissions.
+- `exposeToWebMcp` lets browser agents call the same verified capabilities as WebMCP tools.
+- Consequential capabilities can be allowed with approval. The server (`allowConsequential`), the host and the person (`createApprovalPrompt`) must all agree.
+- WordPress can expose read-only WordPress Abilities chosen by the administrator. They run on the server with the visitor's own permissions.
 
-- R1 local API inventory and conservative normalized declaration/schema/manifest/PHP-source baseline, a read-only `api:check` enforced in CI and candidate preparation, and synthetic serialized Node checkpoint recovery regressions. English compatibility/deprecation, upgrade/recovery and maintenance guidance explicitly excludes API freeze, historical-release upgrade certification and RC/stable promotion.
+#### Assistant driving
 
-- B5 alpha/beta prerelease policy, explicit independent-onboarding/support/security review records, a read-only `release:check -- --beta` readiness gate, channel-bound candidate manifests and beta inventory regressions. English beta testing/feedback/promotion guidance preserves clean-checkout, CI, approval and deferred-registry boundaries; no version promotion or public beta is implied.
+See [assistant driving](docs/assistant-driving.md).
 
-- B4 trusted server-only Node/PHP conversation-erasure helpers preserve request buckets, host metadata and separate provider budgets. English operations guidance covers incident containment, lock/lease recovery, retention and integration-specific deletion boundaries; no public deletion endpoint is enabled.
+- An animated cursor and outline, page reading with clear truncation, scrolling, highlights and guided tours.
+- Optional speech that runs locally first.
+- Node and PHP keep the rest of a multi-part request after a page navigation.
+- WordPress can offer reading, scrolling and highlighting of public content.
 
-- B2 opt-in Sumopod evaluator with an exclusive durable attempt ledger, bounded transport, no automatic paid retries, and real isolated OFFBEAT browser verification. A dated sanitized twelve-call/five-scenario live result is separate from the 246 EN/ID synthetic contract variants and fifteen named providers' official-documentation reviews. CI runs only the deterministic offline browser smoke; model/provider settings remain environment-owned.
+#### Progress, streaming and languages
 
-- Sixteen server-side provider profiles (fifteen named service/gateway profiles plus Custom), shared Node/PHP configuration, canonical environment settings, Laravel wiring and an administrator-only WordPress provider selector. English support matrix and per-integration tutorials distinguish synthetic transport support from live-model certification.
-- Explicit JSON/prompt, output-token field, instruction-role and supported thinking switches; bounded whole-fence/text-part normalization and refusal/truncation rejection without automatic provider fallback or paid retries. Existing explicit-endpoint configuration remains compatible.
+- **Action progress.** A step-by-step timeline of each action in the widget: checking, running, verifying and the outcome. It shows the real steps only, never model reasoning. See [action progress](docs/action-progress.md).
+- **Streaming.** Optional NDJSON responses show fixed server stages (`accepted`, `thinking`, `reviewing`, `replaying`) while the model works. The model's text itself is never streamed. See [streaming](docs/streaming.md).
+- **Languages.** English and Indonesian for the widget, progress, approvals, tours, errors and the engine's fixed replies. The language follows `<html lang>`, and any text can be overridden. See [languages](docs/i18n.md).
 
-- OFFBEAT now offers thirteen verified tools, including independent heading highlighting/body color, reading fonts/spacing, gallery search/sort, edge-aware scrolling and resets. Separate-message, confirmation, recovery and expired-auth browser regressions extend the original single-message smoke coverage.
-- Legacy Node/PHP history normalization and safe typed HTTP failure feedback, with conversation continuity after known provider-format failures and no automatic paid retries or quota resets.
+#### Developer tools
 
-- OFFBEAT, an independent brutalist art/culture landing demo with original characters, a filterable gallery, accessible dialogs, verified guided actions and six expressions. Its optional private AI chat deploys alongside the frontend on Vercel, with environment-owned model/provider configuration, signed sessions, Supabase PostgreSQL checkpoints, fenced leases and shared usage limits. Guided actions need no credentials.
+- **Capability inspector.** Compares the capabilities you expect with the ones registered, probes targets, and shows schemas. See [capability inspector](docs/capability-inspector.md).
+- **App context.** An app can pass typed public state and say which actions are available right now. The model treats it as untrusted data. See [app context](docs/app-context.md).
+- **Traces.** A local trace recorder and viewer (`onTrace`, `TraceRecorder`, `mountTraceViewer`). See [traces and evaluation](docs/trace-and-eval.md).
+- **Evaluation.** A 36-task browser evaluation graded from the final page state, plus an optional live-model evaluator with a hard budget.
+- **API check.** `npm run api:check` compares the public API with a saved baseline, in CI and before a release.
 
-- Independent capability registry, versioned schemas and CSP-safe compiled validators.
-- Browser observation, verified actions, ambiguity/staleness checks, cancellation and navigation continuation.
-- Conversation widget with six emotion callbacks, including thinking during loading.
-- Bounded PHP and Node engines, server-only provider transports and PHP/Node conformance fixtures.
-- Laravel 13, React 19, Inertia v3 and Next.js App Router adapters.
-- Script-based onboarding, bounded source/DOM discovery and optional English Codex/Claude Code setup skills.
-- Self-contained WordPress ZIP, guided dashboard setup, filtered context export and configuration-only import.
-- GitHub-first release checks, local source/npm/PHP/plugin artifacts, checksums, compatibility evidence and community templates.
+#### Model providers
+
+- Fifteen named provider presets, including OpenAI, OpenRouter, Groq, DeepSeek, Gemini, Mistral, Qwen, GLM, Sumopod, Together, Fireworks, Cerebras, xAI and 9Router, plus a custom OpenAI-compatible endpoint. They work the same in Node, PHP, Laravel and WordPress. See [providers](docs/providers.md).
+- Optional native tool calling (`tools` mode).
+- Provider diagnostics with status, latency and token usage, never content.
+- Settings for JSON mode, output-token fields, instruction roles and thinking switches.
+- No automatic paid retries.
+
+#### Operations
+
+- Per-session hourly provider budgets in the Node and PHP endpoints (`attemptsPerHour`, default 60).
+- Server-side helpers to erase a conversation. See [operations](docs/operations.md).
+- `observeUrl` and `redactUrl` for the page observer, and `resetSession()` so each conversation starts with a fresh action budget.
+
+#### Demos
+
+- **OFFBEAT**, an art and culture demo site with thirteen verified actions, a gallery, guided buttons and six expressions. Its private AI chat runs on Vercel with Supabase PostgreSQL for sessions and usage limits. See the [OFFBEAT guide](examples/brutalist-demo/README.md).
+
+#### Foundation
+
+- Capability registry, versioned JSON Schema contracts, and validators compiled at build time that work under a strict CSP.
+- Page observation and verified actions, with checks for ambiguous and stale targets, cancellation, and navigation that continues the conversation.
+- A chat widget with six emotions.
+- PHP and Node conversation engines that keep provider keys on the server, with shared conformance tests.
+- Laravel 13, React 19, Inertia v3 and Next.js App Router integrations.
+- An onboarding CLI with source and page discovery and an `assistant-setup` skill for Codex and Claude Code.
+- A self-contained WordPress plugin ZIP with guided dashboard setup and context export and import.
+- Release tooling: source, npm and PHP archives, checksums and compatibility records.
 
 ### Fixed
 
-- WordPress per-minute site/IP limits and the daily provider budget use lock-free atomic counters instead of one shared non-blocking option lock, so simultaneous visitors no longer get spurious 409 `BUSY` responses. An exhausted daily provider budget now returns 429 `PROVIDER_BUDGET` before any conversation work instead of a 502 after the attempt was recorded.
+- **WordPress rate limits.** Rate limits and the daily provider budget now use atomic counters, so visitors arriving at the same time no longer get a `409 BUSY`. A used-up daily budget now returns `429 PROVIDER_BUDGET` before any work starts.
+- **Laravel empty strings.** Laravel now passes the raw validated request body to the engine. Middleware such as `TrimStrings` used to turn empty page titles into `null` and reject ordinary pages.
+- **History size.** Conversation history no longer stores page snapshots of earlier steps, so long tasks no longer run out of context. A request that is still too large ends without using up a model attempt.
+- **Timeouts.** After a timeout or cancellation, the browser waits for the abandoned handler to finish before starting the next action, so a late change cannot count as the next action's result.
+- **Fragment navigation.** Links that only change the `#fragment` are verified in place.
+- **Sensitive URLs.** More sensitive URL parameters (signatures, nonces, tokens, session IDs, one-time codes) now block navigation and observation.
+- **Closed `details`.** Content inside a closed `details` element no longer counts as visible.
+- **Cancellation.** A cancel just before a handler or verifier starts now stops it from running.
+- **OFFBEAT database cleanup.** Expiry cleanup in the OFFBEAT database no longer deletes sessions that were renewed at the same moment.
+- **WordPress login test.** The WordPress login test waits for the login page's autofocus before typing.
+- **History format.** Assistant history now uses the same response format the model is asked to produce, without internal IDs.
 
-- Laravel passes the contract-validated raw JSON body to the engine. Global `TrimStrings`/`ConvertEmptyStringsToNull` middleware previously turned empty titles or unlabeled targets into `null`, so ordinary pages were rejected with 422 `INVALID_PAYLOAD`, and trimmed visitor messages.
-- Node/PHP conversation history keeps browser results without their `observation` snapshot (the current page is already sent each turn), so multi-step tasks no longer exhaust the context limit after a few large pages. An oversized context now finishes without charging an attempt.
-- After a timeout or cancellation, the browser runtime refuses new actions until the abandoned handler or verifier settles (bounded by one more timeout window), so a late mutation cannot be credited to the next verifier.
-- Fragment-only document navigation is verified in place instead of leaving a navigation checkpoint for a page load that never happens.
-- More sensitive query/fragment keys (signatures, nonces, credentials, JWTs, session IDs, `sig`/`sid`/`otp`) block navigation and observation.
+### Security
 
-- Closed native `details` content is no longer considered visible solely because it retains layout rectangles; its first summary remains available. Registered handlers must explicitly prepare hidden controls.
-
-- OFFBEAT PostgreSQL expiry cleanup locks bounded candidates and rechecks target expiry/lease conditions. Concurrent session lease and cost-bucket renewals no longer get deleted using stale candidate IDs; disposable real-database regressions cover both races and batch limits. Production rollout remains a separate owner-authorized step.
-
-- Browser cancellation is rechecked immediately before queued handlers and verifiers start, including resumed navigation. Cancelling an action before its callback starts no longer invokes that callback; a fresh action can still run afterward.
-- The real WordPress browser fixture waits for WordPress's deferred login autofocus before filling credentials and verifies both fields before submitting. A delayed-autofocus regression covers the credential-focus race found in Windows CI without altering plugin authentication or relaxing test assertions.
-- B1 regressions cover five independent PHP/Node chat messages, continuing after cancellation, ignoring late transport/provider replies after cancellation or timeout, and shared PHP/Node recovery without action replay or attempt-budget resets. These use deterministic providers, not live-model accuracy certification.
-
-### Security and distribution
-
-- Node/PHP assistant history now preserves the provider response schema for both action and final turns, without internal call/snapshot identifiers. This avoids teaching live models an incompatible internal action format; strict response and parameter validation remains unchanged.
-
-- Explicit host authorization, CSRF/origin controls, schema validation, durable checkpoints and bounded inference attempts.
-- WordPress lock ownership and quota controls; disabled-by-default activation.
-- MIT shared packages; GPL-3.0-or-later combined WordPress plugin with prefixed dependencies, notices and corresponding sources.
-- npm packages remain private. npm, Packagist and WordPress.org publishing is deferred.
+- Host authorization, CSRF and origin checks, schema validation, saved checkpoints and limits on model attempts.
+- WordPress keeps the assistant off until the administrator enables it, with lock ownership and quotas.
+- Shared packages are MIT-licensed. The WordPress plugin bundles them under GPL-3.0-or-later with prefixed dependencies and third-party notices.
 
 ### Known limitations
 
-This is not stable 1.0 or a production security certification. See [compatibility](docs/compatibility.md) and [security](SECURITY.md). Live-model accuracy, remote CI results, production topology, broad theme/plugin support and assistive-technology review remain unverified. No Rive artwork is redistributed.
+This is a beta, not a stable 1.0. It has not yet been tested with many live models, on production hosting, with a wide range of WordPress themes and plugins, or with assistive technology. See [compatibility](docs/compatibility.md) and [security](SECURITY.md).
