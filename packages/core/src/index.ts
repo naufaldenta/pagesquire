@@ -13,3 +13,4 @@ export * from './json.js';
 export * from './webmcp.js';
 export * from './generic.js';
 export * from './companion.js';
+export * from './link.js';

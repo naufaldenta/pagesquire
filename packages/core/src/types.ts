@@ -68,7 +68,14 @@ export type ActionProgressListener = (
 /** A question or a hand-off shown to the visitor while an action waits. */
 export type VisitorPrompt =
   | { kind: 'choice'; question: string; options: readonly string[] }
-  | { kind: 'handoff'; instruction: string };
+  | { kind: 'handoff'; instruction: string }
+  | {
+      /** PageSquire Link: continue on a partner site; answered with 'continue'. */
+      kind: 'link';
+      partner: { origin: string; name: string };
+      goal: string;
+      fields: Readonly<Record<string, string | number | boolean>>;
+    };
 
 export interface ExecutionContext {
   document: Document;

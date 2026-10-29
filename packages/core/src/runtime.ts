@@ -682,21 +682,30 @@ export class BrowserRuntime {
               options: Object.freeze([...prompt.options]),
               signal: asking.signal,
             }
-          : {
-              kind: 'handoff',
-              instruction: prompt.instruction,
-              signal: asking.signal,
-            };
+          : prompt.kind === 'link'
+            ? {
+                kind: 'link',
+                partner: Object.freeze({ ...prompt.partner }),
+                goal: prompt.goal,
+                fields: Object.freeze({ ...prompt.fields }),
+                signal: asking.signal,
+              }
+            : {
+                kind: 'handoff',
+                instruction: prompt.instruction,
+                signal: asking.signal,
+              };
       const answer = await withAbort(
         Promise.resolve().then(() => visitor(Object.freeze(request))),
         asking.signal,
       );
-      // Only one of the offered options, or 'done' after a hand-off, counts.
+      // Only one of the offered options, 'done' after a hand-off, or
+      // 'continue' for a partner site counts.
       if (
         typeof answer !== 'string' ||
         (prompt.kind === 'choice'
           ? !prompt.options.includes(answer)
-          : answer !== 'done')
+          : answer !== (prompt.kind === 'link' ? 'continue' : 'done'))
       )
         throw new PageSquireError('VISITOR_DECLINED', 'The visitor declined.');
       return answer;
