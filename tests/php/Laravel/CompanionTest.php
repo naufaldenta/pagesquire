@@ -40,6 +40,8 @@ final class CompanionTest extends TestCase
         // Screenshots are declared only when the owner turns them on.
         config(['pagesquire.companion.screenshots' => true]);
         $this->getJson('/.well-known/pagesquire.json')->assertJsonPath('features', ['trustedInput', 'screenshots']);
+        // Link stays off, and its route absent, until the owner turns it on.
+        $this->postJson('/pagesquire/link', [])->assertNotFound();
     }
 
     public function test_chat_replies_carry_calls_signed_for_the_app_origin(): void

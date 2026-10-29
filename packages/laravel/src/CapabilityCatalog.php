@@ -4,6 +4,7 @@ namespace PageSquire\Laravel;
 
 use Illuminate\Contracts\Config\Repository;
 use PageSquire\Server\AssistantException;
+use PageSquire\Server\Link\Link;
 use PageSquire\Server\ProtocolValidator;
 use Throwable;
 
@@ -28,7 +29,7 @@ final class CapabilityCatalog
                 $manifest = json_decode($contents, false, 64, JSON_THROW_ON_ERROR);
                 $this->validator->validate('manifest', $manifest);
 
-                return json_decode($contents, true, 64, JSON_THROW_ON_ERROR);
+                return $this->withLink(json_decode($contents, true, 64, JSON_THROW_ON_ERROR));
             }
 
             if (! is_array($manifest)) {
@@ -37,9 +38,24 @@ final class CapabilityCatalog
 
             $this->validator->validate('manifest', $manifest);
 
-            return $manifest;
+            return $this->withLink($manifest);
         } catch (Throwable) {
             throw new AssistantException('INVALID_CONFIGURATION', 'The assistant catalog is not configured.', 503);
         }
+    }
+
+    /**
+     * With PageSquire Link on, the catalog also lists link.handoff; the pagesquire.capability gate still decides who may use it.
+     *
+     * @param  array<string, mixed>  $manifest
+     * @return array<string, mixed>
+     */
+    private function withLink(array $manifest): array
+    {
+        if ($this->config->get('pagesquire.link.enabled') && $this->config->get('pagesquire.companion.signing_key') && ! in_array('link.handoff', array_column($manifest['capabilities'], 'id'), true)) {
+            $manifest['capabilities'][] = Link::handoffCapability();
+        }
+
+        return $manifest;
     }
 }

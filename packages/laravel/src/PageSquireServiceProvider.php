@@ -11,6 +11,11 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use PageSquire\Server\ActionSigner;
 use PageSquire\Server\ConversationEngine;
+use PageSquire\Server\Link\CurlLinkTransport;
+use PageSquire\Server\Link\FileLinkStore;
+use PageSquire\Server\Link\LinkManager;
+use PageSquire\Server\Link\LinkStore;
+use PageSquire\Server\Link\LinkTransport;
 use PageSquire\Server\ProtocolValidator;
 use PageSquire\Server\Provider;
 
@@ -27,6 +32,24 @@ final class PageSquireServiceProvider extends ServiceProvider
             return new ActionSigner(
                 (string) $config->get('pagesquire.companion.signing_key'),
                 (string) ($config->get('pagesquire.companion.origin') ?: ActionSigner::origin((string) $config->get('app.url'))),
+            );
+        });
+        $this->app->singleton(LinkStore::class, fn ($app): LinkStore => new FileLinkStore(
+            (string) ($app['config']->get('pagesquire.link.store') ?: storage_path('app/pagesquire-links.json')),
+        ));
+        $this->app->bind(LinkTransport::class, CurlLinkTransport::class);
+        $this->app->singleton(LinkManager::class, function ($app): LinkManager {
+            $config = $app['config'];
+
+            return new LinkManager(
+                $app->make(ActionSigner::class),
+                $app->make(LinkStore::class),
+                [
+                    'endpoint' => '/'.ltrim((string) $config->get('pagesquire.link.path', 'pagesquire/link'), '/'),
+                    'name' => (string) ($config->get('pagesquire.link.name') ?: $config->get('app.name', 'PageSquire site')),
+                    'skills' => (array) $config->get('pagesquire.link.skills', []),
+                ],
+                $app->make(LinkTransport::class),
             );
         });
         $this->app->bind(Provider::class, function ($app): Provider {
@@ -75,6 +98,7 @@ final class PageSquireServiceProvider extends ServiceProvider
                 (bool) ($limits['check_actions'] ?? false),
                 $app['config']->get('pagesquire.companion.signing_key') ? $app->make(ActionSigner::class) : null,
                 (bool) $app['config']->get('pagesquire.companion.screenshots', false),
+                $app['config']->get('pagesquire.link.enabled') && $app['config']->get('pagesquire.companion.signing_key') ? $app->make(LinkManager::class) : null,
             );
         });
     }
@@ -82,6 +106,15 @@ final class PageSquireServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->publishes([__DIR__.'/../config/pagesquire.php' => config_path('pagesquire.php')], 'pagesquire-config');
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                Console\LinkInviteCommand::class,
+                Console\LinkAcceptCommand::class,
+                Console\LinkListCommand::class,
+                Console\LinkApproveCommand::class,
+                Console\LinkRevokeCommand::class,
+            ]);
+        }
 
         if (! $this->app['config']->get('pagesquire.enabled')) {
             return;
@@ -97,6 +130,10 @@ final class PageSquireServiceProvider extends ServiceProvider
                     ->response(fn (): mixed => response()->json(['error' => ['code' => 'RATE_LIMITED', 'message' => 'Please wait before sending another message.']], 429)->header('Cache-Control', 'no-store')),
             ];
         });
+        // Partner servers call the link endpoint: no session, so limit by address.
+        RateLimiter::for('pagesquire-link', fn (Request $request): Limit => Limit::perMinute(max(1, min(600, (int) config('pagesquire.link.requests_per_minute', 60))))
+            ->by('ip:'.hash('sha256', (string) $request->ip()))
+            ->response(fn (): mixed => response()->json(['error' => ['code' => 'RATE_LIMITED', 'message' => 'Too many link messages.']], 429)->header('Cache-Control', 'no-store')));
         $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
     }
 }

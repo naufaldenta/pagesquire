@@ -49,6 +49,24 @@ return [
         // reads images; visitors still allow them in the extension. Off by default.
         'screenshots' => env('PAGESQUIRE_SCREENSHOTS', false),
     ],
+    // PageSquire Link: pair with partner PageSquire sites (docs/link.md). Needs the
+    // companion signing key; owners pair with the pagesquire:link-* commands.
+    'link' => [
+        'enabled' => env('PAGESQUIRE_LINK', false),
+        // Shown to partner owners and visitors (default: APP_NAME).
+        'name' => env('PAGESQUIRE_LINK_NAME'),
+        'path' => 'pagesquire/link',
+        // Services partners may hand visitors into: A2A-style skills with the fields
+        // a handoff may carry and the page it opens, e.g.
+        // ['id' => 'book_table', 'name' => 'Book a table', 'description' => '...',
+        //  'tags' => ['restaurant'], 'fields' => ['date' => ['type' => 'string', 'format' => 'date']],
+        //  'startPath' => '/reservations'].
+        'skills' => [],
+        // JSON file for links (default: storage/app/pagesquire-links.json). Bind your
+        // own PageSquire\Server\Link\LinkStore for several application servers.
+        'store' => env('PAGESQUIRE_LINK_STORE'),
+        'requests_per_minute' => 60,
+    ],
     // Replay verified trajectories for identical instructions without calling the provider.
     'trajectory_cache' => [
         'enabled' => false,
