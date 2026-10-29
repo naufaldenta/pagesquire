@@ -4,11 +4,13 @@ import type { LocaleOptions } from './i18n.js';
 
 export type LinkArrivalOptions = LocaleOptions;
 
-const FRAGMENT = /^#psq-link=([A-Za-z0-9_-]{22})$/;
+// psq-link: a partner site sent the visitor; psq-agent: an A2A agent did.
+const FRAGMENT = /^#psq-(link|agent)=([A-Za-z0-9_-]{22})$/;
 
 /**
  * PageSquire Link arrival: when a partner site sent the visitor here with a
- * `#psq-link=CODE` fragment, removes it from the address bar at once and
+ * `#psq-link=CODE` fragment, or an A2A agent with `#psq-agent=CODE`,
+ * removes it from the address bar at once and
  * shows a banner in `host`. Only Continue redeems the code, starting the
  * conversation from the visitor's request; Dismiss discards it. Returns a
  * function that removes the banner, or undefined when there is no code.
@@ -20,8 +22,10 @@ export function mountLinkArrival(
 ): (() => void) | undefined {
   const document = host.ownerDocument;
   const view = document.defaultView;
-  const code = FRAGMENT.exec(view?.location.hash ?? '')?.[1];
+  const match = FRAGMENT.exec(view?.location.hash ?? '');
+  const code = match?.[2];
   if (!view || !code) return undefined;
+  const agent = match![1] === 'agent';
   // The code must not linger in history, bookmarks or shared links.
   view.history.replaceState(
     view.history.state,
@@ -36,10 +40,10 @@ export function mountLinkArrival(
   const heading = document.createElement('p');
   heading.className = 'pagesquire-visitor-title';
   heading.id = `pagesquire-arrival-${Math.random().toString(36).slice(2)}`;
-  heading.textContent = t['link.arrivalTitle'];
+  heading.textContent = t[agent ? 'link.agentTitle' : 'link.arrivalTitle'];
   banner.setAttribute('aria-labelledby', heading.id);
   const text = document.createElement('p');
-  text.textContent = t['link.arrivalText'];
+  text.textContent = t[agent ? 'link.agentText' : 'link.arrivalText'];
   const actions = document.createElement('div');
   actions.className = 'pagesquire-visitor-actions';
   const proceed = document.createElement('button');

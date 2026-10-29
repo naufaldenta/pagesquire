@@ -281,7 +281,11 @@ export class AssistantClient {
    * link.handoff call and returns the partner URL. Used by
    * createLinkBindings while that call runs.
    */
-  async approveHandoff(callId: string, signal: AbortSignal): Promise<string> {
+  async approveHandoff(
+    callId: string,
+    signal: AbortSignal,
+    skill?: string,
+  ): Promise<string> {
     if (!this.conversationId)
       throw new PageSquireError(
         'NO_CONVERSATION',
@@ -291,7 +295,7 @@ export class AssistantClient {
       protocolVersion: PROTOCOL_VERSION,
       requestId: crypto.randomUUID(),
       conversationId: this.conversationId,
-      handoff: { callId },
+      handoff: { callId, ...(skill !== undefined ? { skill } : {}) },
       // The handoff action is still running and owns the page snapshot; an
       // approval carries no page content, only where it was given.
       snapshot: {

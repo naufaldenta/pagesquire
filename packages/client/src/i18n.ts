@@ -40,9 +40,17 @@ export const en = {
   'visitor.linkOrigin':
     '{origin} opens in a new tab. Only your request and the details below are shared.',
   'visitor.linkContinue': 'Continue on {name}',
+  'visitor.linkChooseTitle': 'Where do you want to continue?',
+  'visitor.linkChoiceHelp':
+    'The site you choose opens in a new tab. Only your request and the details listed under it are shared.',
+  'visitor.returnTitle': 'Back to {name}?',
+  'visitor.returnContinue': 'Back to {name}',
   'link.arrivalTitle': 'Continue from a partner site',
   'link.arrivalText':
-    'A partner site sent you here with your request. Continue to let this assistant pick it up.',
+    'A partner site sent you here. Continue to let this assistant pick up where you left off.',
+  'link.agentTitle': 'Continue a request from an AI agent',
+  'link.agentText':
+    'An AI agent sent you here with a request. Continue to let this assistant help you with it here.',
   'link.continue': 'Continue',
   'link.dismiss': 'Dismiss',
   'error.handoffExpired':
@@ -203,9 +211,17 @@ export const id: Messages = {
   'visitor.linkOrigin':
     '{origin} terbuka di tab baru. Hanya permintaanmu dan detail di bawah ini yang dibagikan.',
   'visitor.linkContinue': 'Lanjut di {name}',
+  'visitor.linkChooseTitle': 'Mau lanjut di mana?',
+  'visitor.linkChoiceHelp':
+    'Situs yang kamu pilih terbuka di tab baru. Hanya permintaanmu dan detail di bawah nama situs itu yang dibagikan.',
+  'visitor.returnTitle': 'Kembali ke {name}?',
+  'visitor.returnContinue': 'Kembali ke {name}',
   'link.arrivalTitle': 'Lanjutan dari situs mitra',
   'link.arrivalText':
-    'Situs mitra mengirimmu ke sini dengan permintaanmu. Pilih Lanjutkan agar asisten di sini meneruskannya.',
+    'Situs mitra mengirimmu ke sini. Pilih Lanjutkan agar asisten di sini meneruskan dari tempat terakhir.',
+  'link.agentTitle': 'Lanjutkan permintaan dari agen AI',
+  'link.agentText':
+    'Agen AI mengirimmu ke sini dengan sebuah permintaan. Pilih Lanjutkan agar asisten di sini membantumu dengan permintaan itu.',
   'link.continue': 'Lanjutkan',
   'link.dismiss': 'Tutup',
   'error.handoffExpired':

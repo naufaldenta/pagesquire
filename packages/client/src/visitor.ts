@@ -8,8 +8,10 @@ export type VisitorPromptOptions = LocaleOptions;
  * Returns a `visitor` function for `BrowserRuntime` that shows ui.ask
  * questions as option buttons, ui.hand_off requests as a "Your turn" panel
  * and PageSquire Link handoffs as a "Continue on partner?" panel listing
- * the partner's origin, the goal and every field, in `host`. Only a click
- * on an offered option, "I'm done" or "Continue on …" answers; cancel,
+ * the partner's origin, the goal and every field, in `host`. When several
+ * partners offer the skill, each gets its own block with its origin, its
+ * fields and its own Continue button. Only a click on an offered option,
+ * "I'm done" or "Continue on …" answers; cancel,
  * Escape, withdrawal and timeouts resolve `null`.
  * Text is rendered with textContent, never as HTML.
  */
@@ -54,16 +56,26 @@ export function createVisitorPrompt(
     } else if (request.kind === 'link') {
       // Nothing leaves this site until the visitor reads this and continues.
       panel.setAttribute('role', 'alertdialog');
-      heading.textContent = format(t['visitor.linkTitle'], {
-        name: request.partner.name,
-      });
+      const name = { name: request.partner.name };
+      heading.textContent = request.alternatives?.length
+        ? t['visitor.linkChooseTitle']
+        : format(
+            t[request.back ? 'visitor.returnTitle' : 'visitor.linkTitle'],
+            name,
+          );
       summary.textContent = request.goal;
-      choices.push([
-        button(
-          format(t['visitor.linkContinue'], { name: request.partner.name }),
-        ),
-        'continue',
-      ]);
+      if (!request.alternatives?.length)
+        choices.push([
+          button(
+            format(
+              t[
+                request.back ? 'visitor.returnContinue' : 'visitor.linkContinue'
+              ],
+              name,
+            ),
+          ),
+          'continue',
+        ]);
     } else {
       // A hand-off leaves the page usable: no focus move, a polite announcement.
       panel.setAttribute('role', 'region');
@@ -72,29 +84,58 @@ export function createVisitorPrompt(
       summary.textContent = request.instruction;
       choices.push([button(t['visitor.done']), 'done']);
     }
-    actions.append(...choices.map(([element]) => element), cancel);
     panel.append(heading, summary);
     if (request.kind === 'link') {
-      const fields = Object.entries(request.fields);
-      if (fields.length) {
+      const fieldList = (values: Readonly<Record<string, unknown>>) => {
         const list = document.createElement('dl');
         list.className = 'pagesquire-visitor-fields';
-        for (const [name, value] of fields) {
+        for (const [name, value] of Object.entries(values)) {
           const term = document.createElement('dt');
           term.textContent = name;
           const detail = document.createElement('dd');
           detail.textContent = String(value);
           list.append(term, detail);
         }
-        panel.append(list);
+        return list.childElementCount ? [list] : [];
+      };
+      const help = document.createElement('p');
+      help.className = 'pagesquire-visitor-help';
+      if (request.alternatives?.length) {
+        // One block per partner, so the visitor sees what each would receive.
+        for (const [index, choice] of [
+          request,
+          ...request.alternatives,
+        ].entries()) {
+          const group = document.createElement('div');
+          group.className = 'pagesquire-visitor-choice';
+          group.setAttribute('role', 'group');
+          const label = document.createElement('p');
+          label.id = `${id}-choice-${index}`;
+          label.className = 'pagesquire-visitor-partner';
+          label.textContent = `${choice.partner.name} (${choice.partner.origin})`;
+          group.setAttribute('aria-labelledby', label.id);
+          const go = button(
+            format(t['visitor.linkContinue'], { name: choice.partner.name }),
+          );
+          choices.push([go, index ? `continue:${index}` : 'continue']);
+          group.append(label, ...fieldList(choice.fields), go);
+          panel.append(group);
+        }
+        help.textContent = t['visitor.linkChoiceHelp'];
+      } else {
+        panel.append(...fieldList(request.fields));
+        help.textContent = format(t['visitor.linkOrigin'], {
+          origin: request.partner.origin,
+        });
       }
-      const origin = document.createElement('p');
-      origin.className = 'pagesquire-visitor-help';
-      origin.textContent = format(t['visitor.linkOrigin'], {
-        origin: request.partner.origin,
-      });
-      panel.append(origin);
+      panel.append(help);
     }
+    actions.append(
+      ...choices
+        .map(([element]) => element)
+        .filter((element) => !element.parentElement),
+      cancel,
+    );
     if (request.kind === 'handoff') {
       const help = document.createElement('p');
       help.className = 'pagesquire-visitor-help';
