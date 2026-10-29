@@ -688,6 +688,19 @@ export class BrowserRuntime {
                 partner: Object.freeze({ ...prompt.partner }),
                 goal: prompt.goal,
                 fields: Object.freeze({ ...prompt.fields }),
+                ...(prompt.alternatives?.length
+                  ? {
+                      alternatives: Object.freeze(
+                        prompt.alternatives.map((entry) =>
+                          Object.freeze({
+                            partner: Object.freeze({ ...entry.partner }),
+                            fields: Object.freeze({ ...entry.fields }),
+                          }),
+                        ),
+                      ),
+                    }
+                  : {}),
+                ...(prompt.back ? { back: true } : {}),
                 signal: asking.signal,
               }
             : {
@@ -700,12 +713,18 @@ export class BrowserRuntime {
         asking.signal,
       );
       // Only one of the offered options, 'done' after a hand-off, or
-      // 'continue' for a partner site counts.
+      // 'continue' ('continue:N' for an alternative) for a partner site counts.
       if (
         typeof answer !== 'string' ||
         (prompt.kind === 'choice'
           ? !prompt.options.includes(answer)
-          : answer !== (prompt.kind === 'link' ? 'continue' : 'done'))
+          : prompt.kind === 'link'
+            ? answer !== 'continue' &&
+              !Array.from(
+                prompt.alternatives ?? [],
+                (_entry, index) => `continue:${index + 1}`,
+              ).includes(answer)
+            : answer !== 'done')
       )
         throw new PageSquireError('VISITOR_DECLINED', 'The visitor declined.');
       return answer;

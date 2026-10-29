@@ -1,6 +1,28 @@
-import type { CapabilityDefinition } from '@pagesquire/protocol';
+import type { CapabilityDefinition, JsonObject } from '@pagesquire/protocol';
 import { PageSquireError } from './errors.js';
 import type { CapabilityHandler, VerificationHandler } from './types.js';
+
+const fieldsSchema: JsonObject = {
+  type: 'object',
+  maxProperties: 10,
+  additionalProperties: {
+    anyOf: [
+      { type: 'string', maxLength: 200 },
+      { type: 'number' },
+      { type: 'boolean' },
+    ],
+  },
+};
+
+const partnerSchema: JsonObject = {
+  type: 'object',
+  properties: {
+    origin: { type: 'string', maxLength: 200 },
+    name: { type: 'string', maxLength: 80 },
+  },
+  required: ['origin', 'name'],
+  additionalProperties: false,
+};
 
 /**
  * PageSquire Link (Phase 6B): the built-in tool that hands the visitor to a
@@ -22,26 +44,24 @@ export function createLinkCapabilities(): CapabilityDefinition[] {
         properties: {
           skill: { type: 'string', minLength: 3, maxLength: 200 },
           goal: { type: 'string', minLength: 1, maxLength: 300 },
-          fields: {
-            type: 'object',
-            maxProperties: 10,
-            additionalProperties: {
-              anyOf: [
-                { type: 'string', maxLength: 200 },
-                { type: 'number' },
-                { type: 'boolean' },
-              ],
-            },
-          },
+          fields: fieldsSchema,
           // Set by the engine from the link, never by the model.
-          partner: {
-            type: 'object',
-            properties: {
-              origin: { type: 'string', maxLength: 200 },
-              name: { type: 'string', maxLength: 80 },
+          partner: partnerSchema,
+          // Set by the engine: other partners with the same skill ID, so the
+          // visitor chooses where to continue.
+          alternatives: {
+            type: 'array',
+            maxItems: 3,
+            items: {
+              type: 'object',
+              properties: {
+                skill: { type: 'string', minLength: 3, maxLength: 200 },
+                partner: partnerSchema,
+                fields: fieldsSchema,
+              },
+              required: ['skill', 'partner', 'fields'],
+              additionalProperties: false,
             },
-            required: ['origin', 'name'],
-            additionalProperties: false,
           },
         },
         required: ['skill', 'goal'],
@@ -50,6 +70,25 @@ export function createLinkCapabilities(): CapabilityDefinition[] {
       risk: 'reversible',
       verification: { handler: 'link.handoff.verify' },
     },
+    {
+      id: 'link.return',
+      description:
+        "Send the visitor back to the partner site they came from, once, with a one-line outcome of what was done here, such as a confirmed booking. Use it only when the visitor's request here is finished or they ask to go back. The visitor sees the outcome and must approve; the partner then opens in a new tab.",
+      execution: 'browser',
+      handler: 'link.return',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          outcome: { type: 'string', minLength: 1, maxLength: 300 },
+          // Set by the engine from the arrival, never by the model.
+          partner: partnerSchema,
+        },
+        required: ['outcome'],
+        additionalProperties: false,
+      },
+      risk: 'reversible',
+      verification: { handler: 'link.return.verify' },
+    },
   ];
 }
 
@@ -57,17 +96,24 @@ export interface LinkBindingOptions {
   /**
    * Reports the visitor's approval of a pending link.handoff call to the
    * server and returns the partner URL (AssistantClient.approveHandoff).
+   * `skill` is the partner skill the visitor chose; pass it on.
    */
-  approve: (callId: string, signal: AbortSignal) => Promise<string>;
+  approve: (
+    callId: string,
+    signal: AbortSignal,
+    skill?: string,
+  ) => Promise<string>;
   /** Opens the new tab; defaults to window.open in the page's window. */
   open?: () => Window | null;
 }
 
 /**
- * The browser side of link.handoff: the visitor sees the partner, the goal
- * and every field and must choose Continue. The new tab opens at once, while
- * the click still counts as a user gesture; only then does the server send
- * the ticket, and the tab goes to the partner's address with its code.
+ * The browser side of link.handoff and link.return: the visitor sees the
+ * partner, the goal or outcome and every field and must choose Continue.
+ * When several partners offer the skill, the visitor picks one of them. The
+ * new tab opens at once, while the click still counts as a user gesture; only
+ * then does the server send the ticket, and the tab goes to the partner's
+ * address with its code.
  */
 export function createLinkBindings(options: LinkBindingOptions): {
   capabilities: CapabilityDefinition[];
@@ -75,30 +121,52 @@ export function createLinkBindings(options: LinkBindingOptions): {
   verifiers: Record<string, VerificationHandler>;
 } {
   const opened = new Map<string, string>();
-  const handlers: Record<string, CapabilityHandler> = {
-    'link.handoff': async (parameters, context) => {
-      const partner = parameters.partner as
-        { origin?: unknown; name?: unknown } | undefined;
-      if (
-        typeof partner?.origin !== 'string' ||
-        typeof partner.name !== 'string' ||
-        !/^https?:\/\/[^/?#\s]+$/.test(partner.origin)
-      )
-        throw new PageSquireError(
-          'INVALID_PARAMETERS',
-          'The handoff does not name its partner site.',
-        );
+  const go =
+    (back: boolean): CapabilityHandler =>
+    async (parameters, context) => {
+      const choices = [
+        parameters,
+        ...(back ? [] : ((parameters.alternatives ?? []) as JsonObject[])),
+      ].map((entry) => {
+        const partner = entry.partner as
+          { origin?: unknown; name?: unknown } | undefined;
+        if (
+          typeof partner?.origin !== 'string' ||
+          typeof partner.name !== 'string' ||
+          !/^https?:\/\/[^/?#\s]+$/.test(partner.origin)
+        )
+          throw new PageSquireError(
+            'INVALID_PARAMETERS',
+            'The handoff does not name its partner site.',
+          );
+        return {
+          skill: back ? undefined : String(entry.skill),
+          partner: { origin: partner.origin, name: partner.name },
+          fields: back
+            ? {}
+            : { ...((entry.fields ?? {}) as Record<string, string>) },
+        };
+      });
       if (!context.askVisitor)
         throw new PageSquireError(
           'VISITOR_UNAVAILABLE',
           'No visitor prompt is configured on this page.',
         );
+      let answer: string;
       try {
-        await context.askVisitor({
+        answer = await context.askVisitor({
           kind: 'link',
-          partner: { origin: partner.origin, name: partner.name },
-          goal: String(parameters.goal),
-          fields: { ...((parameters.fields ?? {}) as Record<string, string>) },
+          partner: choices[0]!.partner,
+          goal: String(back ? parameters.outcome : parameters.goal),
+          fields: choices[0]!.fields,
+          ...(choices.length > 1
+            ? {
+                alternatives: choices
+                  .slice(1)
+                  .map(({ partner, fields }) => ({ partner, fields })),
+              }
+            : {}),
+          ...(back ? { back: true } : {}),
         });
       } catch (error) {
         // Choosing not to continue is the visitor's decision, not a failure.
@@ -112,6 +180,9 @@ export function createLinkBindings(options: LinkBindingOptions): {
           );
         throw error;
       }
+      // 'continue' is the first partner, 'continue:N' alternative N.
+      const { skill, partner } =
+        choices[answer === 'continue' ? 0 : Number(answer.slice(9))]!;
       const tab = options.open
         ? options.open()
         : (context.document.defaultView?.open('', '_blank') ?? null);
@@ -129,7 +200,7 @@ export function createLinkBindings(options: LinkBindingOptions): {
       let target: URL;
       try {
         target = new URL(
-          await options.approve(context.call.callId, context.signal),
+          await options.approve(context.call.callId, context.signal, skill),
         );
       } catch (error) {
         tab.close();
@@ -147,16 +218,21 @@ export function createLinkBindings(options: LinkBindingOptions): {
       }
       tab.location.href = target.href;
       opened.set(context.call.callId, partner.origin);
-    },
+    };
+  const verify: VerificationHandler = (_parameters, context) => {
+    const origin = opened.get(context.call.callId);
+    opened.delete(context.call.callId);
+    return origin
+      ? { verified: true, evidence: { opened: origin } }
+      : { verified: false };
+  };
+  const handlers: Record<string, CapabilityHandler> = {
+    'link.handoff': go(false),
+    'link.return': go(true),
   };
   const verifiers: Record<string, VerificationHandler> = {
-    'link.handoff.verify': (_parameters, context) => {
-      const origin = opened.get(context.call.callId);
-      opened.delete(context.call.callId);
-      return origin
-        ? { verified: true, evidence: { opened: origin } }
-        : { verified: false };
-    },
+    'link.handoff.verify': verify,
+    'link.return.verify': verify,
   };
   return { capabilities: createLinkCapabilities(), handlers, verifiers };
 }

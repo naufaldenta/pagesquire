@@ -70,11 +70,21 @@ export type VisitorPrompt =
   | { kind: 'choice'; question: string; options: readonly string[] }
   | { kind: 'handoff'; instruction: string }
   | {
-      /** PageSquire Link: continue on a partner site; answered with 'continue'. */
+      /**
+       * PageSquire Link: continue on a partner site; answered with
+       * 'continue', or 'continue:N' for alternative N (from 1).
+       */
       kind: 'link';
       partner: { origin: string; name: string };
       goal: string;
       fields: Readonly<Record<string, string | number | boolean>>;
+      /** Other partners offering the same skill, each with what it would receive. */
+      alternatives?: readonly {
+        partner: { origin: string; name: string };
+        fields: Readonly<Record<string, string | number | boolean>>;
+      }[];
+      /** Back to the site the visitor came from (link.return). */
+      back?: boolean;
     };
 
 export interface ExecutionContext {
