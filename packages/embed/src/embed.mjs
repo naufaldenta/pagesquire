@@ -6,6 +6,7 @@ import {
   composedClosest,
   createCompanionDriver,
   createGenericBindings,
+  createLinkBindings,
   PageObserver,
   createPageBindings,
   exposeToWebMcp,
@@ -17,6 +18,7 @@ import {
   createApprovalPrompt,
   createVisitorPrompt,
   createHttpTransport,
+  mountLinkArrival,
   mountTraceViewer,
   mountWidget,
 } from '@pagesquire/client';
@@ -47,6 +49,9 @@ import { parameters } from '../dist/generated/bindings.mjs';
  *   data-screenshots  "true", with data-companion, to also offer ui.screenshot: redacted screenshots
  *                     the visitor allows in the extension; the server must forward images
  *                     (EngineOptions.screenshots) to a model that reads them
+ *   data-link         "true" when the server runs PageSquire Link: the assistant may offer to continue
+ *                     on an approved partner site (the visitor sees and approves what is shared), and a
+ *                     visitor sent here by a partner sees a banner to continue their request
  *   data-locale       "en", "id" or "auto" (default: follows <html lang>) for built-in UI text
  *   data-trace        "true" to record a local trace and show its viewer; "content" also keeps message
  *                     text, parameters and evidence (development only)
@@ -85,6 +90,7 @@ function settings(element) {
     generic: data.generic === 'true',
     companion: data.companion === 'true',
     screenshots: data.companion === 'true' && data.screenshots === 'true',
+    link: data.link === 'true',
     outline: data.outline === 'true',
     frames: data.frames === 'true',
     locale: ['en', 'id'].includes(data.locale) ? data.locale : 'auto',
@@ -137,6 +143,12 @@ async function boot() {
   const generic = config.generic
     ? createGenericBindings(companion ? { driver: companion } : {})
     : undefined;
+  // The client is created below; a handoff runs only after it exists.
+  const link = config.link
+    ? createLinkBindings({
+        approve: (callId, signal) => client.approveHandoff(callId, signal),
+      })
+    : undefined;
   void companion?.connected();
   const registry = new CapabilityRegistry(
     {
@@ -145,18 +157,21 @@ async function boot() {
         (entry) =>
           (navigation || entry.id !== 'browser.navigate') &&
           (generic || !entry.id.startsWith('ui.')) &&
-          (entry.id !== 'ui.screenshot' || config.screenshots),
+          (entry.id !== 'ui.screenshot' || config.screenshots) &&
+          (entry.id !== 'link.handoff' || config.link),
       ),
     },
     {
       handlers: {
         ...page.handlers,
         ...generic?.handlers,
+        ...link?.handlers,
         'browser.navigate': (args, context) => context.navigate(args.url),
       },
       verifiers: {
         ...page.verifiers,
         ...generic?.verifiers,
+        ...link?.verifiers,
         'browser.verifyNavigation': (args) => ({
           verified:
             document.URL === new URL(args.url, document.URL).href &&
@@ -184,12 +199,13 @@ async function boot() {
     presentation: driver,
     // Risky generic steps such as submit or delete ask the visitor first.
     ...(generic
-      ? {
-          approve: createApprovalPrompt(host, { locale: config.locale }),
-          visitor: createVisitorPrompt(host, { locale: config.locale }),
-          timeoutMs: 8000,
-        }
+      ? { approve: createApprovalPrompt(host, { locale: config.locale }) }
       : {}),
+    ...(generic || link
+      ? { visitor: createVisitorPrompt(host, { locale: config.locale }) }
+      : {}),
+    // A handoff waits for the partner's server (up to 10 seconds).
+    ...(link ? { timeoutMs: 20000 } : generic ? { timeoutMs: 8000 } : {}),
     ...(navigationStore ? { navigationStore } : {}),
   });
   const trace = config.trace
@@ -209,6 +225,7 @@ async function boot() {
     ...(generic ? { allowRecovery: true, timeoutMs: 120000 } : {}),
   });
   mountWidget(host, client, { title: config.title, locale: config.locale });
+  if (link) mountLinkArrival(host, client, { locale: config.locale });
   if (trace) mountTraceViewer(host, trace);
   const webmcp = config.webmcp ? await exposeToWebMcp(runtime) : undefined;
   window.PageSquire = Object.freeze({

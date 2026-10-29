@@ -1,5 +1,6 @@
 import {
   createGenericCapabilities,
+  createLinkCapabilities,
   createScreenshotCapabilities,
   createPageCapabilities,
   navigationCapability,
@@ -18,5 +19,7 @@ export const manifest = {
     ...createGenericCapabilities(),
     // Offered only with data-companion and data-screenshots as well.
     ...createScreenshotCapabilities(),
+    // Offered only when the tag sets data-link="true" (PageSquire Link).
+    ...createLinkCapabilities(),
   ],
 };
