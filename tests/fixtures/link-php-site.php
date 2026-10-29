@@ -42,7 +42,8 @@ if (PHP_SAPI === 'cli') {
             'list' => $manager->list(),
             'handoff' => $manager->handoff((string) ($argv[2] ?? ''), json_decode((string) ($argv[3] ?? '{}'), true, 8, JSON_THROW_ON_ERROR)),
             'redeem' => ['ticket' => $manager->redeem((string) ($argv[2] ?? ''))],
-            default => throw new AssistantException('UNKNOWN_COMMAND', 'Use invite, accept, approve, revoke, list, handoff or redeem.', 400),
+            'sendback' => $manager->sendBack((string) ($argv[2] ?? ''), json_decode((string) ($argv[3] ?? '{}'), true, 8, JSON_THROW_ON_ERROR)),
+            default => throw new AssistantException('UNKNOWN_COMMAND', 'Use invite, accept, approve, revoke, list, handoff, redeem or sendback.', 400),
         };
         echo json_encode($result, JSON_UNESCAPED_SLASHES);
     } catch (AssistantException $exception) {

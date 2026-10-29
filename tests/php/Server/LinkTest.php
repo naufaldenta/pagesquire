@@ -187,7 +187,7 @@ final class LinkTest extends TestCase
         $this->assertMatchesRegularExpression('~^http://resto\.test/reservations#psq-link=[\w-]{22}$~', $result['url']);
         $code = explode('#psq-link=', $result['url'])[1];
         $this->assertSame([
-            'link' => $id, 'partner' => ['origin' => 'http://hotel.test', 'name' => 'Hotel Nusa'],
+            'kind' => 'handoff', 'link' => $id, 'partner' => ['origin' => 'http://hotel.test', 'name' => 'Hotel Nusa'],
             'skill' => 'book_table', 'goal' => 'A table for four tonight', 'fields' => ['date' => '2026-10-29', 'people' => 4], 'locale' => 'id',
             'expiresAt' => $result['expiresAt'],
         ], $resto->redeem($code));
@@ -245,6 +245,43 @@ final class LinkTest extends TestCase
         $second = $hotel->handoff($id, self::TABLE_FOR_FOUR);
         $resto->revoke($id);
         $this->assertNull($resto->redeem(explode('#psq-link=', $second['url'])[1]));
+    }
+
+    public function test_the_partner_sends_the_visitor_back_once_to_the_page_they_left(): void
+    {
+        [$hotel, $resto, $id] = $this->handing();
+        $sent = $hotel->handoff($id, ['returnUrl' => 'http://hotel.test/rooms?night=2'] + self::TABLE_FOR_FOUR);
+        $arrival = $resto->redeem(explode('#psq-link=', $sent['url'])[1]);
+        $this->assertMatchesRegularExpression('/^ret_[\w-]{22}$/', $arrival['returnId']);
+        $back = $resto->sendBack($id, ['returnId' => $arrival['returnId'], 'outcome' => 'Table for 4 booked for 29 October, 19:00.', 'locale' => 'en']);
+        $this->assertMatchesRegularExpression('~^http://hotel\.test/rooms\?night=2#psq-link=[\w-]{22}$~', $back['url']);
+        $this->assertSame([
+            'kind' => 'return', 'link' => $id, 'partner' => ['origin' => 'http://resto.test', 'name' => 'Restoran Laut'],
+            'skill' => 'book_table', 'goal' => 'Table for 4 booked for 29 October, 19:00.', 'fields' => [], 'locale' => 'en', 'expiresAt' => $back['expiresAt'],
+        ], $hotel->redeem(explode('#psq-link=', $back['url'])[1]));
+        try {
+            $resto->sendBack($id, ['returnId' => $arrival['returnId'], 'outcome' => 'Again']);
+            $this->fail('A second return was accepted.');
+        } catch (AssistantException $exception) {
+            $this->assertSame('PARTNER_REJECTED', $exception->errorCode);
+        }
+        // Handoffs count per skill as well; a return counts in the totals only.
+        $counts = static fn (array $stats): array => array_diff_key($stats, ['lastAt' => true]) + ['timed' => is_int($stats['lastAt'] ?? null)];
+        $this->assertSame(['sent' => 1, 'received' => 1, 'skills' => ['book_table' => ['sent' => 1, 'received' => 0]], 'timed' => true], $counts($hotel->get($id)['stats']));
+        $this->assertSame(['sent' => 1, 'received' => 1, 'skills' => ['book_table' => ['sent' => 0, 'received' => 1]], 'timed' => true], $counts($resto->get($id)['stats']));
+
+        // A return URL on another origin is ignored: no return is possible.
+        $elsewhere = $hotel->handoff($id, ['returnUrl' => 'https://evil.example/phish'] + self::TABLE_FOR_FOUR);
+        $this->assertArrayNotHasKey('returnId', $resto->redeem(explode('#psq-link=', $elsewhere['url'])[1]));
+        $again = $resto->redeem(explode('#psq-link=', $hotel->handoff($id, ['returnUrl' => 'http://hotel.test/'] + self::TABLE_FOR_FOUR)['url'])[1]);
+        foreach (['', str_repeat('x', 301), "Line\nbreak"] as $outcome) {
+            try {
+                $resto->sendBack($id, ['returnId' => $again['returnId'], 'outcome' => $outcome]);
+                $this->fail('An invalid outcome was sent.');
+            } catch (AssistantException $exception) {
+                $this->assertSame('RETURN_INVALID', $exception->errorCode);
+            }
+        }
     }
 
     /** @return array{LinkManager, LinkManager, string} A paired hotel and restaurant where the hotel may hand visitors into booking. */

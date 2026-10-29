@@ -157,22 +157,41 @@ test('a PHP owner invites, a Node owner accepts, both approve, then PHP revokes'
     skill: 'book_table',
     goal: 'A table for four tonight',
     fields: { date: '2026-10-29', people: 4 },
+    returnUrl: `${node.origin}/rooms`,
   });
   assert.ok(url.startsWith(`${phpEnv.PSQ_ORIGIN}/reservations#psq-link=`));
   const handoffCode = url.split('#psq-link=')[1];
   const { ticket } = await phpOwner('redeem', handoffCode);
+  assert.match(ticket.returnId, /^ret_[\w-]{22}$/);
   assert.deepEqual(
-    { ...ticket, expiresAt: undefined },
+    { ...ticket, expiresAt: undefined, returnId: undefined },
     {
+      kind: 'handoff',
       link: id,
       partner: { origin: node.origin, name: 'Hotel Nusa (Node)' },
       skill: 'book_table',
       goal: 'A table for four tonight',
       fields: { date: '2026-10-29', people: 4 },
       expiresAt: undefined,
+      returnId: undefined,
     },
   );
   assert.equal((await phpOwner('redeem', handoffCode)).ticket, null);
+
+  // PHP sends the visitor back to the Node page they left from.
+  const back = await phpOwner(
+    'sendback',
+    id,
+    JSON.stringify({
+      returnId: ticket.returnId,
+      outcome: 'Table for 4 booked for 19:00.',
+    }),
+  );
+  assert.ok(back.url.startsWith(`${node.origin}/rooms#psq-link=`));
+  const returned = await node.manager.redeem(back.url.split('#psq-link=')[1]);
+  assert.equal(returned.kind, 'return');
+  assert.equal(returned.goal, 'Table for 4 booked for 19:00.');
+  assert.equal(returned.partner.origin, phpEnv.PSQ_ORIGIN);
 
   const revoked = await phpOwner('revoke', id);
   assert.equal(revoked.notified, true);

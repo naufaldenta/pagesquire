@@ -28,6 +28,9 @@ final class LinkManager
     /**
      * @param  array{endpoint: string, name: string, skills: list<array<string, mixed>>}  $profile  This site's link endpoint path, name and skills.
      * @param  (callable(): int)|null  $now  Clock in milliseconds, for tests.
+     * @param  array{endpoint: string, skills: list<string>, description?: string}|null  $a2a  The optional A2A interface
+     *                                                                                              (Phase 6E): its JSON-RPC endpoint path, the profile skills any A2A agent may send requests into, and the
+     *                                                                                              Agent Card's description.
      */
     public function __construct(
         private readonly ActionSigner $signer,
@@ -35,12 +38,21 @@ final class LinkManager
         private readonly array $profile,
         private readonly LinkTransport $transport = new CurlLinkTransport,
         ?callable $now = null,
+        private ?array $a2a = null,
     ) {
         $skills = Link::readSkills($profile['skills'] ?? null);
         if (! Link::originAllowed($signer->siteOrigin()) || $skills === null || ! is_string($profile['endpoint'] ?? null) || ! str_starts_with($profile['endpoint'], '/') || str_starts_with($profile['endpoint'], '//') || ! is_string($profile['name'] ?? null) || $profile['name'] === '' || mb_strlen($profile['name']) > 80) {
             throw new AssistantException('INVALID_OPTIONS', 'The link profile needs an allowed origin, an endpoint path, a name and valid skills.', 500);
         }
         $this->skills = $skills;
+        if ($a2a !== null) {
+            $ids = array_column($skills, 'id');
+            if (! is_string($a2a['endpoint'] ?? null) || ! str_starts_with($a2a['endpoint'], '/') || str_starts_with($a2a['endpoint'], '//') || ! is_array($a2a['skills'] ?? null)
+                || array_diff($a2a['skills'], $ids) !== [] || (array_key_exists('description', $a2a) && (! is_string($a2a['description']) || $a2a['description'] === '' || mb_strlen($a2a['description']) > 300))) {
+                throw new AssistantException('INVALID_OPTIONS', 'The A2A interface needs an endpoint path, skills from the profile and a description of at most 300 characters.', 500);
+            }
+            $this->a2a = ['endpoint' => $a2a['endpoint'], 'skills' => array_values(array_unique($a2a['skills']))] + (isset($a2a['description']) ? ['description' => $a2a['description']] : []);
+        }
         $this->now = $now !== null ? \Closure::fromCallable($now) : static fn (): int => (int) floor(microtime(true) * 1000);
     }
 
@@ -74,6 +86,130 @@ final class LinkManager
     public function get(string $id): ?array
     {
         return $this->store->transaction(static fn (array &$data): ?array => $data['links'][$id] ?? null);
+    }
+
+    /**
+     * What an owner dashboard shows: link counts, totals, the partner skills offered now grouped by skill ID
+     * (several partners mean the visitor chooses), and which partners may hand visitors into each own skill.
+     *
+     * @return array{links: array{active: int, pending: int, revoked: int}, totals: array{sent: int, received: int}, offered: list<array<string, mixed>>, accepted: list<array<string, mixed>>}
+     */
+    public function overview(): array
+    {
+        $records = $this->list();
+        $links = ['active' => 0, 'pending' => 0, 'revoked' => 0];
+        $totals = ['sent' => 0, 'received' => 0];
+        foreach ($records as $link) {
+            $links[$link['status']]++;
+            $totals['sent'] += $link['stats']['sent'] ?? 0;
+            $totals['received'] += $link['stats']['received'] ?? 0;
+        }
+        $offered = [];
+        foreach (Link::offers($records) as $offer) {
+            $offered[$offer['skill']['id']] ??= ['skill' => $offer['skill']['id'], 'name' => $offer['skill']['name'], 'partners' => []];
+            $offered[$offer['skill']['id']]['partners'][] = ['link' => $offer['link']] + $offer['partner'];
+        }
+        $accepted = array_map(static fn (array $skill): array => [
+            'skill' => $skill['id'],
+            'name' => $skill['name'],
+            'partners' => array_values(array_map(
+                static fn (array $link): array => ['link' => $link['id'], 'origin' => $link['partner']['origin'], 'name' => $link['partner']['name']],
+                array_filter($records, static fn (array $link): bool => $link['status'] === 'active' && in_array($skill['id'], $link['ours']['accept'], true)),
+            )),
+        ], $this->skills);
+
+        $agents = $this->a2a === null ? null : $this->store->transaction(fn (array &$data): array => ['skills' => $this->a2a['skills'], 'received' => $data['agents']['received'] ?? 0]
+            + (isset($data['agents']['lastAt']) ? ['lastAt' => $data['agents']['lastAt']] : []));
+
+        return ['links' => $links, 'totals' => $totals, 'offered' => array_values($offered), 'accepted' => $accepted] + ($agents !== null ? ['agents' => $agents] : []);
+    }
+
+    /**
+     * This site's A2A Agent Card (Phase 6E), for /.well-known/agent-card.json: the open skills, the
+     * JSON-RPC interface, and a signature with the site key that agentKeys() verifies.
+     *
+     * @return array<string, mixed>
+     */
+    public function agentCard(): array
+    {
+        $a2a = $this->openA2A();
+        $open = array_values(array_filter(Link::encodeSkills($this->skills), static fn (array $skill): bool => in_array($skill['id'], $a2a['skills'], true)));
+        $params = [];
+        foreach ($open as $skill) {
+            $params[$skill['id']] = ['fields' => $skill['fields']];
+        }
+
+        return A2A::signCard([
+            'name' => $this->profile['name'],
+            'description' => $a2a['description'] ?? 'Continue a request on '.$this->profile['name'].' with its PageSquire assistant. Each answer is a single-use link where the person confirms on the site.',
+            'supportedInterfaces' => [['url' => $this->origin().$a2a['endpoint'], 'protocolBinding' => 'JSONRPC', 'protocolVersion' => A2A::PROTOCOL_VERSION]],
+            'version' => '1.0.0',
+            'capabilities' => ['streaming' => false, 'pushNotifications' => false, 'extensions' => [[
+                'uri' => A2A::EXTENSION,
+                'description' => 'PageSquire handoff: send a data part { skill, goal, fields } with the fields listed here. The answer is a single-use link where the person continues on this site.',
+                'required' => false,
+                'params' => ['skills' => (object) $params],
+            ]]],
+            'defaultInputModes' => ['text/plain', 'application/json'],
+            'defaultOutputModes' => ['text/plain', 'application/json'],
+            'skills' => array_map(static fn (array $skill): array => ['id' => $skill['id'], 'name' => $skill['name'], 'description' => $skill['description'], 'tags' => $skill['tags']]
+                + (isset($skill['examples']) ? ['examples' => $skill['examples']] : []), $open),
+        ], $this->signer, $this->origin().A2A::KEYS_PATH);
+    }
+
+    /**
+     * The JWK Set at A2A::KEYS_PATH that verifies the Agent Card.
+     *
+     * @return array{keys: list<array<string, string>>}
+     */
+    public function agentKeys(): array
+    {
+        $this->openA2A();
+
+        return ['keys' => [A2A::jwk($this->signer)]];
+    }
+
+    /**
+     * An A2A agent's request into an open skill (Phase 6E): checked like a partner's handoff, then stored
+     * under a fresh code for A2A::TICKET_SECONDS. Returns the single-use link to give the person.
+     *
+     * @param  array{skill?: string, goal: string, fields?: array<string, mixed>}  $request
+     * @return array{url: string, expiresAt: int, name: string}
+     */
+    public function agentHandoff(array $request): array
+    {
+        $a2a = $this->openA2A();
+        $open = array_values(array_filter($this->skills, static fn (array $skill): bool => in_array($skill['id'], $a2a['skills'], true)));
+        $skill = $request['skill'] ?? (count($open) === 1 ? $open[0]['id'] : null);
+        if ($skill === null) {
+            throw new AssistantException('A2A_INVALID', 'Name one of the skills on the Agent Card in a data part.', 400);
+        }
+        $goal = is_string($request['goal'] ?? null) ? trim($request['goal']) : '';
+        // A visitor reads the goal as their own request; it may not send them elsewhere.
+        if (preg_match('/https?:|www\./i', $goal)) {
+            throw new AssistantException('A2A_INVALID', 'The goal must not contain links.', 400);
+        }
+        $body = $this->checkHandoff(['skill' => $skill, 'goal' => $goal, 'fields' => $request['fields'] ?? []], $this->skills, static fn (array $entry): ?array => in_array($entry['id'], $a2a['skills'], true) ? array_keys($entry['fields']) : null);
+        $code = Link::random(16);
+        $now = ($this->now)();
+        $expiresAt = $now + A2A::TICKET_SECONDS * 1000;
+        $this->store->transaction(function (array &$data) use ($body, $code, $now, $expiresAt): void {
+            $this->prune($data);
+            // Agents may hold at most half of the open codes, so partners' handoffs keep room.
+            if (count($data['tickets']) >= 1000 || count(array_filter($data['tickets'], static fn (array $ticket): bool => $ticket['kind'] === 'agent')) >= 500) {
+                throw new AssistantException('LINK_BUSY', 'Too many open handoffs. Try again shortly.', 429);
+            }
+            $data['tickets'][Link::base64url(hash('sha256', $code, true))] = ['kind' => 'agent', 'link' => 'a2a'] + $body + ['expiresAt' => $expiresAt];
+            $data['agents'] = ['received' => ($data['agents']['received'] ?? 0) + 1, 'lastAt' => $now];
+        });
+
+        return ['url' => $this->origin().$this->skill($this->skills, $body['skill'])['startPath'].'#psq-agent='.$code, 'expiresAt' => $expiresAt, 'name' => $this->profile['name']];
+    }
+
+    /** @return array{endpoint: string, skills: list<string>, description?: string} */
+    private function openA2A(): array
+    {
+        return $this->a2a ?? throw new AssistantException('A2A_DISABLED', 'This site takes no A2A requests.', 404);
     }
 
     /**
@@ -187,8 +323,22 @@ final class LinkManager
     {
         $link = $this->get($id) ?? throw new AssistantException('LINK_UNKNOWN', 'No such link.', 404);
         $this->active($link);
+        $returnUrl = $handoff['returnUrl'] ?? null;
+        unset($handoff['returnUrl']);
         $body = $this->checkHandoff($handoff, $link['partner']['skills'], static fn (array $skill): ?array => in_array($skill['id'], $link['theirs']['accept'], true) ? ($link['ours']['offer'][$skill['id']] ?? null) : null);
-        $answer = $this->send($link['partner'], ['type' => 'handoff', 'link' => $id, 'body' => $body], 'ticket');
+        // The partner may send the visitor back once, to the page they left from.
+        $back = $this->returnPath($returnUrl);
+        $returnId = $back !== null ? 'ret_'.Link::random(16) : null;
+        if ($returnId !== null) {
+            $this->store->transaction(function (array &$data) use ($returnId, $id, $body, $back): void {
+                $this->prune($data);
+                if (count($data['returns']) >= 1000) {
+                    throw new AssistantException('LINK_BUSY', 'Too many open handoffs. Try again shortly.', 429);
+                }
+                $data['returns'][$returnId] = ['link' => $id, 'skill' => $body['skill'], 'path' => $back, 'expiresAt' => ($this->now)() + Link::RETURN_HOURS * 3_600_000];
+            });
+        }
+        $answer = $this->send($link['partner'], ['type' => 'handoff', 'link' => $id, 'body' => $body + ($returnId !== null ? ['return' => $returnId] : [])], 'ticket');
         $skill = $this->skill($link['partner']['skills'], $body['skill']);
         $prefix = $link['partner']['origin'].$skill['startPath'].'#psq-link=';
         $url = $answer['body']['url'] ?? null;
@@ -196,6 +346,31 @@ final class LinkManager
         if (! is_string($url) || ! str_starts_with($url, $prefix) || ! preg_match(Link::CODE, substr($url, strlen($prefix))) || ! is_int($expiresAt)) {
             throw new AssistantException('PARTNER_INVALID', 'The partner answered with an invalid ticket.', 502);
         }
+        $this->count($id, 'sent', $body['skill']);
+
+        return ['url' => $url, 'expiresAt' => $expiresAt];
+    }
+
+    /**
+     * Sends the visitor back to the site they came from (Phase 6C), once per handoff and within
+     * Link::RETURN_HOURS, with a one-line outcome. Returns the URL on the partner where the visitor continues.
+     *
+     * @param  array<string, mixed>  $back  returnId, outcome and optional locale.
+     * @return array{url: string, expiresAt: int}
+     */
+    public function sendBack(string $id, array $back): array
+    {
+        $link = $this->get($id) ?? throw new AssistantException('LINK_UNKNOWN', 'No such link.', 404);
+        $this->active($link);
+        $body = self::checkReturn(['return' => $back['returnId'] ?? null] + array_diff_key($back, ['returnId' => true]));
+        $answer = $this->send($link['partner'], ['type' => 'return', 'link' => $id, 'body' => $body], 'ticket');
+        $url = $answer['body']['url'] ?? null;
+        $expiresAt = $answer['body']['expiresAt'] ?? null;
+        $parts = is_string($url) ? explode('#psq-link=', $url) : [];
+        if (count($parts) !== 2 || ! str_starts_with($parts[0], $link['partner']['origin'].'/') || ! preg_match(Link::CODE, $parts[1]) || ! is_int($expiresAt)) {
+            throw new AssistantException('PARTNER_INVALID', 'The partner answered with an invalid ticket.', 502);
+        }
+        $this->count($id, 'sent');
 
         return ['url' => $url, 'expiresAt' => $expiresAt];
     }
@@ -220,6 +395,10 @@ final class LinkManager
                 return null;
             }
             unset($data['tickets'][$key]);
+            // An agent's request lives while the A2A interface is on; a partner's, while its link is active.
+            if ($ticket['kind'] === 'agent') {
+                return $this->a2a !== null ? $ticket : null;
+            }
 
             return ($data['links'][$ticket['link']]['status'] ?? null) === 'active' ? $ticket : null;
         });
@@ -242,7 +421,7 @@ final class LinkManager
         if ($claims['type'] === 'accept') {
             return $this->accept($envelope, $claims);
         }
-        if (! in_array($claims['type'], ['approve', 'revoke', 'handoff'], true)) {
+        if (! in_array($claims['type'], ['approve', 'revoke', 'handoff', 'return'], true)) {
             throw new AssistantException('LINK_INVALID', 'Unexpected link message.', 400);
         }
         $known = $claims['link'] !== null ? $this->get($claims['link']) : null;
@@ -252,6 +431,9 @@ final class LinkManager
         $this->verifyFromPartner($known, $envelope, $claims['type']);
         if ($claims['type'] === 'handoff') {
             return $this->ticket($known, $claims);
+        }
+        if ($claims['type'] === 'return') {
+            return $this->returned($known, $claims);
         }
         $this->store->transaction(function (array &$data) use ($claims, $known): void {
             $this->useNonce($data, $claims);
@@ -325,12 +507,111 @@ final class LinkManager
             if (count($data['tickets']) >= 1000) {
                 throw new AssistantException('LINK_BUSY', 'Too many open handoffs. Try again shortly.', 429);
             }
-            $data['tickets'][Link::base64url(hash('sha256', $code, true))] = ['link' => $link['id'], 'partner' => ['origin' => $link['partner']['origin'], 'name' => $link['partner']['name']]] + $body + ['expiresAt' => $expiresAt];
+            $data['tickets'][Link::base64url(hash('sha256', $code, true))] = ['kind' => 'handoff', 'link' => $link['id'], 'partner' => ['origin' => $link['partner']['origin'], 'name' => $link['partner']['name']]] + $body + ['expiresAt' => $expiresAt];
+            $this->tally($data['links'][$known['id']], 'received', $body['skill']);
 
             return $this->skill($this->skills, $body['skill']);
         });
 
         return $this->signed($known['partner']['origin'], $known['id'], 'ticket', ['url' => $this->origin().$skill['startPath'].'#psq-link='.$code, 'expiresAt' => $expiresAt]);
+    }
+
+    /**
+     * A partner sends the visitor back: one return per handoff this site sent.
+     *
+     * @param  array<string, mixed>  $known
+     * @param  array<string, mixed>  $claims
+     * @return array{claims: string, value: string}
+     */
+    private function returned(array $known, array $claims): array
+    {
+        $code = Link::random(16);
+        $expiresAt = ($this->now)() + Link::TICKET_SECONDS * 1000;
+        $path = $this->store->transaction(function (array &$data) use ($known, $claims, $code, $expiresAt): string {
+            $this->prune($data);
+            $this->useNonce($data, $claims);
+            $link = $data['links'][$known['id']];
+            $this->active($link);
+            $body = self::checkReturn(is_array($claims['body']) ? $claims['body'] : []);
+            $back = $data['returns'][$body['return']] ?? null;
+            if ($back === null || $back['link'] !== $link['id']) {
+                throw new AssistantException('RETURN_UNKNOWN', 'No open handoff to return from.', 404);
+            }
+            unset($data['returns'][$body['return']]);
+            if (count($data['tickets']) >= 1000) {
+                throw new AssistantException('LINK_BUSY', 'Too many open handoffs. Try again shortly.', 429);
+            }
+            $data['tickets'][Link::base64url(hash('sha256', $code, true))] = ['kind' => 'return', 'link' => $link['id'], 'partner' => ['origin' => $link['partner']['origin'], 'name' => $link['partner']['name']], 'skill' => $back['skill'], 'goal' => $body['outcome'], 'fields' => []]
+                + (isset($body['locale']) ? ['locale' => $body['locale']] : []) + ['expiresAt' => $expiresAt];
+            $this->tally($data['links'][$known['id']], 'received');
+
+            return $back['path'];
+        });
+
+        return $this->signed($known['partner']['origin'], $known['id'], 'ticket', ['url' => $this->origin().$path.'#psq-link='.$code, 'expiresAt' => $expiresAt]);
+    }
+
+    /**
+     * A checked return body: the reference, a one-line outcome and an optional locale.
+     *
+     * @param  array<string, mixed>  $value
+     * @return array{return: string, outcome: string, locale?: string}
+     */
+    private static function checkReturn(array $value): array
+    {
+        if (array_diff(array_keys($value), ['return', 'outcome', 'locale']) !== [] || ! is_string($value['return'] ?? null) || ! preg_match(Link::RETURN_ID, $value['return'])) {
+            throw new AssistantException('RETURN_INVALID', 'The return is malformed.', 400);
+        }
+        if (! Link::sentence($value['outcome'] ?? null)) {
+            throw new AssistantException('RETURN_INVALID', 'A return needs an outcome of at most 300 characters.', 400);
+        }
+        if (array_key_exists('locale', $value) && (! is_string($value['locale']) || ! preg_match('/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{1,8}){0,3}$/', $value['locale']))) {
+            throw new AssistantException('RETURN_INVALID', 'The return locale is invalid.', 400);
+        }
+
+        return ['return' => $value['return'], 'outcome' => $value['outcome']] + (array_key_exists('locale', $value) ? ['locale' => $value['locale']] : []);
+    }
+
+    /** The same-origin path and query of a return URL on this site, if usable. */
+    private function returnPath(mixed $value): ?string
+    {
+        if (! is_string($value) || ActionSigner::origin($value) !== $this->origin()) {
+            return null;
+        }
+        $parts = parse_url($value);
+        $path = ($parts['path'] ?? '/').(isset($parts['query']) ? '?'.$parts['query'] : '');
+
+        return strlen($path) <= 200 && str_starts_with($path, '/') && ! str_starts_with($path, '//') && ! preg_match('/[\s\\\\#]/', $path) ? $path : null;
+    }
+
+    private function count(string $id, string $direction, ?string $skill = null): void
+    {
+        try {
+            $this->store->transaction(function (array &$data) use ($id, $direction, $skill): void {
+                if (isset($data['links'][$id])) {
+                    $this->tally($data['links'][$id], $direction, $skill);
+                }
+            });
+        } catch (\Throwable) {
+            // Counts are for the owner's information only.
+        }
+    }
+
+    /**
+     * Counts one handoff (with its skill) or return on a stored link record.
+     *
+     * @param  array<string, mixed>  $link
+     */
+    private function tally(array &$link, string $direction, ?string $skill = null): void
+    {
+        $stats = $link['stats'] ?? ['sent' => 0, 'received' => 0];
+        $stats[$direction]++;
+        if ($skill !== null) {
+            $stats['skills'][$skill] ??= ['sent' => 0, 'received' => 0];
+            $stats['skills'][$skill][$direction]++;
+        }
+        $stats['lastAt'] = ($this->now)();
+        $link['stats'] = $stats;
     }
 
     /** @param array<string, mixed> $link */
@@ -370,7 +651,7 @@ final class LinkManager
      */
     private function checkHandoff(array $value, array $skills, callable $scope): array
     {
-        if (array_diff(array_keys($value), ['skill', 'goal', 'fields', 'locale']) !== []) {
+        if (array_diff(array_keys($value), ['skill', 'goal', 'fields', 'locale', 'return']) !== []) {
             throw new AssistantException('HANDOFF_INVALID', 'The handoff is malformed.', 400);
         }
         $skill = $this->skill($skills, is_string($value['skill'] ?? null) ? $value['skill'] : '');
@@ -393,7 +674,11 @@ final class LinkManager
             }
         }
 
-        return ['skill' => $skill['id'], 'goal' => $goal, 'fields' => $fields] + (array_key_exists('locale', $value) ? ['locale' => $value['locale']] : []);
+        if (array_key_exists('return', $value) && (! is_string($value['return']) || ! preg_match(Link::RETURN_ID, $value['return']))) {
+            throw new AssistantException('HANDOFF_INVALID', 'The return reference is invalid.', 400);
+        }
+
+        return ['skill' => $skill['id'], 'goal' => $goal, 'fields' => $fields] + (array_key_exists('locale', $value) ? ['locale' => $value['locale']] : []) + (array_key_exists('return', $value) ? ['returnId' => $value['return']] : []);
     }
 
     /**
@@ -474,6 +759,12 @@ final class LinkManager
         foreach ($data['tickets'] as $key => $ticket) {
             if ($ticket['expiresAt'] < $now) {
                 unset($data['tickets'][$key]);
+            }
+        }
+        $data['returns'] ??= [];
+        foreach ($data['returns'] as $key => $back) {
+            if ($back['expiresAt'] < $now) {
+                unset($data['returns'][$key]);
             }
         }
     }

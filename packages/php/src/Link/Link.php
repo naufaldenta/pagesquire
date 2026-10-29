@@ -22,12 +22,23 @@ final class Link
 
     public const MAX_BODY_BYTES = 65536;
 
-    public const TYPES = ['accept', 'accepted', 'approve', 'revoke', 'ack', 'handoff', 'ticket'];
+    public const TYPES = ['accept', 'accepted', 'approve', 'revoke', 'ack', 'handoff', 'ticket', 'return'];
 
     /** How long a handoff code stays redeemable. */
     public const TICKET_SECONDS = 120;
 
     public const CODE = '/^[A-Za-z0-9_-]{22}$/';
+
+    /** How long the partner may send a visitor back after a handoff. */
+    public const RETURN_HOURS = 24;
+
+    public const RETURN_ID = '/^ret_[A-Za-z0-9_-]{22}$/';
+
+    /** A one-line text of at most 300 characters: a goal or an outcome. */
+    public static function sentence(mixed $value): bool
+    {
+        return is_string($value) && trim($value) !== '' && mb_check_encoding($value, 'UTF-8') && mb_strlen($value) <= 300 && ! preg_match('/[\x00-\x1f\x7f]/', $value);
+    }
 
     private const ID = '/^[A-Za-z0-9_-]{16,64}$/';
 
@@ -88,6 +99,34 @@ final class Link
 
     /** @return array<string, mixed>|null */
     /**
+     * The partner skills an assistant may offer: active links, offered by this site's scope and accepted by
+     * the partner, in link order. The same as linkOffers() in @pagesquire/server.
+     *
+     * @param  list<array<string, mixed>>  $records
+     * @return list<array{ref: string, link: string, partner: array{origin: string, name: string}, skill: array<string, mixed>, fields: list<string>}>
+     */
+    public static function offers(array $records): array
+    {
+        $offers = [];
+        foreach ($records as $link) {
+            if ($link['status'] !== 'active') {
+                continue;
+            }
+            $url = parse_url($link['partner']['origin']);
+            $host = $url['host'].(isset($url['port']) ? ':'.$url['port'] : '');
+            foreach ($link['partner']['skills'] as $skill) {
+                $fields = $link['ours']['offer'][$skill['id']] ?? null;
+                $ref = $host.'/'.$skill['id'];
+                if ($fields !== null && in_array($skill['id'], $link['theirs']['accept'], true) && ! isset($offers[$ref])) {
+                    $offers[$ref] = ['ref' => $ref, 'link' => $link['id'], 'partner' => ['origin' => $link['partner']['origin'], 'name' => $link['partner']['name']], 'skill' => $skill, 'fields' => $fields];
+                }
+            }
+        }
+
+        return array_values($offers);
+    }
+
+    /**
      * The link.handoff capability, the same as createLinkCapabilities() in @pagesquire/core.
      * Hosts add it to the manifest when the engine runs with links.
      *
@@ -107,12 +146,49 @@ final class Link
                     'goal' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 300],
                     'fields' => ['type' => 'object', 'maxProperties' => 10, 'additionalProperties' => ['anyOf' => [['type' => 'string', 'maxLength' => 200], ['type' => 'number'], ['type' => 'boolean']]]],
                     'partner' => ['type' => 'object', 'properties' => ['origin' => ['type' => 'string', 'maxLength' => 200], 'name' => ['type' => 'string', 'maxLength' => 80]], 'required' => ['origin', 'name'], 'additionalProperties' => false],
+                    // Set by the engine: other partners with the same skill ID, so the visitor chooses.
+                    'alternatives' => ['type' => 'array', 'maxItems' => 3, 'items' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'skill' => ['type' => 'string', 'minLength' => 3, 'maxLength' => 200],
+                            'partner' => ['type' => 'object', 'properties' => ['origin' => ['type' => 'string', 'maxLength' => 200], 'name' => ['type' => 'string', 'maxLength' => 80]], 'required' => ['origin', 'name'], 'additionalProperties' => false],
+                            'fields' => ['type' => 'object', 'maxProperties' => 10, 'additionalProperties' => ['anyOf' => [['type' => 'string', 'maxLength' => 200], ['type' => 'number'], ['type' => 'boolean']]]],
+                        ],
+                        'required' => ['skill', 'partner', 'fields'],
+                        'additionalProperties' => false,
+                    ]],
                 ],
                 'required' => ['skill', 'goal'],
                 'additionalProperties' => false,
             ],
             'risk' => 'reversible',
             'verification' => ['handler' => 'link.handoff.verify'],
+        ];
+    }
+
+    /**
+     * The link.return capability, the same as the second entry of createLinkCapabilities() in @pagesquire/core.
+     *
+     * @return array<string, mixed>
+     */
+    public static function returnCapability(): array
+    {
+        return [
+            'id' => 'link.return',
+            'description' => "Send the visitor back to the partner site they came from, once, with a one-line outcome of what was done here, such as a confirmed booking. Use it only when the visitor's request here is finished or they ask to go back. The visitor sees the outcome and must approve; the partner then opens in a new tab.",
+            'execution' => 'browser',
+            'handler' => 'link.return',
+            'inputSchema' => [
+                'type' => 'object',
+                'properties' => [
+                    'outcome' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 300],
+                    'partner' => ['type' => 'object', 'properties' => ['origin' => ['type' => 'string', 'maxLength' => 200], 'name' => ['type' => 'string', 'maxLength' => 80]], 'required' => ['origin', 'name'], 'additionalProperties' => false],
+                ],
+                'required' => ['outcome'],
+                'additionalProperties' => false,
+            ],
+            'risk' => 'reversible',
+            'verification' => ['handler' => 'link.return.verify'],
         ];
     }
 

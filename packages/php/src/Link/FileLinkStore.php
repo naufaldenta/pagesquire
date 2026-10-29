@@ -28,7 +28,7 @@ final class FileLinkStore implements LinkStore
             if (! flock($lock, LOCK_EX)) {
                 throw new AssistantException('INVALID_STORE', 'The link store is unavailable.', 500);
             }
-            $data = ['links' => [], 'invitations' => [], 'nonces' => [], 'tickets' => []];
+            $data = ['links' => [], 'invitations' => [], 'nonces' => [], 'tickets' => [], 'returns' => []];
             if (is_file($this->path)) {
                 $raw = file_get_contents($this->path, false, null, 0, 2000001);
                 if ($raw === false || strlen($raw) > 2000000) {

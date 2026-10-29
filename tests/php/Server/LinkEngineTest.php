@@ -115,6 +115,97 @@ final class LinkEngineTest extends TestCase
         $this->assertNotContains('handoff', $this->sent);
     }
 
+    public function test_a_visitor_sent_here_is_sent_back_once_with_the_outcome(): void
+    {
+        [$hotel, $resto, $id] = $this->pair();
+        $hotel->approve($id, ['offer' => ['book_table' => ['date', 'people']], 'accept' => []]);
+        $resto->approve($id, ['offer' => [], 'accept' => ['book_table']]);
+        $all = ['link.handoff', 'link.return'];
+        $manifest = ['schemaVersion' => '0.1', 'capabilities' => [Link::handoffCapability(), Link::returnCapability()]];
+        $hotelEngine = new ConversationEngine($this->provider([$this->handoff(['skill' => 'resto.test/book_table', 'goal' => 'A table for four'])]), new ProtocolValidator, $manifest, links: $hotel);
+        $first = $hotelEngine->handle(['capabilityIds' => $all] + $this->ask('Book a table for 4'), null, $all);
+        $call = $first['reply']['response']['toolCalls'][0];
+        $approved = $hotelEngine->handle(['protocolVersion' => '0.1', 'requestId' => 'consent', 'conversationId' => $first['state']['id'], 'handoff' => ['callId' => $call['callId']], 'snapshot' => ['url' => 'http://hotel.test/rooms'] + self::SNAPSHOT, 'capabilityIds' => $all], $first['state'], $all);
+        $code = explode('#psq-link=', $approved['reply']['response']['handoff']['url'])[1];
+
+        $outcome = 'Table for 4 booked for 29 October, 19:00.';
+        $restoProvider = $this->provider([
+            ['text' => 'Booked. Taking you back.', 'emotion' => 'happy', 'finished' => false, 'toolCalls' => [['capabilityId' => 'link.return', 'parameters' => ['outcome' => $outcome]]]],
+        ]);
+        $restoEngine = new ConversationEngine($restoProvider, new ProtocolValidator, $manifest, links: $resto);
+        $arrived = $restoEngine->handle(['protocolVersion' => '0.1', 'requestId' => 'arrive', 'linkCode' => $code, 'snapshot' => self::SNAPSHOT, 'capabilityIds' => $all], null, $all);
+        $this->assertSame(['link.return'], $restoProvider->capabilities[0]);
+        $back = $arrived['reply']['response']['toolCalls'][0];
+        $this->assertEquals(['outcome' => $outcome, 'partner' => ['origin' => 'http://hotel.test', 'name' => 'Hotel Nusa']], (array) $back['parameters']);
+        $consent = $restoEngine->handle(['protocolVersion' => '0.1', 'requestId' => 'back', 'conversationId' => $arrived['state']['id'], 'handoff' => ['callId' => $back['callId']], 'snapshot' => self::SNAPSHOT, 'capabilityIds' => $all], $arrived['state'], $all);
+        $url = $consent['reply']['response']['handoff']['url'];
+        $this->assertMatchesRegularExpression('~^http://hotel\.test/rooms#psq-link=[\w-]{22}$~', $url);
+        $this->assertSame(['return'], array_values(array_filter($this->sent, static fn (string $type): bool => $type === 'return')));
+
+        $hotelBack = $this->provider([$this->said('Welcome back!')]);
+        (new ConversationEngine($hotelBack, new ProtocolValidator, $manifest, links: $hotel))->handle(['protocolVersion' => '0.1', 'requestId' => 'home', 'linkCode' => explode('#psq-link=', $url)[1], 'snapshot' => self::SNAPSHOT, 'capabilityIds' => $all], null, $all);
+        $messages = $hotelBack->received[0];
+        $this->assertSame('Back from Restoran Laut (resto.test): '.$outcome, $messages[count($messages) - 2]['content']);
+        $this->assertNotContains('link.return', $hotelBack->capabilities[0]);
+        $this->assertSame(['sent' => 1, 'received' => 1, 'skills' => ['book_table' => ['sent' => 1, 'received' => 0]]], array_diff_key($hotel->get($id)['stats'], ['lastAt' => true]));
+    }
+
+    public function test_when_two_partners_offer_the_same_skill_the_visitor_chooses(): void
+    {
+        [$hotel, $resto, $id] = $this->pair();
+        $warung = $this->site('http://warung.test', 'Warung Sari', [['fields' => ['people' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 8]], 'startPath' => '/booking'] + self::BOOK_TABLE]);
+        $second = $hotel->acceptInvitation($warung->createInvitation()['code'])['id'];
+        $hotel->approve($id, ['offer' => ['book_table' => ['date', 'people']], 'accept' => []]);
+        $resto->approve($id, ['offer' => [], 'accept' => ['book_table']]);
+        $hotel->approve($second, ['offer' => ['book_table' => ['people']], 'accept' => []]);
+        $warung->approve($second, ['offer' => [], 'accept' => ['book_table']]);
+
+        $provider = $this->provider([$this->handoff(['skill' => 'resto.test/book_table', 'goal' => 'A table for four', 'fields' => ['date' => '2026-10-29', 'people' => 4]])]);
+        $engine = new ConversationEngine($provider, new ProtocolValidator, $this->manifest(), links: $hotel);
+        $first = $engine->handle($this->ask('Book a table for 4 on 2026-10-29'), null, ['link.handoff']);
+        $this->assertStringContainsString('the visitor chooses between them', $provider->received[0][0]['content']);
+        $call = $first['reply']['response']['toolCalls'][0];
+        $this->assertSame(
+            '{"skill":"resto.test/book_table","goal":"A table for four","fields":{"date":"2026-10-29","people":4},"partner":{"origin":"http://resto.test","name":"Restoran Laut"},"alternatives":[{"skill":"warung.test/book_table","partner":{"origin":"http://warung.test","name":"Warung Sari"},"fields":{"people":4}}]}',
+            json_encode($call['parameters'], JSON_UNESCAPED_SLASHES),
+        );
+
+        $consent = static fn (string $skill): array => ['protocolVersion' => '0.1', 'requestId' => 'consent-'.md5($skill), 'conversationId' => $first['state']['id'], 'handoff' => ['callId' => $call['callId'], 'skill' => $skill], 'snapshot' => self::SNAPSHOT, 'capabilityIds' => ['link.handoff']];
+        try {
+            $engine->handle($consent('evil.test/book_table'), $first['state'], ['link.handoff']);
+            $this->fail('A partner the visitor was not shown was chosen.');
+        } catch (AssistantException $exception) {
+            $this->assertSame([409, 'RESULT_MISMATCH'], [$exception->httpStatus, $exception->errorCode]);
+        }
+        $url = $engine->handle($consent('warung.test/book_table'), $first['state'], ['link.handoff'])['reply']['response']['handoff']['url'];
+        $this->assertMatchesRegularExpression('~^http://warung\.test/booking#psq-link=[\w-]{22}$~', $url);
+        $this->assertSame(['handoff'], array_values(array_filter($this->sent, static fn (string $type): bool => $type === 'handoff')));
+        $this->assertSame(['people' => 4], $warung->redeem(explode('#psq-link=', $url)[1])['fields']);
+        $this->assertArrayNotHasKey('stats', $hotel->get($id));
+        $this->assertSame(['book_table' => ['sent' => 1, 'received' => 0]], $hotel->get($second)['stats']['skills']);
+
+        $this->assertSame([
+            'links' => ['active' => 2, 'pending' => 0, 'revoked' => 0],
+            'totals' => ['sent' => 1, 'received' => 0],
+            'offered' => [['skill' => 'book_table', 'name' => 'Book a table', 'partners' => [
+                ['link' => $id, 'origin' => 'http://resto.test', 'name' => 'Restoran Laut'],
+                ['link' => $second, 'origin' => 'http://warung.test', 'name' => 'Warung Sari'],
+            ]]],
+            'accepted' => [],
+        ], $hotel->overview());
+        $this->assertSame([
+            'links' => ['active' => 1, 'pending' => 0, 'revoked' => 0],
+            'totals' => ['sent' => 0, 'received' => 1],
+            'offered' => [],
+            'accepted' => [['skill' => 'book_table', 'name' => 'Book a table', 'partners' => [['link' => $second, 'origin' => 'http://hotel.test', 'name' => 'Hotel Nusa']]]],
+        ], $warung->overview());
+
+        $hotel->revoke($second);
+        $alone = $this->provider([$this->handoff(['skill' => 'resto.test/book_table', 'goal' => 'A table for four'])]);
+        $later = (new ConversationEngine($alone, new ProtocolValidator, $this->manifest(), links: $hotel))->handle($this->ask('Book a table for 4'), null, ['link.handoff']);
+        $this->assertArrayNotHasKey('alternatives', (array) $later['reply']['response']['toolCalls'][0]['parameters']);
+    }
+
     /** @return array{LinkManager, LinkManager, string} */
     private function pair(): array
     {

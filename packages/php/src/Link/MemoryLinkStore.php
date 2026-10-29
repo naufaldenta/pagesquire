@@ -8,7 +8,7 @@ namespace PageSquire\Server\Link;
 final class MemoryLinkStore implements LinkStore
 {
     /** @var array<string, mixed> */
-    private array $data = ['links' => [], 'invitations' => [], 'nonces' => [], 'tickets' => []];
+    private array $data = ['links' => [], 'invitations' => [], 'nonces' => [], 'tickets' => [], 'returns' => []];
 
     public function transaction(callable $operation): mixed
     {
