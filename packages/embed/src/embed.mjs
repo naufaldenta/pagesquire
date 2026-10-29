@@ -146,7 +146,8 @@ async function boot() {
   // The client is created below; a handoff runs only after it exists.
   const link = config.link
     ? createLinkBindings({
-        approve: (callId, signal) => client.approveHandoff(callId, signal),
+        approve: (callId, signal, skill) =>
+          client.approveHandoff(callId, signal, skill),
       })
     : undefined;
   void companion?.connected();
@@ -158,7 +159,7 @@ async function boot() {
           (navigation || entry.id !== 'browser.navigate') &&
           (generic || !entry.id.startsWith('ui.')) &&
           (entry.id !== 'ui.screenshot' || config.screenshots) &&
-          (entry.id !== 'link.handoff' || config.link),
+          (!entry.id.startsWith('link.') || config.link),
       ),
     },
     {

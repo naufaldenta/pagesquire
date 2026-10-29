@@ -8,6 +8,7 @@ import {
   ConversationEngine,
   LinkManager,
   MemoryLinkStore,
+  createA2AHandler,
   createLinkHandler,
   createSigningKey,
   siteDeclaration,
@@ -77,7 +78,7 @@ async function sites() {
     accept: [],
   });
   await resto.approve(id, { offer: {}, accept: ['book_table'] });
-  return { hotel, resto, sent };
+  return { hotel, resto, sent, add };
 }
 
 function scripted(...drafts) {
@@ -113,7 +114,7 @@ async function serve(context, origin, path, title, engine) {
         const { state, reply } = await engine.handle(
           body,
           body.conversationId ? states.get(body.conversationId) : null,
-          ['link.handoff'],
+          ['link.handoff', 'link.return'],
         );
         states.set(state.id, state);
         return route.fulfill({
@@ -280,4 +281,246 @@ test('cancelling the consent sends nothing to the partner', async ({
   ).toHaveText('link.handoff: cancelled');
   expect(context.pages()).toHaveLength(1);
   expect(sent.filter((type) => type === 'handoff')).toEqual([]);
+});
+
+test('the partner sends the visitor back to the hotel with the outcome', async ({
+  page,
+  context,
+}) => {
+  const { hotel, resto, sent } = await sites();
+  const outcome = 'Table for 4 booked for 29 October, 19:00.';
+  const hotelProvider = scripted(
+    handoffDraft,
+    said('Restoran Laut is open in a new tab.'),
+    said('Welcome back! Your table for 4 is booked.'),
+  );
+  const restoProvider = scripted(
+    {
+      text: 'Booked. Taking you back to the hotel.',
+      emotion: 'happy',
+      finished: false,
+      toolCalls: [{ capabilityId: 'link.return', parameters: { outcome } }],
+    },
+    said('Enjoy your stay.'),
+  );
+  await serve(
+    context,
+    'http://hotel.localhost',
+    '/',
+    'Hotel Nusa',
+    new ConversationEngine({ provider: hotelProvider, manifest, links: hotel }),
+  );
+  await serve(
+    context,
+    'http://resto.localhost',
+    '/reservations',
+    'Restoran Laut',
+    new ConversationEngine({ provider: restoProvider, manifest, links: resto }),
+  );
+
+  await page.goto('http://hotel.localhost/');
+  await ask(page, 'Book a table for 4 on 2026-10-29');
+  const opened = context.waitForEvent('page');
+  await page.getByRole('button', { name: 'Continue on Restoran Laut' }).click();
+  const partner = await opened;
+  await partner.waitForURL('http://resto.localhost/reservations');
+  await partner
+    .getByRole('region', { name: 'Continue from a partner site' })
+    .getByRole('button', { name: 'Continue' })
+    .click();
+
+  // The restaurant offers to go back; the visitor sees the outcome first.
+  const consent = partner.getByRole('alertdialog', {
+    name: 'Back to Hotel Nusa?',
+  });
+  await expect(consent).toContainText(outcome);
+  await expect(consent).toContainText(
+    'http://hotel.localhost opens in a new tab.',
+  );
+  const home = context.waitForEvent('page');
+  await consent.getByRole('button', { name: 'Back to Hotel Nusa' }).click();
+  const back = await home;
+  await back.waitForURL('http://hotel.localhost/');
+  expect(sent.filter((type) => type === 'return')).toEqual(['return']);
+  await expect(
+    partner.locator('.pagesquire-message.pagesquire-assistant').last(),
+  ).toHaveText('Enjoy your stay.');
+
+  await back
+    .getByRole('region', { name: 'Continue from a partner site' })
+    .getByRole('button', { name: 'Continue' })
+    .click();
+  await expect(
+    back.locator('.pagesquire-message.pagesquire-assistant').last(),
+  ).toHaveText('Welcome back! Your table for 4 is booked.');
+  expect(hotelProvider.calls[2].at(-2).content).toBe(
+    `Back from Restoran Laut (resto.localhost): ${outcome}`,
+  );
+  expect((await hotel.get((await hotel.list())[0].id)).stats).toEqual({
+    sent: 1,
+    received: 1,
+    skills: { book_table: { sent: 1, received: 0 } },
+    lastAt: expect.any(Number),
+  });
+});
+
+test('with two restaurants offering the skill, the visitor chooses one', async ({
+  page,
+  context,
+}) => {
+  const { hotel, resto, sent, add } = await sites();
+  const warung = add('http://warung.localhost', 'Warung Sari', [
+    {
+      ...bookTable,
+      fields: { people: bookTable.fields.people },
+      startPath: '/booking',
+    },
+  ]);
+  const { id } = await hotel.acceptInvitation(
+    (await warung.createInvitation()).code,
+  );
+  await hotel.approve(id, { offer: { book_table: ['people'] }, accept: [] });
+  await warung.approve(id, { offer: {}, accept: ['book_table'] });
+  const warungProvider = scripted(said('Warung Sari here. A table for 4?'));
+  await serve(
+    context,
+    'http://hotel.localhost',
+    '/',
+    'Hotel Nusa',
+    new ConversationEngine({
+      provider: scripted(handoffDraft, said('Warung Sari is open.')),
+      manifest,
+      links: hotel,
+    }),
+  );
+  await serve(
+    context,
+    'http://warung.localhost',
+    '/booking',
+    'Warung Sari',
+    new ConversationEngine({
+      provider: warungProvider,
+      manifest: { schemaVersion: '0.1', capabilities: [] },
+      links: warung,
+    }),
+  );
+
+  await page.goto('http://hotel.localhost/');
+  await ask(page, 'Book a table for 4 on 2026-10-29');
+  const consent = page.getByRole('alertdialog', {
+    name: 'Where do you want to continue?',
+  });
+  await expect(consent).toContainText('A table for four on 29 October');
+  const laut = consent.getByRole('group', {
+    name: 'Restoran Laut (http://resto.localhost)',
+  });
+  await expect(laut).toContainText('date2026-10-29');
+  const sari = consent.getByRole('group', {
+    name: 'Warung Sari (http://warung.localhost)',
+  });
+  await expect(sari).toContainText('people4');
+  await expect(sari).not.toContainText('date');
+  await expect(consent).toContainText(
+    'The site you choose opens in a new tab.',
+  );
+
+  const opened = context.waitForEvent('page');
+  await sari.getByRole('button', { name: 'Continue on Warung Sari' }).click();
+  const partner = await opened;
+  await partner.waitForURL('http://warung.localhost/booking');
+  expect(sent.filter((type) => type === 'handoff')).toEqual(['handoff']);
+  await partner
+    .getByRole('region', { name: 'Continue from a partner site' })
+    .getByRole('button', { name: 'Continue' })
+    .click();
+  await expect(
+    partner.locator('.pagesquire-message.pagesquire-assistant').last(),
+  ).toHaveText('Warung Sari here. A table for 4?');
+  expect(
+    JSON.parse(warungProvider.calls[0].at(-1).content).untrustedHandoff,
+  ).toEqual({
+    partner: { origin: 'http://hotel.localhost', name: 'Hotel Nusa' },
+    skill: 'book_table',
+    fields: { people: 4 },
+  });
+  // The restaurant the visitor did not choose received nothing.
+  expect((await resto.list())[0].stats).toBeUndefined();
+});
+
+test("a visitor opens an AI agent's link and the assistant continues after one click", async ({
+  page,
+  context,
+}) => {
+  const resto = new LinkManager({
+    store: new MemoryLinkStore(),
+    signingKey: createSigningKey().signingKey,
+    origin: 'http://resto.localhost',
+    profile: {
+      endpoint: '/pagesquire/link',
+      name: 'Restoran Laut',
+      skills: [bookTable],
+    },
+    a2a: { endpoint: '/a2a', skills: ['book_table'] },
+  });
+  const answer = await (
+    await createA2AHandler(resto)(
+      new Request('http://resto.localhost/a2a', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'A2A-Version': '1.0' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'SendMessage',
+          params: {
+            message: {
+              messageId: 'm-1',
+              role: 'ROLE_USER',
+              parts: [
+                {
+                  data: {
+                    skill: 'book_table',
+                    goal: 'A table for four on 29 October',
+                    fields: { date: '2026-10-29', people: 4 },
+                  },
+                },
+              ],
+            },
+          },
+        }),
+      }),
+    )
+  ).json();
+  const url = answer.result.message.parts[1].data.url;
+  const provider = scripted(said('Shall I book 4 people on 29 October?'));
+  await serve(
+    context,
+    'http://resto.localhost',
+    '/reservations',
+    'Restoran Laut',
+    new ConversationEngine({
+      provider,
+      manifest: { schemaVersion: '0.1', capabilities: [] },
+      links: resto,
+    }),
+  );
+  await page.goto(url);
+  await page.waitForURL('http://resto.localhost/reservations');
+  const banner = page.getByRole('region', {
+    name: 'Continue a request from an AI agent',
+  });
+  await expect(banner).toContainText('An AI agent sent you here');
+  await banner.getByRole('button', { name: 'Continue' }).click();
+  await expect(
+    page.locator('.pagesquire-message.pagesquire-assistant').last(),
+  ).toHaveText('Shall I book 4 people on 29 October?');
+  expect(provider.calls[0].at(-2).content).toBe(
+    'Request from an AI agent: A table for four on 29 October',
+  );
+  expect(JSON.parse(provider.calls[0].at(-1).content).untrustedHandoff).toEqual(
+    {
+      from: 'an AI agent (A2A)',
+      skill: 'book_table',
+      fields: { date: '2026-10-29', people: 4 },
+    },
+  );
 });

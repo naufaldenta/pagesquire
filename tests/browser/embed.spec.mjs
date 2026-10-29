@@ -100,6 +100,7 @@ test('the one-tag embed boots under a strict CSP and completes a verified read',
     'ui.hand_off',
     'ui.screenshot',
     'link.handoff',
+    'link.return',
   ]);
 });
 
