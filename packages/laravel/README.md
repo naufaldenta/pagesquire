@@ -1,18 +1,16 @@
 # PageSquire Laravel adapter
 
-For optional [public app context and availability](../../docs/app-context.md), install matching browser/PHP schemas first. FormRequest preserves the optional validated array while raw protocol/semantic checks and Gates remain authoritative; no new route or automatic state discovery is enabled.
+Laravel 13 (PHP 8.3) integration for PageSquire's server-side conversation engine. It is in beta and not yet on Packagist; install it from this repository.
 
-Early Laravel 13 / PHP 8.3 integration for PageSquire's server-owned conversation engine. This package is developed in the local monorepo and is not published on Packagist yet. Do not treat this preview as a production security audit or a guarantee of model accuracy.
+## Enable it
 
-## Enable deliberately
-
-The discovered service provider registers no endpoint until `pagesquire.enabled` is true. Publish configuration with the host application's Artisan command:
+The service provider is auto-discovered but registers no route until `pagesquire.enabled` is true. Publish the configuration:
 
 ```sh
 php artisan vendor:publish --tag=pagesquire-config --no-interaction
 ```
 
-Select a server-side provider preset, its key and an account-owned model ID:
+Pick a provider preset, then set its key and your model ID on the server:
 
 ```dotenv
 PAGESQUIRE_ENABLED=true
@@ -21,15 +19,17 @@ PAGESQUIRE_API_KEY=your-server-only-key
 PAGESQUIRE_MODEL=your-provider-model
 ```
 
-Custom/regional gateways also require the full HTTPS `PAGESQUIRE_PROVIDER_URL`. Existing `PAGESQUIRE_PROVIDER_ENDPOINT/KEY/MODEL` aliases remain available. Merge new provider-name/dialect entries into previously published configuration and refresh the host config cache on deployment. See the [provider matrix and Laravel tutorial](https://github.com/naufaldenta/pagesquire/blob/main/docs/providers.md#laravel--reactinertia).
+Custom or regional gateways also need the full HTTPS `PAGESQUIRE_PROVIDER_URL`. The older `PAGESQUIRE_PROVIDER_ENDPOINT`, `PAGESQUIRE_PROVIDER_KEY` and `PAGESQUIRE_PROVIDER_MODEL` names still work. If you published the config earlier, merge in any new provider and dialect entries and refresh the config cache when you deploy. See the [provider matrix and Laravel tutorial](https://github.com/naufaldenta/pagesquire/blob/main/docs/providers.md#laravel--reactinertia).
 
-These values must never become Inertia shared props, Vite variables, widget options, scan artifacts or public exports. Requests to the configured external provider transmit approved capability descriptions, the visitor's conversation and the filtered page snapshot. Explain this data transfer and provider charges to visitors before activation. Inference is not free merely because PageSquire is open source.
+Keep these values on the server. Never put them in Inertia shared props, Vite variables, widget options, scan artifacts or public exports.
 
-In `config/pagesquire.php`, set `manifest` to either a trusted manifest array or an absolute path to a trusted manifest JSON file. It must match the browser adapter's reviewed capability definitions. The server does not accept capability definitions or permissions from the browser. The browser's `capabilityIds` merely narrows the server-approved catalog.
+Each chat request sends the approved capability descriptions, the visitor's conversation and the filtered page snapshot to your provider, and the provider charges for that. Tell visitors about it before you turn the assistant on.
 
-## Authorize explicitly
+In `config/pagesquire.php`, set `manifest` to a trusted manifest array or the absolute path of a trusted manifest JSON file. It must match the capabilities your browser adapter defines. The server never accepts capability definitions or permissions from the browser; the browser's `capabilityIds` can only narrow the server's catalog.
 
-Both gates deny access unless the host defines them. An intentionally public, presentation-only integration could define:
+## Authorize
+
+Both gates deny access until you define them. A public integration that only changes presentation could use:
 
 ```php
 use App\Models\User;
@@ -43,27 +43,39 @@ Gate::define('pagesquire.capability', fn (?User $user, string $id): bool => in_a
 ], true));
 ```
 
-Adapt the principal type and conditions to the host application. Authenticated workflows should use the application's own policies. Consequential capabilities are blocked by the engine even if a gate approves them, unless `PAGESQUIRE_ALLOW_CONSEQUENTIAL=true`; the browser runtime then still needs an approval prompt and a person's approval per call. Browser action evidence is untrusted client telemetry; it is not authorization for business mutations.
+Adapt the user type and conditions to your app; authenticated workflows should use your own policies.
+
+The engine blocks consequential capabilities even when a gate allows them, unless `PAGESQUIRE_ALLOW_CONSEQUENTIAL=true`. Even then, the browser runtime needs an approval prompt and a person's approval for each call. Action results reported by the browser are untrusted and never authorize business changes.
 
 ## Endpoint and browser integration
 
-The named `pagesquire.chat` route is a POST endpoint with the `web` middleware group, CSRF protection, a named rate limiter and session blocking. The default path is `/pagesquire/chat`; resolve it with `route('pagesquire.chat')`, not by assuming the path. Laravel/Inertia hosts using Wayfinder should generate and use its route function in the frontend. Pass only the generated endpoint URL and the host's normal CSRF header into the widget transport.
+The `pagesquire.chat` route is a POST endpoint in the `web` middleware group, with CSRF protection, a named rate limiter and session blocking. Its default path is `/pagesquire/chat`, but resolve it with `route('pagesquire.chat')` (or Wayfinder's generated route function in an Inertia frontend) instead of assuming the path. Give the widget transport only that URL and your normal CSRF header.
 
-The request contract accepts a bounded message or a matching pending action result, a snapshot, advertised capability IDs, and protocol/request/conversation identifiers. It rejects client history, system instructions and provider configuration. Successful replies contain `ChatReply`; PageSquire-handled errors use a sanitized `{ error: { code, message } }`, with `Cache-Control: no-store`. Host middleware may return standard Laravel errors instead, such as a CSRF rejection.
+A request carries a bounded message or a matching pending action result, a snapshot, the advertised capability IDs and protocol, request and conversation IDs. Client history, system instructions and provider settings are rejected. Success returns a `ChatReply`. Errors handled by PageSquire return a sanitized `{ error: { code, message } }` with `Cache-Control: no-store`. Other middleware may still return standard Laravel errors, such as a CSRF rejection.
 
-Use server-side sessions (`file`, `database` or Redis, for example) and a cache store supporting atomic locks. Cookie sessions are rejected. Configure secure session cookies and trusted proxies normally for your deployment. Conversation state is written immediately into the selected server-side cache, using a key derived from the session ID and a principal-bound wrapper. `pagesquire.cache_store` selects that store; when unset it uses the application's default cache. Use a durable, appropriately private shared cache for multi-worker deployments. The `session` and `null` cache drivers are rejected; `array` is allowed only in tests.
+### Sessions and storage
 
-One conversation slot is stored per session: starting a new conversation replaces the previous slot, including across tabs. Logging in or out requires a new conversation. Cache entries expire with the engine's original deadline; each checkpoint uses its remaining lifetime, not a new conversation lifetime. State is not embedded in the ordinary session or a client cookie. The adapter does not prematurely save the host session or age its flash messages.
+- Use server-side sessions, for example `file`, `database` or Redis. Cookie sessions are rejected. Configure secure session cookies and trusted proxies as usual.
+- Conversation state is written straight to a cache store that supports atomic locks, under a key derived from the session ID and bound to the current principal. `pagesquire.cache_store` picks the store; otherwise the default cache is used. Multi-worker deployments need a durable, private, shared cache. The `session` and `null` drivers are rejected, and `array` is allowed only in tests.
+- Each session holds one conversation. Starting a new one replaces it, even from another tab. Logging in or out requires a new conversation.
+- Cache entries expire at the conversation's original deadline; checkpoints don't extend it. State is never stored in the ordinary session or a client cookie. The adapter does not save the host session early or age its flash messages.
+- The session lock outlasts the provider timeout. Each inference attempt is checkpointed before the request, so a failed upstream call still counts. An exact repeat of a request may get its cached reply; changed or already-used request IDs are rejected. Authorization is checked again on every continuation.
 
-The session lock outlasts the configured provider timeout. Each inference attempt is checkpointed before the request, so upstream failure cannot erase its attempt count. An exact cached request may replay its reply; changed or consumed request IDs are rejected by the engine. Authorization is checked again on continuations.
+## Limits
 
-## Limits and extension points
+Configuration bounds request size, conversation lifetime, action steps, inference attempts and output tokens. Rate limits apply per session and per IP. These are not spending caps, so also set spending limits in your provider account and add your own abuse protection. JSON is bounded in application memory; set matching request and response limits on the web server and reverse proxy as well.
 
-Configuration bounds request size, conversation lifetime, action steps, inference attempts and output tokens. Rate limits apply to both session and IP. These controls are not dollar-denominated billing guarantees; use the provider's own account spending controls and host-specific abuse prevention as well. JSON is bounded in application memory; configure matching request/response limits at the web server and reverse proxy for hostile traffic.
+## Provider transport
 
-The provider supports explicit JSON-object or prompt-only JSON mode and either output-token field, without guessing from model names. The response must still pass strict validation; a preset is not live certification of every model. HTTP timeouts are explicit; redirects, insecure TLS and automatic retries are not enabled. Header and progress callbacks abort oversized responses; the transport requests identity encoding and rejects compressed responses to keep decompression from bypassing the byte limit. Aborting a browser request does not guarantee cancellation of an already-running provider request.
+The provider uses JSON-object mode or prompt-only JSON mode and either output-token field, as configured. It never guesses from the model name. Every response still goes through strict validation, and a preset does not mean every model has been tested.
 
-Bind your own `PageSquire\Server\Provider` implementation in the host container to support another API. There is no required model vendor, remote PageSquire service, telemetry or live-provider call in the tests.
+Timeouts are explicit. Redirects, insecure TLS and automatic retries are off. Oversized responses are aborted, and compressed responses are rejected so decompression cannot get around the size limit. Aborting a browser request does not necessarily cancel a provider request that is already running.
+
+To use another API, bind your own `PageSquire\Server\Provider` implementation in the container. No particular model vendor, remote PageSquire service or telemetry is required, and the tests make no live provider calls.
+
+## App context
+
+The adapter accepts optional [public app context and availability](../../docs/app-context.md). Deploy matching browser and PHP schemas first. The FormRequest keeps the validated context array, but the raw protocol checks and your gates still decide. No route or automatic state collection is added.
 
 ## Language
 
@@ -71,21 +83,30 @@ Set `PAGESQUIRE_LOCALE=id` for Indonesian fixed engine replies (default `en`). B
 
 ## Companion extension
 
-Set `PAGESQUIRE_SIGNING_KEY` to a key from `npx pagesquire signing-key` to sign every action call for the [companion extension](../../docs/companion-extension.md#signed-action-calls). The package then also serves the public key at `/.well-known/pagesquire.json`. Calls are signed for the origin of `APP_URL`; set `PAGESQUIRE_SITE_ORIGIN` if the public origin differs. Keep the key secret, like the provider key. `PAGESQUIRE_SCREENSHOTS=true` also declares redacted screenshots and forwards them once to the model, which must read images; visitors still allow them in the extension.
+Set `PAGESQUIRE_SIGNING_KEY` to a key from `npx pagesquire signing-key` to sign every action call for the [companion extension](../../docs/companion-extension.md#signed-action-calls). The package then also serves the public key at `/.well-known/pagesquire.json`. Calls are signed for the origin of `APP_URL`; set `PAGESQUIRE_SITE_ORIGIN` if the public origin differs. Keep the key secret, like the provider key.
+
+`PAGESQUIRE_SCREENSHOTS=true` also declares redacted screenshots and forwards each one once to the model, which must accept images. Visitors still have to allow screenshots in the extension.
 
 ## PageSquire Link
 
-With the signing key set, `PAGESQUIRE_LINK=true` lets this site pair with another owner's PageSquire site ([PageSquire Link](../../docs/link.md#using-link-phase-6a)). The package serves `POST /pagesquire/link`, adds a `link` section to `/.well-known/pagesquire.json`, and keeps links in `storage/app/pagesquire-links.json` (`PAGESQUIRE_LINK_STORE` to move it). Name the site with `PAGESQUIRE_LINK_NAME` and list partner-facing skills under `pagesquire.link.skills`. Owners pair from the command line: `pagesquire:link-invite`, `pagesquire:link-accept`, `pagesquire:link-list`, `pagesquire:link-overview`, `pagesquire:link-approve` and `pagesquire:link-revoke`. Handoffs need the browser side too: the one-tag embed with `data-link="true"`, or `createLinkBindings` and `mountLinkArrival` in a custom setup ([details](../../docs/link.md#handoff-phase-6b)). Allow `link.handoff` in your `pagesquire.capability` gate. With `PAGESQUIRE_A2A=true` and skill IDs under `pagesquire.link.a2a.skills`, any A2A agent may send a request into those skills ([A2A interface](../../docs/link.md#a2a-interface-phase-6e)): the package publishes a signed Agent Card and serves `POST /pagesquire/a2a`, and the agent receives only a single-use link where the person continues.
+With the signing key set, `PAGESQUIRE_LINK=true` lets this site pair with another owner's PageSquire site ([PageSquire Link](../../docs/link.md#using-link-phase-6a)).
 
-## Verification
+- The package serves `POST /pagesquire/link`, adds a `link` section to `/.well-known/pagesquire.json` and keeps links in `storage/app/pagesquire-links.json` (move it with `PAGESQUIRE_LINK_STORE`).
+- Name the site with `PAGESQUIRE_LINK_NAME` and list partner-facing skills under `pagesquire.link.skills`.
+- Owners pair from the command line with `pagesquire:link-invite`, `pagesquire:link-accept`, `pagesquire:link-list`, `pagesquire:link-overview`, `pagesquire:link-approve` and `pagesquire:link-revoke`.
+- Handoffs also need the browser side: the one-tag embed with `data-link="true"`, or `createLinkBindings` and `mountLinkArrival` in a custom setup ([details](../../docs/link.md#handoff-phase-6b)). Allow `link.handoff` in your `pagesquire.capability` gate.
 
-From the monorepo root, after building the protocol and installing Composer dependencies:
+With `PAGESQUIRE_A2A=true` and skill IDs under `pagesquire.link.a2a.skills`, any A2A agent can send requests into those skills ([A2A interface](../../docs/link.md#a2a-interface-phase-6e)). The package publishes a signed Agent Card and serves `POST /pagesquire/a2a`. The agent only gets a single-use link where the person continues.
+
+## Tests
+
+From the repository root, after building the protocol and installing Composer dependencies:
 
 ```sh
 php vendor/bin/phpunit tests/php/Laravel
 php vendor/bin/pint packages/laravel tests/php/Laravel --format agent
 ```
 
-Tests exercise the actual Laravel router, session middleware, authorization, CSRF rejection, rate limiting, state/checkpoint behavior and a faked HTTP provider. They do not prove multi-server lock performance, live-model tool selection, screen-reader support or production readiness. See the root roadmap for the remaining release gates.
+The tests run the real Laravel router, session middleware, authorization, CSRF rejection, rate limiting and checkpointing against a faked HTTP provider. They don't cover multi-server locking, live-model behaviour or screen readers.
 
-This package's original source is covered by the repository's MIT license.
+This package is MIT licensed.

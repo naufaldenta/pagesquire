@@ -1,13 +1,13 @@
 # @pagesquire/protocol
 
-Private development preview of PageSquire protocol version `0.1`.
+TypeScript contracts, JSON Schema files, standalone validators and emotion normalization for PageSquire protocol version `0.1`. Validation is compiled during the build, so browser code doesn't need Ajv or `unsafe-eval`.
 
-C3 adds optional `ChatRequest.appContext` (envelope schema1), public primitive fields and fixed availability statuses. `validateAppContext` and `validateChatRequest` enforce both structural checks and unique identities / 16-KiB limits; raw JSON Schema alone does not enforce all semantic limits. Old closed-schema servers reject the opted-in field; deploy matching artifacts first. See [context/compatibility](../../docs/app-context.md).
+Use `validateManifest`, `validateActionCall`, `validateActionResult`, `validateSnapshot` and `validateAssistantResponse` at your integration boundaries. They check shape, not permission: decode external payloads as JSON and apply your backend's policy before running a capability.
 
-Exports TypeScript contracts, JSON Schema artifacts, standalone validators, and emotion normalization. JSON Schema validation is compiled during the workspace build; browser consumers do not need Ajv or unsafe-eval.
+After building, the schema files are exported at paths such as `@pagesquire/protocol/schemas/manifest`. Runtime exports are ES modules.
 
-Use `validateManifest`, `validateActionCall`, `validateActionResult`, `validateSnapshot`, and `validateAssistantResponse` at integration boundaries. These are schema checks, not authorization decisions. Decode external payloads as JSON and apply backend policy before invoking capabilities.
+## App context
 
-JSON Schema files are available through exports such as `@pagesquire/protocol/schemas/manifest` after building. Runtime exports use ES modules.
+`ChatRequest.appContext` is optional. It carries public primitive fields and fixed availability statuses, with its own `schemaVersion: 1`. `validateAppContext` and `validateChatRequest` check structure, unique identities and the 16-KiB limit; the raw JSON Schema alone doesn't enforce every limit. Servers built on the older closed schema reject the field, so deploy the matching server first. See [app context](../../docs/app-context.md).
 
-No package has been published. See the workspace documentation for the current implementation scope and MIT license.
+Not yet published to npm. MIT licensed.

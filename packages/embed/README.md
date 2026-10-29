@@ -21,7 +21,7 @@ The build writes `packages/embed/dist/`:
 - `pagesquire.css`
 - `manifest.json`, the catalog the server must load
 
-Serve the two browser files from your own origin or CDN. No PageSquire package or release is published yet. After an owner-approved release, a public CDN such as jsDelivr can serve the same files.
+Serve the two browser files from your own origin or CDN. PageSquire is not published yet, so there is no public CDN copy; once it is released, a CDN such as jsDelivr can serve the same files.
 
 ## 2. Add the tag
 
@@ -62,6 +62,6 @@ The bundle never holds provider keys. Point `data-endpoint` at any PageSquire ba
 - [Node / Next.js](../../docs/node-next.md): `new ConversationEngine({ manifest, provider })` with `createChatHandler`.
 - [Standalone PHP](../../docs/standalone-php.md) or [Laravel](../../docs/laravel-react.md): put the manifest in the engine or `pagesquire.manifest` config.
 
-Grant the four capability IDs in the host's authorization (`capabilityIds` / gates). The usual server rules still apply: exact Origin, a CSRF token bound to the session, private storage, and budgets.
+Allow the four capability IDs in the host's authorization (for example `capabilityIds` in Node, or the Laravel gates). The usual server rules still apply: exact Origin, a CSRF token bound to the session, private storage and budgets.
 
 The bundle is about 210 KB minified, because it includes the validators compiled at build time. No `eval` is used, so it runs under `script-src 'self'`.

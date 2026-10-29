@@ -1,6 +1,12 @@
 # @pagesquire/cli
 
-Local PageSquire F3 onboarding for Node.js 24+. Static commands need no model, cloud account, API key or project-code execution. They do not install website dependencies or publish anything. The package is an unpublished beta candidate; use the checkout or local tarballs, not a public npm download command.
+Command-line onboarding for adding PageSquire to a website. Requires Node.js 24+.
+
+The static commands need no model, cloud account or API key. They never run your project's code, install its dependencies or publish anything.
+
+The package is in beta and not yet on npm. Run it from a checkout of this repository or from a local tarball.
+
+## Quick start
 
 From the PageSquire checkout:
 
@@ -13,40 +19,57 @@ npm run pagesquire -- report --root ../my-website
 npm run pagesquire -- prepare-ai --root ../my-website --host both
 ```
 
-Then review the installed skill and invoke `$assistant-setup` in Codex or `/assistant-setup` in Claude Code from the website project. The CLI never launches either assistant or transmits context to a model. Coding-agent permissions/costs belong to the chosen host. Manual integration is equally supported: author the manifest, named handler/verifier functions and binding inventory yourself, then validate and test.
+Next, review the installed skill and run `$assistant-setup` in Codex or `/assistant-setup` in Claude Code from the website project. The CLI never starts either assistant and never sends anything to a model. The coding agent's permissions and costs are set by the tool you choose.
+
+You can also integrate by hand: write the manifest, the named handler and verifier functions and the binding inventory yourself, then validate and test.
+
+## Validate
 
 ```sh
 npm run pagesquire -- validate --root ../my-website
 npm run pagesquire -- validate --root ../my-website --compile
 ```
 
-The first command is read-only. The second explicitly writes generated validators and binding imports, but still does not import application modules. Results are JSON with `scope: "static-contract"` and `runtimeVerified: false`. Empty/invalid manifests return exit status 1. Success means schemas and direct named-function exports match, not that handlers are safe or work. Host/browser tests are mandatory before enabling features.
+The first command is read-only. The second also writes generated validators and binding imports, but still does not import your application modules.
 
-See [the onboarding guide](../../docs/onboarding.md) for the full sequence, files, scope, privacy boundaries, and manual binding format.
+Output is JSON with `scope: "static-contract"` and `runtimeVerified: false`. An empty or invalid manifest exits with status 1. A pass means the schemas match and the named functions are exported directly. It does not mean the handlers are safe or work, so test in the host app and the browser before enabling anything.
+
+See [the onboarding guide](../../docs/onboarding.md) for the full sequence, the files involved, privacy boundaries and the manual binding format.
 
 ## Optional DOM observation
 
-Install Playwright and its Chromium binary in the CLI environment, then explicitly request an approved page:
+Install Playwright and its Chromium binary in the CLI environment, then pass the page you want observed:
 
 ```sh
 npm exec -- playwright install chromium
 npm run pagesquire -- scan --root ../my-website --url http://127.0.0.1:8000/
 ```
 
-The URL must match `site.origin` and an exact `site.paths` pathname in the website's `pagesquire.config.json`. At most five explicit URLs are allowed. No links are followed automatically. Do not supply credentials, query strings or fragments. The fresh isolated browser has no existing login/session. Service workers, WebSockets, downloads, popups, foreign origins, fetch/XHR, non-GET/HEAD requests and out-of-scope navigation are blocked. Normal same-origin documents/scripts/styles/images/fonts may load; GET is not universally side-effect free. Scan only owner-approved development/staging pages. Browser scripts run as part of rendering the page, unlike the static scanner, which never executes project code.
+- The URL must match `site.origin` and one of the exact `site.paths` in the website's `pagesquire.config.json`. You can pass at most five URLs, and links are not followed.
+- Don't include credentials, query strings or fragments.
+- The browser starts fresh, with no existing login or session.
+- Service workers, WebSockets, downloads, popups, other origins, fetch/XHR, non-GET/HEAD requests and out-of-scope navigation are blocked. Same-origin documents, scripts, styles, images and fonts load normally.
+- Unlike the static scanner, this runs the page's scripts, and GET requests are not always free of side effects. Only scan development or staging pages you control.
 
-Only control metadata, stable selector hints, ambiguity counts and heading counts are exported. No page text, labels, field values, screenshots, cookies, network payloads or authentication state are stored. Metadata/paths/IDs can still be sensitive: review reports before sharing. Blocked resources, hidden/authenticated states and dynamic data can make coverage incomplete. DOM results are observations at one instant, never authorization or runtime postcondition proof.
+The scan exports control metadata, stable selector hints and counts of ambiguous matches and headings. It stores no page text, labels, field values, screenshots, cookies, network payloads or login state. Paths and IDs can still be sensitive, so review reports before sharing them.
+
+Blocked resources, hidden or logged-in states and dynamic data can leave gaps. A DOM result describes the page at one moment. It does not authorize anything or prove that an action works.
 
 ## Files and safeguards
 
-Init creates `pagesquire.config.json`, `pagesquire/capabilities.json`, `pagesquire/bindings.json`, and `pagesquire/adapter.mjs`. The manifest is empty by default. Scans/reports live in `.pagesquire/`; generated browser files live under `pagesquire/generated/` by default. Skill installation touches only the selected project's `.agents/skills/assistant-setup/` and/or `.claude/skills/assistant-setup/`. Existing instructions, application files, dependencies and secrets remain untouched.
+`init` creates `pagesquire.config.json`, `pagesquire/capabilities.json`, `pagesquire/bindings.json` and `pagesquire/adapter.mjs`. The manifest starts empty. Scans and reports go in `.pagesquire/`, and generated browser files go in `pagesquire/generated/` by default.
 
-Conflicting files and project symlinks/junctions are refused; there is no force-overwrite switch. Identical installations are idempotent. Reports and generated files can replace only positively identified PageSquire artifacts. Filesystem changes are bounded, but simultaneous hostile filesystem edits are outside this prerelease's threat model; use a trusted local checkout.
+Installing the skill writes only to `.agents/skills/assistant-setup/` and/or `.claude/skills/assistant-setup/` in the selected project. Your existing instructions, application files, dependencies and secrets are left alone.
 
-Static scans cap source inputs at 500 files, 256 KiB/file, 8 MiB total, 3,000 directory entries and 1,000 candidates. Standard dependency/build/private/config/storage/upload/backup/hidden locations and sensitive filename patterns are excluded. A source file containing PageSquire private/ignore/root annotations is conservatively omitted from candidate extraction. Scripts, route commands and package hooks are never run. Static candidates can be false positives; disabled/hidden branches cannot be fully understood from source alone.
+- Conflicting files and project symlinks or junctions are refused. There is no force option.
+- Repeating an identical install changes nothing.
+- Reports and generated files only replace files the CLI can identify as PageSquire's own.
+- The CLI does not guard against another process editing the files at the same time. Run it on a trusted local checkout.
 
-Parameter schemas must be synchronous/self-contained, with closed object inputs. Direct named function/arrow exports in JS/TS are inspected using Babel's parser; default/re-exported/imported aliases are not resolved. Consequential capabilities remain disabled. TypeScript adapters require the host's bundler. Generated bindings must be recompiled after manifest/schema changes; the browser registry independently checks schema identity.
+Static scans read at most 500 files, 256 KiB per file, 8 MiB in total, 3,000 directory entries and 1,000 candidates. Dependency, build, private, config, storage, upload, backup and hidden directories are skipped, along with sensitive file names. A file with a PageSquire private, ignore or root annotation is left out of candidate extraction. Scripts, route commands and package hooks are never run. Candidates can be false positives, and disabled or hidden branches can't be fully understood from source alone.
 
-F3 is not automatic website training, a crawler, a permissions generator, a WordPress plugin, or a Node/Next.js backend. It does not claim complete site coverage or production readiness.
+Parameter schemas must be synchronous and self-contained, with closed object inputs. Named function and arrow exports in JS/TS are read with Babel's parser. Default exports, re-exports and imported aliases are not resolved. Consequential capabilities stay disabled. TypeScript adapters need the host's bundler. Recompile the generated bindings after changing the manifest or schemas; the browser registry also checks schema identity on its own.
 
-For WordPress, use the separate [plugin dashboard workflow](../wordpress/README.md), not a CLI source scan of a production upload directory. Its exported setup skill prepares only reviewed built-in adapter configuration.
+The CLI does not train a model, crawl the site or generate permissions. It is not a WordPress plugin or a Node/Next.js backend.
+
+For WordPress, use the [plugin dashboard workflow](../wordpress/README.md) instead of scanning a production upload directory. Its exported setup skill only prepares configuration for the built-in adapters.

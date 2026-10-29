@@ -1,14 +1,8 @@
 # @pagesquire/client
 
-C4 adds immutable `state.actionProgress` (latest 20 local attempts), `describeActionProgress` and a shared-widget timeline driven by actual runtime events. Navigation suspension/cache replay are not labelled as fresh success. Fixed failure guidance never renders private adapter errors or automatically retries. Busy state is exposed as widget `data-busy`, with `aria-busy` scoped to messages. See [action progress](../../docs/action-progress.md) for custom UI, lifecycle, privacy and rollout limits.
+The framework-independent conversation client and accessible DOM widget. It depends on the PageSquire protocol and core packages. It includes no API key, framework import, Markdown renderer or dynamic code evaluation.
 
-Optional `GuidedTour` and `SpeechOutput` reuse the external widget stylesheet. Tours use host-authored targets and keyboard cancellation; speech starts disabled/local-only. See [assistant driving](../../docs/assistant-driving.md) for lifecycle, speech-queue/privacy limits and six-state Rive mapping. No mascot, microphone or paid speech endpoint is included.
-
-Framework-independent conversation client and accessible DOM widget. Requires the PageSquire protocol/core packages. No API key, framework import, Markdown renderer, or dynamic evaluation is included.
-
-When its runtime has an explicit `AppContext`, the client sends a fresh bounded public projection per round without dropping registered IDs needed for pending results. It checks cancellation after collection, emits safe unavailable feedback and never retries inference automatically. Opted-in fields require matching server schemas; see [app context](../../docs/app-context.md).
-
-`mountInspector(container, inspector)` optionally mounts a separate developer/admin capability inspector using the same external stylesheet. It provides search/status filters, schema disclosures, explicit target refresh and metadata-only JSON for deliberate copying. It runs no actions or AI requests and returns cleanup; no production widget/plugin mount is enabled automatically. Protect the host surface and review [inspection/privacy limits](../../docs/capability-inspector.md).
+## Usage
 
 ```ts
 import {
@@ -30,20 +24,43 @@ const client = new AssistantClient({
 const unmount = mountWidget(document.querySelector('#assistant'), client);
 ```
 
-The host supplies `runtime`, `serverGeneratedEndpoint`, and optionally `avatar`. Use your framework's route generator rather than hardcoding the endpoint. Supply a fresh CSRF token, not an AI credential.
+The host supplies `runtime`, `serverGeneratedEndpoint` and, optionally, `avatar`. Get the endpoint from your framework's route generator instead of hardcoding it. Pass a fresh CSRF token, never an AI credential.
 
-`send(message)`, `cancel()`, `reset()`, `state`, and `subscribe(listener)` also support custom UIs. `send` resolves after handling operational errors as safe assistant messages; it rejects invalid user input and concurrent submissions. Subscription state is immutable. `mountWidget` returns cleanup that unsubscribes, removes DOM/listeners, and cancels its active request.
+For a custom UI, use `send(message)`, `cancel()`, `reset()`, `state` and `subscribe(listener)`. `send` turns operational errors into safe assistant messages and then resolves; it rejects invalid input and concurrent submissions. Subscription state is immutable. `mountWidget` returns a cleanup function that unsubscribes, removes the DOM and listeners, and cancels any active request.
 
-Defaults: 12 server rounds, 60-second conversation timeout, 4,000-character messages, 100 visible messages. Timeout configuration is bounded at 120 seconds. Final messages have emotion metadata; loading stays `thinking` throughout provider and browser work. Emotions are `idle`, `happy`, `sad`, `thinking`, `confused`, and `hover`. Callback failures cannot interrupt execution. No Rive asset/input names are assumed.
+## Defaults and behaviour
 
-The client accepts one action per unfinished response, binds it to the current snapshot, and uses `BrowserRuntime.execute`. Tool-proposal narration is never shown as completed work. Failed/unverified results cannot trigger another browser action. The HTTP transport enforces same-origin POST, credentials, CSRF, redirect refusal, sanitized failures, and a 192-KiB response cap. Chat/page text uses `textContent`, never HTML.
+- 12 server rounds, a 60-second conversation timeout (configurable up to 120 seconds), 4,000-character messages and 100 visible messages.
+- Final messages carry an emotion: `idle`, `happy`, `sad`, `thinking`, `confused` or `hover`. The emotion stays `thinking` while the provider and the browser are working. No Rive asset or input names are assumed.
+- A failing callback cannot interrupt execution.
+- The client accepts one action per unfinished response, binds it to the current snapshot and runs it with `BrowserRuntime.execute`. Narration of a proposed action is never shown as finished work, and a failed or unverified result cannot trigger another browser action.
+- The HTTP transport enforces same-origin POST, credentials and CSRF. It refuses redirects, sanitizes failures and caps responses at 192 KiB.
+- Chat and page text are rendered with `textContent`, never as HTML.
 
-The widget has a labeled input, live conversation log, status, keyboard cancellation with Escape, explicit Stop/New conversation controls, and focus restoration. The supplied CSS is external for restrictive CSPs and is scoped to `.pagesquire-widget`. Screen-reader testing remains a release gate. Localize custom UI via the client API; built-in control labels are English in this beta.
+The widget has a labelled input, a live conversation log, a status line, Escape to cancel, Stop and New conversation buttons, and focus restoration. Its CSS is an external file scoped to `.pagesquire-widget`, so it works under a strict CSP. Built-in text comes in English and Indonesian and follows the page language; override any text with `messages` ([languages](../../docs/i18n.md)). Screen-reader testing is still to be done.
 
-Browser abort does not guarantee that remote inference has stopped. Do not share a runtime between simultaneous clients. Do not store sensitive transcripts in localStorage.
+Keep in mind:
+
+- Aborting in the browser does not guarantee that remote inference has stopped.
+- Don't share one runtime between clients running at the same time.
+- Don't store sensitive transcripts in localStorage.
+
+## Optional features
+
+- **Action progress.** `state.actionProgress` holds the latest 20 local attempts. `describeActionProgress` and the widget's timeline are driven by real runtime events, so a suspended navigation or a cache replay is not shown as a fresh success. Failure guidance uses fixed text, never shows private adapter errors and never retries automatically. The widget exposes busy state as `data-busy`, with `aria-busy` on the message list. See [action progress](../../docs/action-progress.md).
+- **Guided tours and speech.** `GuidedTour` and `SpeechOutput` reuse the widget stylesheet. Tours point at targets the host defines and can be cancelled from the keyboard. Speech is off by default and runs locally. No mascot, microphone or paid speech service is included. See [assistant driving](../../docs/assistant-driving.md), which also maps the six emotions to Rive states.
+- **App context.** When the runtime has an `AppContext`, the client sends a fresh, bounded public projection each round and keeps any registered IDs that pending results need. It checks for cancellation after collecting, reports unavailability safely and never retries inference on its own. Opted-in fields need matching server schemas; see [app context](../../docs/app-context.md).
+- **Capability inspector.** `mountInspector(container, inspector)` mounts a separate developer or admin inspector with the same stylesheet. It offers search and status filters, schema details, a manual target refresh and metadata-only JSON you can copy. It runs no actions or AI requests, returns a cleanup function and is never mounted automatically. Protect the page you put it on, and see [the inspector's privacy limits](../../docs/capability-inspector.md).
 
 ## Full-document navigation continuation
 
-For an approved same-origin multi-page site, pass `navigationStore: new ChatNavigationStore(sessionStorage)` to AssistantClient (import ChatNavigationStore from this package). Mount the same runtime/catalog/client on each permitted destination and then await `client.resumeNavigation()` once. Do not consume runtime.resumeNavigation() separately. Leave this option unset to retain the original stop-and-reopen behavior.
+For a same-origin site with several pages, pass `navigationStore: new ChatNavigationStore(sessionStorage)` to `AssistantClient` (`ChatNavigationStore` is exported from this package). Mount the same runtime, catalog and client on each allowed destination page, then call `await client.resumeNavigation()` once. Don't call `runtime.resumeNavigation()` separately. If you leave the option unset, the conversation stops on navigation and the visitor reopens it, as before.
 
-The client saves minimal conversation/call IDs, expected URL/origin, issue time and remaining round budget before the navigation handler changes documents. The core separately saves the navigation verification marker. The destination consumes both once, verifies the actual URL/registered postcondition without executing navigation again, and sends the result to the existing server conversation. No messages, page text, action parameters or provider keys are persisted. Expiry is 60 seconds, per-tab sessionStorage; browser storage is not authorization. Server state still requires session/principal authorization and expiry. Wrong/expired/missing checkpoints fail closed; the user may need a new conversation. General reload restoration and cross-tab chat are not implemented. Storage failure prevents checkpoint-enabled navigation from starting. Default storage names assume one PageSquire instance per tab; provide distinct keys for separately scoped deployments.
+Before the navigation handler changes pages, the client saves only what it needs: the conversation and call IDs, the expected URL and origin, the time and the remaining round budget. The core saves its own navigation verification marker. On the destination, both are read once. The client checks the actual URL and the registered postcondition without navigating again, then sends the result to the existing server conversation.
+
+- No messages, page text, action parameters or provider keys are stored.
+- Checkpoints live in per-tab sessionStorage and expire after 60 seconds. Browser storage is not authorization: the server still checks the session, the principal and expiry.
+- A wrong, expired or missing checkpoint fails closed, and the visitor may need to start a new conversation.
+- If storage fails, the navigation does not start.
+- Restoring chat after an ordinary reload, and chat across tabs, are not supported.
+- The default storage keys assume one PageSquire instance per tab. Give separately scoped deployments their own keys.
