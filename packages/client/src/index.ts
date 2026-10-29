@@ -10,3 +10,4 @@ export * from './approval.js';
 export * from './visitor.js';
 export * from './trace.js';
 export * from './i18n.js';
+export * from './link.js';

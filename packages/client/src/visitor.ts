@@ -1,14 +1,16 @@
 import type { VisitorRequest } from '@pagesquire/core';
-import { resolveMessages } from './i18n.js';
+import { format, resolveMessages } from './i18n.js';
 import type { LocaleOptions } from './i18n.js';
 
 export type VisitorPromptOptions = LocaleOptions;
 
 /**
  * Returns a `visitor` function for `BrowserRuntime` that shows ui.ask
- * questions as option buttons and ui.hand_off requests as a "Your turn"
- * panel in `host`. Only a click on an offered option, or on "I'm done",
- * answers; cancel, Escape, withdrawal and timeouts resolve `null`.
+ * questions as option buttons, ui.hand_off requests as a "Your turn" panel
+ * and PageSquire Link handoffs as a "Continue on partner?" panel listing
+ * the partner's origin, the goal and every field, in `host`. Only a click
+ * on an offered option, "I'm done" or "Continue on …" answers; cancel,
+ * Escape, withdrawal and timeouts resolve `null`.
  * Text is rendered with textContent, never as HTML.
  */
 export function createVisitorPrompt(
@@ -49,6 +51,19 @@ export function createVisitorPrompt(
       summary.textContent = request.question;
       for (const option of request.options)
         choices.push([button(option), option]);
+    } else if (request.kind === 'link') {
+      // Nothing leaves this site until the visitor reads this and continues.
+      panel.setAttribute('role', 'alertdialog');
+      heading.textContent = format(t['visitor.linkTitle'], {
+        name: request.partner.name,
+      });
+      summary.textContent = request.goal;
+      choices.push([
+        button(
+          format(t['visitor.linkContinue'], { name: request.partner.name }),
+        ),
+        'continue',
+      ]);
     } else {
       // A hand-off leaves the page usable: no focus move, a polite announcement.
       panel.setAttribute('role', 'region');
@@ -59,6 +74,27 @@ export function createVisitorPrompt(
     }
     actions.append(...choices.map(([element]) => element), cancel);
     panel.append(heading, summary);
+    if (request.kind === 'link') {
+      const fields = Object.entries(request.fields);
+      if (fields.length) {
+        const list = document.createElement('dl');
+        list.className = 'pagesquire-visitor-fields';
+        for (const [name, value] of fields) {
+          const term = document.createElement('dt');
+          term.textContent = name;
+          const detail = document.createElement('dd');
+          detail.textContent = String(value);
+          list.append(term, detail);
+        }
+        panel.append(list);
+      }
+      const origin = document.createElement('p');
+      origin.className = 'pagesquire-visitor-help';
+      origin.textContent = format(t['visitor.linkOrigin'], {
+        origin: request.partner.origin,
+      });
+      panel.append(origin);
+    }
     if (request.kind === 'handoff') {
       const help = document.createElement('p');
       help.className = 'pagesquire-visitor-help';
@@ -85,7 +121,7 @@ export function createVisitorPrompt(
         if (event.key === 'Escape') finish(null);
       });
       host.append(panel);
-      if (request.kind === 'choice') choices[0]?.[0].focus();
+      if (request.kind !== 'handoff') choices[0]?.[0].focus();
     });
     return pending;
   };

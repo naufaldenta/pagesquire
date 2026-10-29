@@ -36,6 +36,17 @@ export const en = {
     'Finish this step yourself, then press the button. The assistant waits and never receives what you type into fields.',
   'visitor.done': "I'm done",
   'visitor.cancel': 'Cancel',
+  'visitor.linkTitle': 'Continue on {name}?',
+  'visitor.linkOrigin':
+    '{origin} opens in a new tab. Only your request and the details below are shared.',
+  'visitor.linkContinue': 'Continue on {name}',
+  'link.arrivalTitle': 'Continue from a partner site',
+  'link.arrivalText':
+    'A partner site sent you here with your request. Continue to let this assistant pick it up.',
+  'link.continue': 'Continue',
+  'link.dismiss': 'Dismiss',
+  'error.handoffExpired':
+    'This handoff expired or was already used. Ask your question here instead.',
 
   'tour.label': 'PageSquire guided tour',
   'tour.previous': 'Previous',
@@ -188,6 +199,17 @@ export const id: Messages = {
     'Selesaikan langkah ini sendiri, lalu tekan tombolnya. Asisten menunggu dan tidak pernah menerima isi yang kamu ketik di kolom.',
   'visitor.done': 'Sudah selesai',
   'visitor.cancel': 'Batal',
+  'visitor.linkTitle': 'Lanjut di {name}?',
+  'visitor.linkOrigin':
+    '{origin} terbuka di tab baru. Hanya permintaanmu dan detail di bawah ini yang dibagikan.',
+  'visitor.linkContinue': 'Lanjut di {name}',
+  'link.arrivalTitle': 'Lanjutan dari situs mitra',
+  'link.arrivalText':
+    'Situs mitra mengirimmu ke sini dengan permintaanmu. Pilih Lanjutkan agar asisten di sini meneruskannya.',
+  'link.continue': 'Lanjutkan',
+  'link.dismiss': 'Tutup',
+  'error.handoffExpired':
+    'Lanjutan ini sudah kedaluwarsa atau sudah dipakai. Tanyakan langsung di sini.',
 
   'tour.label': 'Tur terpandu PageSquire',
   'tour.previous': 'Sebelumnya',

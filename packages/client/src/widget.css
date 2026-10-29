@@ -436,6 +436,22 @@
   flex-wrap: wrap;
 }
 
+.pagesquire-visitor-fields {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 0.75rem;
+  margin: 0.5rem 0;
+}
+
+.pagesquire-visitor-fields dt {
+  font-weight: 700;
+}
+
+.pagesquire-visitor-fields dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .pagesquire-trace-events {
   max-height: 20rem;
   overflow: auto;

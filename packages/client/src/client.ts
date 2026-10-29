@@ -260,6 +260,80 @@ export class AssistantClient {
       );
     await this.run(message);
   }
+  /**
+   * PageSquire Link: starts a conversation from a partner's handoff code
+   * (the `#psq-link=` fragment). The server redeems it once and the
+   * assistant continues from the visitor's request.
+   */
+  async arrive(code: string): Promise<void> {
+    if (this.controller)
+      throw new PageSquireError('BUSY', this.t['client.busy']);
+    if (!/^[A-Za-z0-9_-]{22}$/.test(code))
+      throw new PageSquireError(
+        'INVALID_MESSAGE',
+        'The handoff code is invalid.',
+      );
+    this.conversationId = undefined;
+    await this.run(undefined, undefined, code);
+  }
+  /**
+   * PageSquire Link: reports the visitor's approval of the pending
+   * link.handoff call and returns the partner URL. Used by
+   * createLinkBindings while that call runs.
+   */
+  async approveHandoff(callId: string, signal: AbortSignal): Promise<string> {
+    if (!this.conversationId)
+      throw new PageSquireError(
+        'NO_CONVERSATION',
+        'No conversation is active.',
+      );
+    const request: ChatRequest = {
+      protocolVersion: PROTOCOL_VERSION,
+      requestId: crypto.randomUUID(),
+      conversationId: this.conversationId,
+      handoff: { callId },
+      // The handoff action is still running and owns the page snapshot; an
+      // approval carries no page content, only where it was given.
+      snapshot: {
+        protocolVersion: PROTOCOL_VERSION,
+        id: `handoff-${callId}`.slice(0, 128),
+        url: this.options.runtime.observer.document.URL,
+        title: this.options.runtime.observer.document.title.slice(0, 200),
+        text: '',
+        targets: [],
+        truncated: { text: false, targets: false },
+      },
+      capabilityIds: this.capabilityIds(),
+    };
+    const raw: unknown = JSON.parse(
+      canonicalJson(
+        await abortable(this.options.transport(request, signal), signal),
+        196608,
+      ),
+    );
+    const validation = validateChatReply(raw);
+    const url =
+      validation.valid &&
+      validation.value.conversationId === this.conversationId
+        ? validation.value.response.handoff?.url
+        : undefined;
+    if (!url)
+      throw new PageSquireError(
+        'INVALID_RESPONSE',
+        this.t['client.invalidReply'],
+      );
+    return url;
+  }
+  private capabilityIds(): string[] {
+    return this.options.runtime.registry
+      .list()
+      .filter(
+        (capability) =>
+          capability.risk !== 'consequential' ||
+          this.options.runtime.approvalEnabled === true,
+      )
+      .map((capability) => capability.id);
+  }
   async resumeNavigation(): Promise<void> {
     if (this.controller)
       throw new PageSquireError('BUSY', this.t['client.busy']);
@@ -271,6 +345,7 @@ export class AssistantClient {
   private async run(
     message?: string,
     resume?: ChatNavigationCheckpoint,
+    linkCode?: string,
   ): Promise<void> {
     const controller = new AbortController();
     this.controller = controller;
@@ -339,18 +414,15 @@ export class AssistantClient {
           requestId: crypto.randomUUID(),
           snapshot,
           ...(appContext ? { appContext } : {}),
-          capabilityIds: this.options.runtime.registry
-            .list()
-            .filter(
-              (capability) =>
-                capability.risk !== 'consequential' ||
-                this.options.runtime.approvalEnabled === true,
-            )
-            .map((capability) => capability.id),
+          capabilityIds: this.capabilityIds(),
           ...(this.conversationId
             ? { conversationId: this.conversationId }
             : {}),
-          ...(result ? { result } : { message: message! }),
+          ...(result
+            ? { result }
+            : linkCode !== undefined
+              ? { linkCode }
+              : { message: message! }),
         };
         if (!validateChatRequest(request).valid)
           throw new PageSquireError(

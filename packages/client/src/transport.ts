@@ -122,7 +122,10 @@ const FAILURE_CODES: Record<number, string[]> = {
     'REPLAY_REJECTED',
     'RESULT_MISMATCH',
     'BUSY',
+    'HANDOFF_USED',
+    'HANDOFF_UNAVAILABLE',
   ],
+  410: ['HANDOFF_EXPIRED'],
   502: [
     'INVALID_PARAMETERS',
     'INVALID_PROVIDER_RESPONSE',
@@ -150,7 +153,9 @@ function explain(
       ? t['error.capabilityDenied']
       : failure === 'CAPABILITY_UNAVAILABLE'
         ? t['error.capabilityUnavailable']
-        : t[explanations[status] ?? 'error.httpOther'],
+        : failure === 'HANDOFF_EXPIRED'
+          ? t['error.handoffExpired']
+          : t[explanations[status] ?? 'error.httpOther'],
   );
 }
 
