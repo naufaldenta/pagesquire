@@ -10,7 +10,7 @@ Every change gets a focused review, a regression test that failed before the fix
 
 ## Versions and deprecations
 
-Package versions and protocol version `0.1` are separate. During `0.x` prereleases APIs and configuration may change, but every intentional break is called out in the notes with migration steps. Changed public files always get a new version; assets and tags are never replaced. The tooling currently accepts alpha and beta versions only, and registries are not used yet.
+Package versions and protocol version `0.1` are separate. During `0.x` prereleases APIs and configuration may change, but every intentional break is called out in the notes with migration steps. Changed public files always get a new version; assets and tags are never replaced. The tooling currently accepts alpha and beta versions only, published to npm and Packagist under the `alpha` or `beta` tag.
 
 When an export, option, environment alias, capability schema or behavior is removed or renamed, the changelog and guide record why, what is affected, the replacement and how to upgrade. Where it is safe, a compatibility path stays for a while, with tests and a planned removal. Deprecated behavior is never kept alive through silent fallbacks, broader permissions or looser validation. A security fix may switch off an unsafe feature immediately, with a clear advisory.
 

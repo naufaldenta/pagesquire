@@ -10,7 +10,7 @@ The demo limits each network to five new messages a day and has separate site an
 
 ## What beta means
 
-A beta is an unstable prerelease for people who want to test it. It is not a stable API and not a promise that the assistant is ready to act on production sites unsupervised. Beta versions use the `github-beta` release channel. Version numbers follow [SemVer](https://semver.org/spec/v2.0.0.html) with no leading zeroes. The release tooling does not support stable versions, release candidates, build-metadata aliases or registry publishing yet. See the [release policy](releasing.md#versioning-and-10).
+A beta is an unstable prerelease for people who want to test it. It is not a stable API and not a promise that the assistant is ready to act on production sites unsupervised. Beta versions use the `github-beta` release channel. Version numbers follow [SemVer](https://semver.org/spec/v2.0.0.html) with no leading zeroes. The release tooling does not support stable versions, release candidates or build-metadata aliases yet. See the [release policy](releasing.md#versioning-and-10).
 
 What is tested is listed in [compatibility](compatibility.md). The [Sumopod evaluation](model-evaluation.md) is a five-scenario smoke test with one model in twelve calls. It is not an accuracy benchmark, and other providers and models have not been measured live. Screen readers, browsers other than Chromium, shared-store deployments, and WordPress on MySQL, multisite or third-party page builders are untested.
 
@@ -47,11 +47,11 @@ These flags are set by hand, so a reviewer still has to check the evidence behin
 ## Promoting and publishing a beta
 
 1. Collect outside-tester results and review the support and security scope. Leave untested targets out of scope. Fix blockers and record the reviews honestly.
-2. Bump the version everywhere at once: the root and six npm manifests, their internal dependencies, the lockfile, the WordPress header and readme, the compatibility record and the release-notes heading. Set the channel to `github-beta`. Update the [API baseline](api-contract.md) deliberately, including its package version, then rebuild and run the check. Keep `private: true`, the licenses and the deferred registries. Document any breaking change or configuration migration.
+2. Bump the version everywhere at once: the root and six npm manifests, their internal dependencies, the lockfile, the WordPress header and readme, the compatibility record and the release-notes heading. Set the channel to `github-beta`. Update the [API baseline](api-contract.md) deliberately, including its package version, then rebuild and run the check. Also bump the exact `pagesquire/server` version in the Laravel manifest and the root `composer.json` path repositories. Keep the licenses and public `publishConfig`. Document any breaking change or configuration migration.
 3. Follow [publishing a GitHub prerelease](releasing.md#publishing-a-github-prerelease). The Windows, Ubuntu and database CI jobs must pass on the exact final commit. Build from a clean checkout and test every consumer. If anything changes, start again on the new commit.
 4. Run `release:check -- --beta` and `release:check -- --publication`, then `release:prepare` and `release:verify` on the clean build. The manifest records the channel, source digest, dirty state and open items. Prepared directories are always labelled `local-preview`.
 5. Create a GitHub **draft prerelease** on the reviewed tag, attach all 12 artifacts plus `release-manifest.json` and `SHA256SUMS`, check the list, and publish it as a prerelease, not as latest. Download the files again and verify them. See [GitHub's release docs](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository). Nothing publishes automatically.
-6. Record the release URL, commit and file list. npm, Packagist and WordPress.org are separate, later steps.
+6. Record the release URL, commit and file list. Pushing the tag also publishes to npm and Packagist ([publishing](releasing.md#publishing-to-npm-and-packagist)). WordPress.org is a separate, later step.
 
 ## Feedback and recovery
 

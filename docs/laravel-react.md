@@ -10,7 +10,7 @@ These browser features plug into the same setup:
 
 ## 1. Install the packages
 
-The packages are not on Packagist or npm yet. Use Composer path repositories for `packages/php` and `packages/laravel`, and npm workspaces or local tarballs for `protocol`, `core`, `client` and `react`. Build PageSquire first so that the JavaScript validators and PHP schemas exist. The [Laravel package guide](../packages/laravel/README.md) covers server configuration and test commands.
+The packages are not on Packagist or npm yet. Use Composer path repositories for `packages/php` and `packages/laravel`, each with an explicit version (`"options": { "versions": { "pagesquire/server": "0.1.0-beta.0" } }`, and the same for `pagesquire/laravel`), because the Laravel package requires that exact server version. Use npm workspaces or local tarballs for `protocol`, `core`, `client` and `react`. Build PageSquire first so that the JavaScript validators and PHP schemas exist. The [Laravel package guide](../packages/laravel/README.md) covers server configuration and test commands.
 
 ## 2. Register a site adapter
 
