@@ -1,6 +1,6 @@
 # PageSquire Link (Phase 6)
 
-**Status:** pairing (Phase 6A) is implemented for Node, native PHP, Laravel and WordPress. Handoffs (Phase 6B) are implemented end to end: tickets between servers, the engine's `link.handoff` tool, the visitor's consent prompt, the new tab and the partner's arrival banner, in Node, native PHP, Laravel, WordPress and the one-tag embed. Returns (6C) and the later phases are still proposals. See [Using Link](#using-link-phase-6a) for setup.
+**Status:** pairing (Phase 6A) is implemented for Node, native PHP, Laravel and WordPress. Handoffs (Phase 6B) are implemented end to end: tickets between servers, the engine's `link.handoff` tool, the visitor's consent prompt, the new tab and the partner's arrival banner, in Node, native PHP, Laravel, WordPress and the one-tag embed. Returns (Phase 6C) are implemented too: the partner can send the visitor back once with a one-line outcome. With several partners for one skill (Phase 6D), the visitor chooses where to continue, and owners get an overview of who offers what and how many visitors went each way. An optional A2A interface (Phase 6E) lets any A2A agent send a request into the skills an owner opens; the agent gets only a single-use link where the person continues. See [Using Link](#using-link-phase-6a) for setup.
 
 PageSquire Link lets two sites that both run PageSquire work together. They can belong to different owners, run on different servers and use different stacks, such as Next.js, Laravel, native PHP or WordPress. It has two parts:
 
@@ -23,7 +23,7 @@ Visitor on hotel.test: "Book a table for four at a seafood place tonight at 7"
 - **A2A** (Agent2Agent, Linux Foundation) standardizes agent-to-agent tasks between servers. It defines no visitor, consent prompt or browser widget.
 - **NLWeb** makes site content reachable for agents.
 
-None of these moves a visitor between the assistants of two independently owned websites with the visitor's consent. Link does, and its catalog uses A2A's skill shape so a later phase can publish an A2A Agent Card ([A2A compatibility](#a2a-compatibility)).
+None of these moves a visitor between the assistants of two independently owned websites with the visitor's consent. Link does, and its catalog uses A2A's skill shape, so a site can also publish a signed A2A Agent Card ([A2A interface](#a2a-interface-phase-6e)).
 
 ## Goals and non-goals
 
@@ -146,13 +146,13 @@ The receiver checks:
 - the expiry, with two minutes of clock tolerance;
 - that the nonce is new.
 
-| Type      | Direction  | Body                                             | Answer                     |
-| --------- | ---------- | ------------------------------------------------ | -------------------------- |
-| `accept`  | B → A      | Invitation ID and proof                          | Signed `accepted`: link ID |
-| `approve` | either     | The skills of its own the sender accepts         | Signed `ack`               |
-| `revoke`  | either     | Nothing                                          | Signed `ack`               |
-| `handoff` | A → B (6B) | Skill ID, goal, fields, locale                   | Signed `ticket`: start URL |
-| `return`  | B → A (6C) | Handoff ID, outcome summary, fields allowed back | Code and start URL         |
+| Type      | Direction  | Body                                     | Answer                     |
+| --------- | ---------- | ---------------------------------------- | -------------------------- |
+| `accept`  | B → A      | Invitation ID and proof                  | Signed `accepted`: link ID |
+| `approve` | either     | The skills of its own the sender accepts | Signed `ack`               |
+| `revoke`  | either     | Nothing                                  | Signed `ack`               |
+| `handoff` | A → B (6B) | Skill ID, goal, fields, locale           | Signed `ticket`: start URL |
+| `return`  | B → A (6C) | Return reference, outcome, locale        | Signed `ticket`: start URL |
 
 Answers are envelopes too, signed by the receiver and bound to the same link, so the sender knows the partner itself answered. Names and skills are never taken from a message body: each side reads them from the other's declaration.
 
@@ -224,6 +224,7 @@ Link needs the site key from [signed action calls](companion-extension.md#signed
 php artisan pagesquire:link-invite --hours=24
 php artisan pagesquire:link-accept psq1.…
 php artisan pagesquire:link-list
+php artisan pagesquire:link-overview
 php artisan pagesquire:link-approve lnk_… --offer=book_table:date,people --accept=find_room
 php artisan pagesquire:link-revoke lnk_…
 ```
@@ -258,7 +259,7 @@ Implemented in 6B-3, in the browser:
 - **Consent.** `createLinkBindings({ approve })` (core) runs `link.handoff`. It shows the partner's name, its origin, the goal and every field in a "Continue on …?" prompt (`createVisitorPrompt`, English and Indonesian). Cancel ends the call as cancelled, and nothing is sent.
 - **The new tab.** Continue opens a blank tab at once, while the click still counts as a user gesture, and clears its `opener`. Then `AssistantClient.approveHandoff()` asks the server for the ticket. The tab goes to the returned address only when its origin is the approved partner's and it carries a `#psq-link=` code; otherwise the tab closes.
 - **Arrival.** `mountLinkArrival(host, client)` (client) removes the `#psq-link=` fragment from the address bar as the page loads and shows a "Continue from a partner site" banner. Only Continue redeems the code, through `AssistantClient.arrive()`. Dismiss discards it. An expired or used code shows a clear message.
-- **Setup.** The embed takes `data-link="true"`, and the WordPress frontend turns this on by itself while Link is enabled. Custom setups add `createLinkCapabilities()` to the browser manifest, merge `createLinkBindings({ approve: (id, signal) => client.approveHandoff(id, signal) })` into the registry, give the runtime a visitor prompt and an action timeout of about 20 seconds, and call `mountLinkArrival`. Pages need a secure context: HTTPS, or `localhost` in development.
+- **Setup.** The embed takes `data-link="true"`, and the WordPress frontend turns this on by itself while Link is enabled. Custom setups add `createLinkCapabilities()` to the browser manifest, merge `createLinkBindings({ approve: (id, signal, skill) => client.approveHandoff(id, signal, skill) })` into the registry, give the runtime a visitor prompt and an action timeout of about 20 seconds, and call `mountLinkArrival`. Pages need a secure context: HTTPS, or `localhost` in development.
 
 1. **The model proposes it.** For each active link, the system prompt lists the partner skills it may offer: the partner name, the skill description and the allowed fields. The model calls `link.handoff` with `{ "skill": "resto.test/book_table", "goal": "…", "fields": { … } }`.
 2. **Server A checks the proposal before the browser sees it:**
@@ -282,26 +283,59 @@ Codes are single use and short-lived, and live only in a fragment. A page script
 
 ### Return (Phase 6C)
 
-When B's link to A allows returns, B's model can call `link.return` with an outcome summary, such as "Reservation #A12 confirmed for 19:00", and fields A accepts. The same consent, envelope and code flow runs in the other direction, opening A at its `returnPath` with that outcome.
+A return answers a handoff, so it needs no extra owner setting:
+
+1. **A keeps a return reference.** When the visitor approves a handoff, A records a single-use reference (`ret_…`) for the page they approved it on, valid for 24 hours. It sends the reference with the ticket. A page on another origin is ignored, so a return can only open A itself.
+2. **B offers `link.return` once.** A visitor who arrived with such a ticket can be sent back. B's model calls `link.return` with a one-line outcome, such as "Table for 4 booked for 29 October, 19:00". The engine checks it like a goal: one line, at most 300 characters, and no contact details, links or long numbers the visitor never gave. It then sets the partner itself.
+3. **The visitor approves.** A "Back to Hotel Nusa?" prompt shows the outcome and A's origin. Only Continue sends anything.
+4. **A answers with a ticket.** B signs a `return` envelope with the reference and the outcome. A checks that the reference is open and belongs to this link, uses it up, and answers with a `ticket`: its own page with a fresh `#psq-link=` code.
+5. **The visitor arrives back.** A's banner redeems the code once and starts a conversation whose first message is "Back from Restoran Laut (resto.test): …". Fields never come back, only the outcome.
+
+`LinkManager.sendBack(linkId, { returnId, outcome, locale })` (Node) and `sendBack()` (PHP) send a return. Tickets carry `kind: 'handoff' | 'return'`, and a handoff ticket carries the `returnId` to send back with.
+
+**Owner counts.** Each link record keeps `stats: { sent, received, skills, lastAt }`. `sent` and `received` count the visitors handed off or returned in each direction. `skills` counts handoffs per skill, and `lastAt` is the time of the last one either way. All of it is counted locally and reported to no one.
+
+### Several partners (Phase 6D)
+
+An owner can link several partners that offer the same service, such as two restaurants that both publish a `book_table` skill. Partners count as offering the same service when their skill IDs are identical, so a shared ID such as `book_table` lets them be grouped.
+
+1. **The model names one partner.** `partnerSkills` lists every offered skill, and the model calls `link.handoff` with any one of them.
+2. **The engine adds the others.** Up to three other active partners with the same skill ID become `alternatives`. Each carries only the fields that its own link scope and its own schema allow, from the same screened values. The model cannot add or remove partners, so a page that injects instructions cannot hide a partner from the visitor or add one.
+3. **The visitor chooses.** The consent prompt asks "Where do you want to continue?" and shows one block per partner: its name, its origin and the fields it would receive, each with its own **Continue on …** button. Cancel sends nothing to anyone.
+4. **Only the chosen partner hears of it.** The browser reports the choice as `ChatRequest.handoff.skill`. The server accepts only a partner it showed in that call, rebuilds the ticket from its own pending call, and sends it to that partner alone. The new tab must land on the chosen partner's origin.
+
+The model's pick is listed first, and the other partners follow in the order they were linked. Commission or ranking does not affect the order.
+
+**Owner overview.** `LinkManager.overview()` (Node and PHP) returns:
+
+- link counts by status;
+- total visitors sent and received;
+- `offered`: the partner skills the assistant may offer now, grouped by skill ID with the partners for each;
+- `accepted`: this site's own skills, with the active partners that may hand visitors into each.
+
+`php artisan pagesquire:link-overview` prints this with each partner's per-skill counts and last activity. In WordPress, the **Overview** section of the Partners step shows the same, and each partner card adds its per-skill counts.
 
 ## Protocol changes
 
 All additions are optional, like earlier phases:
 
 - `ChatRequest.linkCode`: an opaque code, at most 64 characters.
+- `ChatRequest.handoff: { callId, skill? }`: the visitor's approval, and in 6D the partner they chose.
+- `link.handoff` parameters gain engine-set `alternatives` (6D): at most three `{ skill, partner, fields }`.
+- `ChatRequest.linkCode` also redeems an A2A agent's code (6E), read from a `#psq-agent=` fragment. The A2A endpoint itself is plain A2A 1.0 JSON-RPC, outside the PageSquire protocol.
 - New built-in capabilities `link.handoff` and, in 6C, `link.return`. Both run in the browser and their calls are signed. They are offered only when an active link allows them.
 - Declaration `features: ["link"]` and a `link` object (endpoint, name, skills).
 - A server-to-server envelope versioned on its own (`v: 1`), with shared Node and PHP test vectors in `tests/fixtures/link.json`.
 
 ## Implementation map
 
-| Piece                         | Node (`@pagesquire/server`)                                               | PHP (`pagesquire/server`) | Laravel                                                                           | WordPress                       |
-| ----------------------------- | ------------------------------------------------------------------------- | ------------------------- | --------------------------------------------------------------------------------- | ------------------------------- |
-| Envelopes, invitations, store | `link.ts`: `LinkManager`, `LinkStore`, `MemoryLinkStore`, `FileLinkStore` | `Link\\*` classes         | Uses the PHP package                                                              | Uses the PHP package            |
-| Link endpoint                 | `createLinkHandler()` for Next.js or Node routes                          | `LinkEndpoint`            | `POST /pagesquire/link` route                                                     | REST route `pagesquire/v1/link` |
-| Owner controls                | `LinkManager` methods                                                     | Same                      | Artisan: `link-invite`, `link-accept`, `link-list`, `link-approve`, `link-revoke` | Step 6, **Partner sites**       |
-| Engine                        | `EngineOptions.links`: partner skills, handoff checks, `untrustedHandoff` | Same                      | Config `pagesquire.link`                                                          | Settings                        |
-| Browser                       | —                                                                         | —                         | —                                                                                 | —                               |
+| Piece                         | Node (`@pagesquire/server`)                                               | PHP (`pagesquire/server`) | Laravel                                                                                            | WordPress                                   |
+| ----------------------------- | ------------------------------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| Envelopes, invitations, store | `link.ts`: `LinkManager`, `LinkStore`, `MemoryLinkStore`, `FileLinkStore` | `Link\\*` classes         | Uses the PHP package                                                                               | Uses the PHP package                        |
+| Link endpoint                 | `createLinkHandler()` for Next.js or Node routes                          | `LinkEndpoint`            | `POST /pagesquire/link` route                                                                      | REST route `pagesquire/v1/link`             |
+| Owner controls                | `LinkManager` methods, `overview()`                                       | Same                      | Artisan: `link-invite`, `link-accept`, `link-list`, `link-overview`, `link-approve`, `link-revoke` | Step 6, **Partner sites**, with an overview |
+| Engine                        | `EngineOptions.links`: partner skills, handoff checks, `untrustedHandoff` | Same                      | Config `pagesquire.link`                                                                           | Settings                                    |
+| Browser                       | —                                                                         | —                         | —                                                                                                  | —                                           |
 
 Browser pieces live in core, the client and the embed:
 
@@ -310,11 +344,44 @@ Browser pieces live in core, the client and the embed:
 - reading the fragment, the banner and `linkCode` in the client;
 - embed attribute `data-link="true"`.
 
-## A2A compatibility
+## A2A interface (Phase 6E)
 
-Partner skills use A2A 1.0's `AgentSkill` shape, so each site's catalog maps one-to-one to an A2A Agent Card at `/.well-known/agent-card.json`. Link does not publish an Agent Card in 6A to 6C. A card must list a working A2A interface (`supportedInterfaces`), and Link's endpoint does not speak A2A's task protocol yet.
+Partner skills use A2A 1.0's `AgentSkill` shape. A site can also open some of its skills to any A2A agent, such as a person's own AI assistant. This is off by default, and the owner picks the skills.
 
-Phase 6E would add that interface. Other A2A agents could then send tasks into a site's partner skills, with the same scope checks, and a site could sign its card with the site key using A2A's JWS card signatures.
+**What an agent gets.** An agent sends a request into an open skill and receives a single-use link, never an action. The person opens the link, sees a "Continue a request from an AI agent" banner, and continues with one click. The site's assistant then acts with the site's own capabilities and approvals, like any other visitor request. The agent never gets a session, a conversation or data from the site.
+
+**Agent Card.** The site publishes `/.well-known/agent-card.json`. The card lists:
+
+- the open skills;
+- one interface, `{ "url": "https://resto.test/pagesquire/a2a", "protocolBinding": "JSONRPC", "protocolVersion": "1.0" }`;
+- `capabilities` with streaming and push notifications off;
+- an extension with each open skill's fields (the `uri` is this section).
+
+The card is signed with the site key as A2A section 8.4 describes:
+
+1. The card without `signatures` is canonicalized with RFC 8785 (JCS).
+2. A JWS is made with the protected header `{ "alg": "EdDSA", "typ": "JOSE", "kid": …, "jku": "https://resto.test/.well-known/pagesquire-keys.json" }`. `kid` is the RFC 7638 thumbprint of the key.
+3. `/.well-known/pagesquire-keys.json` serves the JWK Set with the Ed25519 key. It is the same key as the `publicKey` in `/.well-known/pagesquire.json`.
+
+Node and PHP sign the shared vector in `tests/fixtures/a2a.json` byte for byte the same.
+
+**The endpoint.** It speaks JSON-RPC 2.0 and needs `A2A-Version: 1.0`, as a header or a query parameter.
+
+- **`SendMessage`** takes one `ROLE_USER` message whose parts are text and at most one data part `{ "skill": "book_table", "goal": "A table for 4 on 29 October", "fields": { "date": "2026-10-29", "people": 4 } }`. Text alone is enough when one skill is open; it becomes the goal.
+- **Checks.** The site checks the request like a partner's handoff: the skill must be open, the goal one line of at most 300 characters, and every field declared and valid. A goal with a link is refused, because the visitor reads it as their own request.
+- **The answer** is a `message` with a text part and a data part `{ "url": "https://resto.test/reservations#psq-agent=…", "expiresAt": "…" }`. The code works once, for 10 minutes, and only while the A2A interface stays on.
+- **No tasks.** The site keeps no tasks, so `GetTask`, `CancelTask` and `SubscribeToTask` answer `TaskNotFoundError` (-32001). Streaming, task lists and push notifications answer with their unsupported errors. Files and URLs in parts answer `ContentTypeNotSupportedError` (-32005), and other A2A versions answer `VersionNotSupportedError` (-32009).
+
+**Arrival.** The `#psq-agent=` fragment works like `#psq-link=`: it leaves the address bar at once, and only Continue redeems it. The first message is "Request from an AI agent: …". The fields arrive as `untrustedHandoff` with `from: "an AI agent (A2A)"` instead of a partner, and there is nothing to return to.
+
+**Owner controls.** The endpoint is public, so rate-limit it per address. Laravel allows 30 requests per minute by default, and WordPress 30. The overview counts the requests agents sent (`agents.received`).
+
+| Stack     | Setup                                                                                                                                                                                                                             |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Node      | `new LinkManager({ …, a2a: { endpoint: '/pagesquire/a2a', skills: ['book_table'] } })`. Serve `manager.agentCard()` and `manager.agentKeys()` at the two well-known paths, and route `createA2AHandler(manager)` at the endpoint. |
+| PHP       | Pass `a2a: ['endpoint' => '/pagesquire/a2a', 'skills' => ['book_table']]` to `LinkManager`. Serve `agentCard()` and `agentKeys()`, and `A2AEndpoint::handle()` with the `A2A-Version` header at the endpoint.                     |
+| Laravel   | `PAGESQUIRE_A2A=true` and `pagesquire.link.a2a.skills`. The package serves the card, the key set and `POST /pagesquire/a2a` (throttled).                                                                                          |
+| WordPress | In step 6, tick **Let AI agents send requests (A2A)** and list the skill IDs. The plugin serves the card, the key set and the REST route `pagesquire/v1/a2a`.                                                                     |
 
 ## Testing
 
@@ -355,7 +422,7 @@ Taken with the owner on 2026-10-29:
 2. **On arrival:** one confirmation click on B, then B continues on its own.
 3. **Data by default:** only the goal summary. Other fields need the link scope and the visitor's approval.
 4. **No business layer:** no referral or commission tracking. Owners get local counts only.
-5. **Standards:** the catalog uses A2A's skill shape; a full A2A interface comes later.
+5. **Standards:** the catalog uses A2A's skill shape. The A2A interface (6E) is optional, answers only with single-use links, and keeps no tasks.
 
 Open for later:
 
