@@ -1,0 +1,238 @@
+{
+  "comment": "Synthetic PageSquire Link test vector shared by the Node and PHP tests. Never use this key.",
+  "signingKey": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+  "publicKey": "ed25519:A6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=",
+  "claims": "{\"v\":1,\"type\":\"approve\",\"from\":\"http://hotel.test\",\"to\":\"http://resto.test\",\"link\":\"lnk_AAAAAAAAAAAAAAAAAAAAAA\",\"nonce\":\"BBBBBBBBBBBBBBBBBBBBBB\",\"iat\":1830000000,\"exp\":1830000300,\"body\":{\"accept\":[\"book_table\"],\"note\":\"Halo — café/1\"}}",
+  "signature": "Y3eUrz6Dr5kDDZZV9nqL5OjIUHRL7P9JHNG+xNpxu8ADfZAJrvRH3PSI2DxvFfXHzR+RggSaJZNg007NVAfiDA==",
+  "invitation": {
+    "secret": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+    "keyHash": "lCAUrwMZXJf8imEhoD4WYLiQJ6U4MloQHrpCbazX5Yc",
+    "from": "http://resto.test",
+    "nonce": "DDDDDDDDDDDDDDDDDDDDDD",
+    "proof": "LgbV7-yFk1KX_R7CyBOaiou4LM7_UFvsCuuKi_GGjKw"
+  },
+  "values": [
+    {
+      "schema": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 20
+      },
+      "value": 4,
+      "valid": true
+    },
+    {
+      "schema": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 20
+      },
+      "value": 0,
+      "valid": false
+    },
+    {
+      "schema": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 20
+      },
+      "value": 21,
+      "valid": false
+    },
+    {
+      "schema": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 20
+      },
+      "value": 2.5,
+      "valid": false
+    },
+    {
+      "schema": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 20
+      },
+      "value": "4",
+      "valid": false
+    },
+    {
+      "schema": {
+        "type": "number",
+        "minimum": 0
+      },
+      "value": 2.5,
+      "valid": true
+    },
+    {
+      "schema": {
+        "type": "number",
+        "minimum": 0
+      },
+      "value": -1,
+      "valid": false
+    },
+    {
+      "schema": {
+        "type": "boolean"
+      },
+      "value": true,
+      "valid": true
+    },
+    {
+      "schema": {
+        "type": "boolean"
+      },
+      "value": "true",
+      "valid": false
+    },
+    {
+      "schema": {
+        "type": "string",
+        "format": "date"
+      },
+      "value": "2026-10-29",
+      "valid": true
+    },
+    {
+      "schema": {
+        "type": "string",
+        "format": "date"
+      },
+      "value": "2026-02-30",
+      "valid": false
+    },
+    {
+      "schema": {
+        "type": "string",
+        "format": "date"
+      },
+      "value": "2026-1-5",
+      "valid": false
+    },
+    {
+      "schema": {
+        "type": "string",
+        "format": "time"
+      },
+      "value": "19:00",
+      "valid": true
+    },
+    {
+      "schema": {
+        "type": "string",
+        "format": "time"
+      },
+      "value": "19:00:30",
+      "valid": true
+    },
+    {
+      "schema": {
+        "type": "string",
+        "format": "time"
+      },
+      "value": "24:00",
+      "valid": false
+    },
+    {
+      "schema": {
+        "type": "string",
+        "format": "email"
+      },
+      "value": "guest@resto.test",
+      "valid": true
+    },
+    {
+      "schema": {
+        "type": "string",
+        "format": "email"
+      },
+      "value": "guest@resto",
+      "valid": false
+    },
+    {
+      "schema": {
+        "type": "string",
+        "enum": ["indoor", "outdoor"]
+      },
+      "value": "indoor",
+      "valid": true
+    },
+    {
+      "schema": {
+        "type": "string",
+        "enum": ["indoor", "outdoor"]
+      },
+      "value": "roof",
+      "valid": false
+    },
+    {
+      "schema": {
+        "type": "string",
+        "pattern": "^[A-Z]{3}$"
+      },
+      "value": "ABC",
+      "valid": true
+    },
+    {
+      "schema": {
+        "type": "string",
+        "pattern": "^[A-Z]{3}$"
+      },
+      "value": "abc",
+      "valid": false
+    },
+    {
+      "schema": {
+        "type": "string",
+        "maxLength": 5
+      },
+      "value": "héllo",
+      "valid": true
+    },
+    {
+      "schema": {
+        "type": "string",
+        "maxLength": 5
+      },
+      "value": "héllo!",
+      "valid": false
+    },
+    {
+      "schema": {
+        "type": "string"
+      },
+      "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "valid": true
+    },
+    {
+      "schema": {
+        "type": "string"
+      },
+      "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "valid": false
+    },
+    {
+      "schema": {
+        "type": "string"
+      },
+      "value": "a\nb",
+      "valid": false
+    },
+    {
+      "schema": {
+        "type": "string"
+      },
+      "value": "",
+      "valid": false
+    },
+    {
+      "schema": {
+        "type": "string"
+      },
+      "value": 7,
+      "valid": false
+    }
+  ]
+}
