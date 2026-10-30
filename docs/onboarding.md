@@ -6,16 +6,25 @@ The scripts work without AI. If you want, a coding agent can help finish the map
 
 Installing PageSquire does not mean every feature is covered. Inspect each real control on the site, compile its exact schema and verify its real effect. For cursor feedback, nested scrolling, reading and summaries, accessibility controls, tours and voice, see [assistant driving](assistant-driving.md). Avoid site-specific intent rules that drop the rest of a compound request.
 
-## 1. Build the CLI
+## 1. Install the CLI
 
-From the PageSquire checkout, run `npm ci` and `npm run build`. `npm run pagesquire -- ...` then runs the CLI. To use it from another project, install the CLI, core and protocol tarballs and run the `pagesquire` executable. The package is not on npm yet and the name is not reserved there, so do not run it through a command that downloads packages on demand.
+The CLI is on npm as [`@pagesquire/cli`](https://www.npmjs.com/package/@pagesquire/cli) and needs Node.js 24 or later. Install it in a small tools folder next to the website, so nothing is added to the website's own dependencies:
 
-The examples below run from the PageSquire checkout against a website in a sibling folder. Replace the root and URL with your own development project. Nothing is installed into the website's dependencies.
+```sh
+mkdir pagesquire-tools
+cd pagesquire-tools
+npm init -y
+npm install @pagesquire/cli@beta
+```
+
+PageSquire is in beta, so ask for the `beta` tag. To run a single command without installing, use `npx @pagesquire/cli@beta <command>` instead of `npx pagesquire <command>`.
+
+The examples below run from the tools folder against a website in `../my-website`. Replace the root and URL with your own development project. Contributors can also run `npm run pagesquire -- <command>` from a built checkout of this repository.
 
 ## 2. Create a default-deny configuration
 
 ```sh
-npm run pagesquire -- init --root ../my-website --url http://127.0.0.1:8000/
+npx pagesquire init --root ../my-website --url http://127.0.0.1:8000/
 ```
 
 `init` creates:
@@ -30,18 +39,19 @@ npm run pagesquire -- init --root ../my-website --url http://127.0.0.1:8000/
 ## 3. Scan the source and, optionally, pages
 
 ```sh
-npm run pagesquire -- scan --root ../my-website
-npm run pagesquire -- report --root ../my-website
+npx pagesquire scan --root ../my-website
+npx pagesquire report --root ../my-website
 ```
 
 The source scanner reads local files up to a size limit, recognizes framework dependencies, and reports candidate controls, headings and routes by file and line. It never runs PHP, imports the site's JavaScript, runs Composer or npm scripts or calls Artisan, and it does not export source snippets or route strings. Folders for secrets, config, private files, generated output and dependencies are skipped. The scanner is conservative and will miss things.
 
-To observe rendered pages, install Playwright's Chromium in the CLI environment and pass the configured URLs:
+To observe rendered pages, install Playwright and its Chromium in the tools folder and pass the configured URLs:
 
 ```sh
-npm exec -- playwright install chromium
-npm run pagesquire -- scan --root ../my-website --url http://127.0.0.1:8000/
-npm run pagesquire -- report --root ../my-website
+npm install playwright
+npx playwright install chromium
+npx pagesquire scan --root ../my-website --url http://127.0.0.1:8000/
+npx pagesquire report --root ../my-website
 ```
 
 Each page is rendered in an isolated browser without a login. Nothing is clicked or filled in. The site's own scripts run, but fetch and XHR, foreign resources, mutating methods, service workers, WebSockets, downloads and unexpected navigation are blocked. GET requests for the page's resources still reach the site, so scan a staging copy and avoid routes where a GET changes data. There is no automatic crawling and no import of logged-in browser storage.
@@ -57,7 +67,7 @@ Each page is rendered in an isolated browser without a login. Nothing is clicked
 **With a coding agent.** Generate project-local guidance. This sends nothing to a model:
 
 ```sh
-npm run pagesquire -- prepare-ai --root ../my-website --host both
+npx pagesquire prepare-ai --root ../my-website --host both
 ```
 
 Pass `codex`, `claude` or `both`, and review the generated skill and references. Global configuration, host instructions, dependencies and the site's source are left alone. Installation stops on conflicting skill files or legacy commands. Running it again with the same result changes nothing. If the configuration changed, review and remove the old generated context file yourself before you generate it again.
@@ -76,13 +86,19 @@ The skill asks the agent to read the relevant code, keep existing changes, tell 
 ## 6. Validate, compile, then test behavior
 
 ```sh
-npm run pagesquire -- validate --root ../my-website
-npm run pagesquire -- validate --root ../my-website --compile
+npx pagesquire validate --root ../my-website
+npx pagesquire validate --root ../my-website --compile
 ```
 
 `validate` checks the manifest, duplicate IDs, parameter schemas, the binding list, local paths, and that bindings are direct named function exports. It does not import the adapter. Empty manifests, unsupported schemas and consequential actions fail. `--compile` writes CSP-safe `parameters.js` and `bindings.mjs` into the generated directory, and leaves conflicting hand-written files alone.
 
-Use these exports in `CapabilityRegistry`, and the same trusted manifest on the server. The registry checks for schema drift again at runtime. Code that passes validation can still throw, return false, ignore cancellation or have unsafe side effects, so test it in a browser and review it before you enable anything. That is why the CLI always reports `runtimeVerified: false`.
+Unlike the CLI, the browser packages belong in the website's own dependencies:
+
+```sh
+npm install @pagesquire/protocol@beta @pagesquire/core@beta @pagesquire/client@beta
+```
+
+Add `@pagesquire/react@beta` for React, Inertia or Next.js, and install the server package your backend needs (see [installing the packages](../README.md#install-the-packages)). Use these exports in `CapabilityRegistry`, and the same trusted manifest on the server. The registry checks for schema drift again at runtime. Code that passes validation can still throw, return false, ignore cancellation or have unsafe side effects, so test it in a browser and review it before you enable anything. That is why the CLI always reports `runtimeVerified: false`.
 
 At minimum, test the real postcondition and the failure behavior of each feature. For accessibility features, test:
 

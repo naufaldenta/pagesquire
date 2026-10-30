@@ -4,19 +4,28 @@ Command-line onboarding for adding PageSquire to a website. Requires Node.js 24+
 
 The static commands need no model, cloud account or API key. They never run your project's code, install its dependencies or publish anything.
 
-The package is in beta and not yet on npm. Run it from a checkout of this repository or from a local tarball.
+## Install
+
+Keep the CLI out of your website's dependencies: install it in a small tools folder next to the website.
+
+```sh
+mkdir pagesquire-tools
+cd pagesquire-tools
+npm init -y
+npm install @pagesquire/cli@beta
+```
+
+PageSquire is in beta, so ask for the `beta` tag. For a single command without installing, `npx @pagesquire/cli@beta <command>` works too.
 
 ## Quick start
 
-From the PageSquire checkout:
+From the tools folder, with the website in `../my-website`:
 
 ```sh
-npm ci
-npm run build
-npm run pagesquire -- init --root ../my-website --url http://127.0.0.1:8000/
-npm run pagesquire -- scan --root ../my-website
-npm run pagesquire -- report --root ../my-website
-npm run pagesquire -- prepare-ai --root ../my-website --host both
+npx pagesquire init --root ../my-website --url http://127.0.0.1:8000/
+npx pagesquire scan --root ../my-website
+npx pagesquire report --root ../my-website
+npx pagesquire prepare-ai --root ../my-website --host both
 ```
 
 Next, review the installed skill and run `$assistant-setup` in Codex or `/assistant-setup` in Claude Code from the website project. The CLI never starts either assistant and never sends anything to a model. The coding agent's permissions and costs are set by the tool you choose.
@@ -26,23 +35,24 @@ You can also integrate by hand: write the manifest, the named handler and verifi
 ## Validate
 
 ```sh
-npm run pagesquire -- validate --root ../my-website
-npm run pagesquire -- validate --root ../my-website --compile
+npx pagesquire validate --root ../my-website
+npx pagesquire validate --root ../my-website --compile
 ```
 
 The first command is read-only. The second also writes generated validators and binding imports, but still does not import your application modules.
 
 Output is JSON with `scope: "static-contract"` and `runtimeVerified: false`. An empty or invalid manifest exits with status 1. A pass means the schemas match and the named functions are exported directly. It does not mean the handlers are safe or work, so test in the host app and the browser before enabling anything.
 
-See [the onboarding guide](../../docs/onboarding.md) for the full sequence, the files involved, privacy boundaries and the manual binding format.
+See [the onboarding guide](https://github.com/naufaldenta/pagesquire/blob/main/docs/onboarding.md) for the full sequence, the files involved, privacy boundaries and the manual binding format.
 
 ## Optional DOM observation
 
-Install Playwright and its Chromium binary in the CLI environment, then pass the page you want observed:
+Install Playwright and its Chromium binary in the tools folder, then pass the page you want observed:
 
 ```sh
-npm exec -- playwright install chromium
-npm run pagesquire -- scan --root ../my-website --url http://127.0.0.1:8000/
+npm install playwright
+npx playwright install chromium
+npx pagesquire scan --root ../my-website --url http://127.0.0.1:8000/
 ```
 
 - The URL must match `site.origin` and one of the exact `site.paths` in the website's `pagesquire.config.json`. You can pass at most five URLs, and links are not followed.
@@ -72,4 +82,4 @@ Parameter schemas must be synchronous and self-contained, with closed object inp
 
 The CLI does not train a model, crawl the site or generate permissions. It is not a WordPress plugin or a Node/Next.js backend.
 
-For WordPress, use the [plugin dashboard workflow](../wordpress/README.md) instead of scanning a production upload directory. Its exported setup skill only prepares configuration for the built-in adapters.
+For WordPress, use the [plugin dashboard workflow](https://github.com/naufaldenta/pagesquire/blob/main/packages/wordpress/README.md) instead of scanning a production upload directory. Its exported setup skill only prepares configuration for the built-in adapters.
