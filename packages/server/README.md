@@ -1,6 +1,14 @@
 # @pagesquire/server
 
-Server-side PageSquire for Node.js 24: the conversation engine, a native HTTPS JSON provider transport and Web Request/Response integration. Never import it into browser code or a Client Component. The package is in beta and not yet on npm.
+Server-side PageSquire for Node.js 24: the conversation engine, a native HTTPS JSON provider transport and Web Request/Response integration. Never import it into browser code or a Client Component.
+
+## Install
+
+```sh
+npm install @pagesquire/server@beta
+```
+
+PageSquire is in beta, so ask for the `beta` tag. Install every PageSquire package at the same version; they depend on each other exactly. Node.js 24 or later is required.
 
 ## Provider
 
@@ -43,8 +51,8 @@ For multi-instance, serverless or ephemeral hosts, the file store won't work. Us
 
 ## PageSquire Link
 
-`LinkManager({ store, signingKey, origin, profile })` pairs this site with another owner's PageSquire site ([PageSquire Link](../../docs/link.md#using-link-phase-6a)): invitations, approval and revocation, with Ed25519-signed envelopes between servers. Route `createLinkHandler(manager)` at the profile's endpoint and pass `link: manager.declaration()` to `siteDeclaration()`. `FileLinkStore` suits one process; multi-instance hosts need a shared transactional `LinkStore`.
+`LinkManager({ store, signingKey, origin, profile })` pairs this site with another owner's PageSquire site ([PageSquire Link](https://github.com/naufaldenta/pagesquire/blob/main/docs/link.md#using-link-phase-6a)): invitations, approval and revocation, with Ed25519-signed envelopes between servers. Route `createLinkHandler(manager)` at the profile's endpoint and pass `link: manager.declaration()` to `siteDeclaration()`. `FileLinkStore` suits one process; multi-instance hosts need a shared transactional `LinkStore`.
 
 ## See also
 
-[Node/Next.js integration](../../docs/node-next.md), [standalone PHP](../../docs/standalone-php.md) and the [security policy](../../SECURITY.md). Shared test fixtures check that the PHP and Node engines behave the same way.
+[Node/Next.js integration](https://github.com/naufaldenta/pagesquire/blob/main/docs/node-next.md), [standalone PHP](https://github.com/naufaldenta/pagesquire/blob/main/docs/standalone-php.md) and the [security policy](https://github.com/naufaldenta/pagesquire/blob/main/SECURITY.md). Shared test fixtures check that the PHP and Node engines behave the same way.

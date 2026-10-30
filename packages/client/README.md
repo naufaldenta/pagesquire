@@ -2,6 +2,14 @@
 
 The framework-independent conversation client and accessible DOM widget. It depends on the PageSquire protocol and core packages. It includes no API key, framework import, Markdown renderer or dynamic code evaluation.
 
+## Install
+
+```sh
+npm install @pagesquire/protocol@beta @pagesquire/core@beta @pagesquire/client@beta
+```
+
+PageSquire is in beta, so ask for the `beta` tag. Install every PageSquire package at the same version; they depend on each other exactly. The runtime you pass in comes from `@pagesquire/core`.
+
 ## Usage
 
 ```ts
@@ -37,7 +45,7 @@ For a custom UI, use `send(message)`, `cancel()`, `reset()`, `state` and `subscr
 - The HTTP transport enforces same-origin POST, credentials and CSRF. It refuses redirects, sanitizes failures and caps responses at 192 KiB.
 - Chat and page text are rendered with `textContent`, never as HTML.
 
-The widget has a labelled input, a live conversation log, a status line, Escape to cancel, Stop and New conversation buttons, and focus restoration. Its CSS is an external file scoped to `.pagesquire-widget`, so it works under a strict CSP. Built-in text comes in English and Indonesian and follows the page language; override any text with `messages` ([languages](../../docs/i18n.md)). Screen-reader testing is still to be done.
+The widget has a labelled input, a live conversation log, a status line, Escape to cancel, Stop and New conversation buttons, and focus restoration. Its CSS is an external file scoped to `.pagesquire-widget`, so it works under a strict CSP. Built-in text comes in English and Indonesian and follows the page language; override any text with `messages` ([languages](https://github.com/naufaldenta/pagesquire/blob/main/docs/i18n.md)). Screen-reader testing is still to be done.
 
 Keep in mind:
 
@@ -47,10 +55,10 @@ Keep in mind:
 
 ## Optional features
 
-- **Action progress.** `state.actionProgress` holds the latest 20 local attempts. `describeActionProgress` and the widget's timeline are driven by real runtime events, so a suspended navigation or a cache replay is not shown as a fresh success. Failure guidance uses fixed text, never shows private adapter errors and never retries automatically. The widget exposes busy state as `data-busy`, with `aria-busy` on the message list. See [action progress](../../docs/action-progress.md).
-- **Guided tours and speech.** `GuidedTour` and `SpeechOutput` reuse the widget stylesheet. Tours point at targets the host defines and can be cancelled from the keyboard. Speech is off by default and runs locally. No mascot, microphone or paid speech service is included. See [assistant driving](../../docs/assistant-driving.md), which also maps the six emotions to Rive states.
-- **App context.** When the runtime has an `AppContext`, the client sends a fresh, bounded public projection each round and keeps any registered IDs that pending results need. It checks for cancellation after collecting, reports unavailability safely and never retries inference on its own. Opted-in fields need matching server schemas; see [app context](../../docs/app-context.md).
-- **Capability inspector.** `mountInspector(container, inspector)` mounts a separate developer or admin inspector with the same stylesheet. It offers search and status filters, schema details, a manual target refresh and metadata-only JSON you can copy. It runs no actions or AI requests, returns a cleanup function and is never mounted automatically. Protect the page you put it on, and see [the inspector's privacy limits](../../docs/capability-inspector.md).
+- **Action progress.** `state.actionProgress` holds the latest 20 local attempts. `describeActionProgress` and the widget's timeline are driven by real runtime events, so a suspended navigation or a cache replay is not shown as a fresh success. Failure guidance uses fixed text, never shows private adapter errors and never retries automatically. The widget exposes busy state as `data-busy`, with `aria-busy` on the message list. See [action progress](https://github.com/naufaldenta/pagesquire/blob/main/docs/action-progress.md).
+- **Guided tours and speech.** `GuidedTour` and `SpeechOutput` reuse the widget stylesheet. Tours point at targets the host defines and can be cancelled from the keyboard. Speech is off by default and runs locally. No mascot, microphone or paid speech service is included. See [assistant driving](https://github.com/naufaldenta/pagesquire/blob/main/docs/assistant-driving.md), which also maps the six emotions to Rive states.
+- **App context.** When the runtime has an `AppContext`, the client sends a fresh, bounded public projection each round and keeps any registered IDs that pending results need. It checks for cancellation after collecting, reports unavailability safely and never retries inference on its own. Opted-in fields need matching server schemas; see [app context](https://github.com/naufaldenta/pagesquire/blob/main/docs/app-context.md).
+- **Capability inspector.** `mountInspector(container, inspector)` mounts a separate developer or admin inspector with the same stylesheet. It offers search and status filters, schema details, a manual target refresh and metadata-only JSON you can copy. It runs no actions or AI requests, returns a cleanup function and is never mounted automatically. Protect the page you put it on, and see [the inspector's privacy limits](https://github.com/naufaldenta/pagesquire/blob/main/docs/capability-inspector.md).
 
 ## Full-document navigation continuation
 

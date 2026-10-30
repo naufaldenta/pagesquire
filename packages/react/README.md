@@ -2,6 +2,14 @@
 
 A thin React 19 wrapper around the PageSquire widget. The host owns a stable `AssistantClient`, the CSS import, the registry, permissions and the backend URL.
 
+## Install
+
+```sh
+npm install @pagesquire/protocol@beta @pagesquire/core@beta @pagesquire/client@beta @pagesquire/react@beta
+```
+
+PageSquire is in beta, so ask for the `beta` tag. Install every PageSquire package at the same version; they depend on each other exactly. React 19 is a peer dependency. For Inertia or Next.js, use the router your app already has.
+
 ```tsx
 import { PageSquireWidget } from '@pagesquire/react';
 import '@pagesquire/client/widget.css';
@@ -27,7 +35,7 @@ Register the standard `browser.navigate` capability, a destination verifier and 
 
 Under a strict CSP, turn off Inertia's progress CSS with `progress: false` in `createInertiaApp`, or set up its nonce support. PageSquire doesn't relax your CSP, and its own widget stylesheet is an external file.
 
-The local fixture runs React Strict Mode with the real Inertia v3 router and checks SPA navigation followed by an accessibility conversation. Your own forms, layouts or error handlers may still behave differently. See the [host integration guide](../../docs/laravel-react.md).
+The local fixture runs React Strict Mode with the real Inertia v3 router and checks SPA navigation followed by an accessibility conversation. Your own forms, layouts or error handlers may still behave differently. See the [host integration guide](https://github.com/naufaldenta/pagesquire/blob/main/docs/laravel-react.md).
 
 ## Next.js App Router
 
@@ -35,4 +43,4 @@ The local fixture runs React Strict Mode with the real Inertia v3 router and che
 
 The destination page must call `navigation.committed(location.href)` from its real ready effect, not from a loading fallback. Calling `push` doesn't count as success: the registered verifier still checks the actual state. Keep the widget in a persistent layout.
 
-See [Node/Next.js integration](../../docs/node-next.md) for server, auth and storage details and the tested fixture.
+See [Node/Next.js integration](https://github.com/naufaldenta/pagesquire/blob/main/docs/node-next.md) for server, auth and storage details and the tested fixture.
