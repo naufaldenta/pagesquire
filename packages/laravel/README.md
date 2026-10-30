@@ -1,6 +1,16 @@
 # PageSquire Laravel adapter
 
-Laravel 13 (PHP 8.3) integration for PageSquire's server-side conversation engine. It is in beta and not yet on Packagist; install it from this repository.
+Laravel 13 (PHP 8.3) integration for PageSquire's server-side conversation engine. It is in beta.
+
+## Install
+
+```sh
+composer require pagesquire/server:^0.1@beta pagesquire/laravel:^0.1@beta
+```
+
+Both packages need `@beta`, because Composer only allows a beta version for packages you require directly.
+
+This package is a read-only copy of `packages/laravel` in the [PageSquire repository](https://github.com/naufaldenta/pagesquire). Send issues and pull requests there.
 
 ## Enable it
 
@@ -75,32 +85,32 @@ To use another API, bind your own `PageSquire\Server\Provider` implementation in
 
 ## App context
 
-The adapter accepts optional [public app context and availability](../../docs/app-context.md). Deploy matching browser and PHP schemas first. The FormRequest keeps the validated context array, but the raw protocol checks and your gates still decide. No route or automatic state collection is added.
+The adapter accepts optional [public app context and availability](https://github.com/naufaldenta/pagesquire/blob/main/docs/app-context.md). Deploy matching browser and PHP schemas first. The FormRequest keeps the validated context array, but the raw protocol checks and your gates still decide. No route or automatic state collection is added.
 
 ## Language
 
-Set `PAGESQUIRE_LOCALE=id` for Indonesian fixed engine replies (default `en`). Browser text follows `<html lang>` or the `locale` option; see [languages](../../docs/i18n.md).
+Set `PAGESQUIRE_LOCALE=id` for Indonesian fixed engine replies (default `en`). Browser text follows `<html lang>` or the `locale` option; see [languages](https://github.com/naufaldenta/pagesquire/blob/main/docs/i18n.md).
 
 ## Companion extension
 
-Set `PAGESQUIRE_SIGNING_KEY` to a key from `npx pagesquire signing-key` to sign every action call for the [companion extension](../../docs/companion-extension.md#signed-action-calls). The package then also serves the public key at `/.well-known/pagesquire.json`. Calls are signed for the origin of `APP_URL`; set `PAGESQUIRE_SITE_ORIGIN` if the public origin differs. Keep the key secret, like the provider key.
+Set `PAGESQUIRE_SIGNING_KEY` to a key from `npx pagesquire signing-key` to sign every action call for the [companion extension](https://github.com/naufaldenta/pagesquire/blob/main/docs/companion-extension.md#signed-action-calls). The package then also serves the public key at `/.well-known/pagesquire.json`. Calls are signed for the origin of `APP_URL`; set `PAGESQUIRE_SITE_ORIGIN` if the public origin differs. Keep the key secret, like the provider key.
 
 `PAGESQUIRE_SCREENSHOTS=true` also declares redacted screenshots and forwards each one once to the model, which must accept images. Visitors still have to allow screenshots in the extension.
 
 ## PageSquire Link
 
-With the signing key set, `PAGESQUIRE_LINK=true` lets this site pair with another owner's PageSquire site ([PageSquire Link](../../docs/link.md#using-link-phase-6a)).
+With the signing key set, `PAGESQUIRE_LINK=true` lets this site pair with another owner's PageSquire site ([PageSquire Link](https://github.com/naufaldenta/pagesquire/blob/main/docs/link.md#using-link-phase-6a)).
 
 - The package serves `POST /pagesquire/link`, adds a `link` section to `/.well-known/pagesquire.json` and keeps links in `storage/app/pagesquire-links.json` (move it with `PAGESQUIRE_LINK_STORE`).
 - Name the site with `PAGESQUIRE_LINK_NAME` and list partner-facing skills under `pagesquire.link.skills`.
 - Owners pair from the command line with `pagesquire:link-invite`, `pagesquire:link-accept`, `pagesquire:link-list`, `pagesquire:link-overview`, `pagesquire:link-approve` and `pagesquire:link-revoke`.
-- Handoffs also need the browser side: the one-tag embed with `data-link="true"`, or `createLinkBindings` and `mountLinkArrival` in a custom setup ([details](../../docs/link.md#handoff-phase-6b)). Allow `link.handoff` in your `pagesquire.capability` gate.
+- Handoffs also need the browser side: the one-tag embed with `data-link="true"`, or `createLinkBindings` and `mountLinkArrival` in a custom setup ([details](https://github.com/naufaldenta/pagesquire/blob/main/docs/link.md#handoff-phase-6b)). Allow `link.handoff` in your `pagesquire.capability` gate.
 
-With `PAGESQUIRE_A2A=true` and skill IDs under `pagesquire.link.a2a.skills`, any A2A agent can send requests into those skills ([A2A interface](../../docs/link.md#a2a-interface-phase-6e)). The package publishes a signed Agent Card and serves `POST /pagesquire/a2a`. The agent only gets a single-use link where the person continues.
+With `PAGESQUIRE_A2A=true` and skill IDs under `pagesquire.link.a2a.skills`, any A2A agent can send requests into those skills ([A2A interface](https://github.com/naufaldenta/pagesquire/blob/main/docs/link.md#a2a-interface-phase-6e)). The package publishes a signed Agent Card and serves `POST /pagesquire/a2a`. The agent only gets a single-use link where the person continues.
 
 ## Tests
 
-From the repository root, after building the protocol and installing Composer dependencies:
+From the root of the [PageSquire repository](https://github.com/naufaldenta/pagesquire), after building the protocol and installing Composer dependencies:
 
 ```sh
 php vendor/bin/phpunit tests/php/Laravel

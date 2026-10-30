@@ -1,8 +1,16 @@
 # pagesquire/server
 
-PageSquire's conversation engine for PHP 8.3, independent of Laravel. It includes a native HTTPS provider, a bounded standalone endpoint and injectable atomic file storage. See [standalone PHP integration](../../docs/standalone-php.md).
+PageSquire's conversation engine for PHP 8.3, independent of Laravel. It includes a native HTTPS provider, a bounded standalone endpoint and injectable atomic file storage. See [standalone PHP integration](https://github.com/naufaldenta/pagesquire/blob/main/docs/standalone-php.md).
 
-Not yet on Packagist, so `composer require` won't find it; install it from this repository.
+## Install
+
+```sh
+composer require pagesquire/server:^0.1@beta
+```
+
+PageSquire is in beta, so the version constraint needs `@beta`. Install `ext-curl` for the native provider transport, and `ext-sodium` to sign action calls for the companion extension.
+
+This package is a read-only copy of `packages/php` in the [PageSquire repository](https://github.com/naufaldenta/pagesquire). Send issues and pull requests there.
 
 ## Provider
 
@@ -42,11 +50,11 @@ A `Provider` implementation must bound its own HTTP time, response size and outp
 
 ## App context
 
-Optional [public app context and availability](../../docs/app-context.md) is checked for structure and meaning, passed to the provider only as current, untrusted data, and used to narrow later proposals without breaking authorization of pending results. Use matching generated schemas and browser packages. Nothing is collected by default, and no framework dependency or permission is added.
+Optional [public app context and availability](https://github.com/naufaldenta/pagesquire/blob/main/docs/app-context.md) is checked for structure and meaning, passed to the provider only as current, untrusted data, and used to narrow later proposals without breaking authorization of pending results. Use matching generated schemas and browser packages. Nothing is collected by default, and no framework dependency or permission is added.
 
 ## PageSquire Link
 
-`Link\LinkManager` pairs this site with another owner's PageSquire site ([PageSquire Link](../../docs/link.md#using-link-phase-6a)). It signs server-to-server envelopes with the `ActionSigner` site key, keeps links in a `LinkStore` (`FileLinkStore` serializes with file locks) and reaches partners through `CurlLinkTransport`, which refuses redirects and bounds time and size. Serve `LinkEndpoint` at the link path and pass `$manager->declaration()` to `ActionSigner::declaration()`.
+`Link\LinkManager` pairs this site with another owner's PageSquire site ([PageSquire Link](https://github.com/naufaldenta/pagesquire/blob/main/docs/link.md#using-link-phase-6a)). It signs server-to-server envelopes with the `ActionSigner` site key, keeps links in a `LinkStore` (`FileLinkStore` serializes with file locks) and reaches partners through `CurlLinkTransport`, which refuses redirects and bounds time and size. Serve `LinkEndpoint` at the link path and pass `$manager->declaration()` to `ActionSigner::declaration()`.
 
 ## Packaging
 
