@@ -8,6 +8,9 @@ if (PHP_SAPI !== 'cli-server' || ! in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127
 }
 $site = realpath(__DIR__.'/../../.cache/pagesquire-wordpress/fixture-7.1.3/site');
 $path = rawurldecode(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH));
+// Logged before handling, so a request that crashes PHP still shows up in the
+// fixture server's crash report. Query strings are left out.
+file_put_contents('php://stderr', 'pagesquire-request '.$_SERVER['REQUEST_METHOD'].' '.$path."\n");
 $file = realpath($site.$path);
 if (str_contains($path, '..') || str_contains($path, '\\') || preg_match('~/(?:wp-config\.php|\.ht|debug\.log|readme\.html|license\.txt|runtime|source)(?:/|$)~i', $path)) {
     http_response_code(403);

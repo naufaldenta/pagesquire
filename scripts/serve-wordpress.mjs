@@ -34,13 +34,20 @@ const server = spawn(
   { stdio: ['ignore', 'inherit', 'pipe'], windowsHide: true },
 );
 let pending = '';
+// The router logs each request before handling it. Keep the latest ones and
+// print them only if PHP exits, to show which request crashed it.
+const recent = [];
 server.stderr.on('data', (chunk) => {
   pending += chunk;
   const lines = pending.split(/\r?\n/);
   pending = lines.pop();
-  for (const line of lines)
-    if (!/Accepted$|Closing$|\[[1-5][0-9]{2}\]:/.test(line))
+  for (const line of lines) {
+    if (line.includes('pagesquire-request ')) {
+      recent.push(line);
+      if (recent.length > 20) recent.shift();
+    } else if (!/Accepted$|Closing$|\[[1-5][0-9]{2}\]:/.test(line))
       process.stderr.write(`${line}\n`);
+  }
 });
 for (const signal of ['SIGINT', 'SIGTERM'])
   process.on(signal, () => server.kill(signal));
@@ -52,6 +59,11 @@ server.on('error', (error) => {
 });
 server.on('exit', (code, signal) => {
   if (pending) process.stderr.write(`${pending}\n`);
+  const stopped = signal === 'SIGINT' || signal === 'SIGTERM';
+  if (!stopped && code !== 0 && recent.length)
+    process.stderr.write(
+      `Last requests before the fixture exited (newest last):\n${recent.join('\n')}\n`,
+    );
   process.stderr.write(
     `WordPress PHP fixture exited: code=${code ?? 'none'}, signal=${signal ?? 'none'}\n`,
   );
