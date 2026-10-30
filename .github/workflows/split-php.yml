@@ -22,9 +22,11 @@ jobs:
       - run: npm ci
       # The PHP package reads its JSON Schemas from resources/schemas, which is generated.
       - run: npx tsc -b packages/protocol && node scripts/build-protocol.mjs
+      # The action clones https://<PAT>@github.com/..., so the token goes in as the
+      # password, which GitHub accepts for both classic and fine-grained tokens.
       - uses: danharrin/monorepo-split-github-action@v2.4.5
         env:
-          GITHUB_TOKEN: ${{ secrets.SPLIT_TOKEN }}
+          PAT: x-access-token:${{ secrets.SPLIT_TOKEN }}
         with:
           package_directory: packages/${{ matrix.package.directory }}
           repository_organization: naufaldenta
