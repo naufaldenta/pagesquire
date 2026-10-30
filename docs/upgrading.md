@@ -1,6 +1,6 @@
 # Upgrading and recovery
 
-There is no published release yet, so there are no tested upgrade paths between versions. The current version is `0.1.0-beta.0`. This page covers what to check before changing a host and how to recover safely. Nothing here changes databases, restores backups, revokes tokens or resets usage counters for you. Read [API boundaries](api-contract.md), [operations](operations.md) and the [beta guide](beta.md) first.
+`0.1.0-beta.0` is the first published version, so there are no tested upgrade paths between versions yet. The current version is `0.1.0-beta.0`. This page covers what to check before changing a host and how to recover safely. Nothing here changes databases, restores backups, revokes tokens or resets usage counters for you. Read [API boundaries](api-contract.md), [operations](operations.md) and the [beta guide](beta.md) first.
 
 ## Changes that need attention
 

@@ -1,6 +1,6 @@
 # Releasing
 
-PageSquire is released on GitHub first. The repository is [naufaldenta/pagesquire](https://github.com/naufaldenta/pagesquire), with private vulnerability reporting enabled. npm and Packagist publishing is set up but runs only when you push a version tag (see [Publishing to npm and Packagist](#publishing-to-npm-and-packagist)). WordPress.org comes later. The release tooling never creates credentials, repositories, tags or releases on its own.
+The repository is [naufaldenta/pagesquire](https://github.com/naufaldenta/pagesquire), with private vulnerability reporting enabled. The six JavaScript packages are on [npm](https://www.npmjs.com/org/pagesquire) and the two PHP packages on [Packagist](https://packagist.org/packages/pagesquire/), starting with `0.1.0-beta.0`. Later versions are published when you push a version tag (see [Publishing to npm and Packagist](#publishing-to-npm-and-packagist)). The WordPress plugin ZIP and the full candidate go into GitHub prereleases. WordPress.org comes later. The release tooling never creates credentials, repositories, tags or releases on its own.
 
 The current version is **0.1.0-beta.0**. The six npm manifests are publishable: `release:check` requires `publishConfig` with public access, `repository` metadata that points at this repository, and a `LICENSE` file in each package. The root workspace stays `private`.
 
@@ -38,17 +38,17 @@ Upload `pagesquire-0.1.0-beta.0.zip` in **Plugins → Add New → Upload Plugin*
 
 ### JavaScript/TypeScript
 
-Download the tarballs into one directory and install the PageSquire packages you need together from local paths. A browser client needs these three:
+Most projects install from npm with the `beta` tag, as shown in the [README](../README.md#install-the-packages). The tarballs in a candidate are for offline installs and for checking a candidate before it is published. Download them into one directory and install the PageSquire packages you need together from local paths. A browser client needs these three:
 
 ```sh
 npm install ./pagesquire-protocol-0.1.0-beta.0.tgz ./pagesquire-core-0.1.0-beta.0.tgz ./pagesquire-client-0.1.0-beta.0.tgz
 ```
 
-React also needs the React tarball and a compatible React peer. The CLI needs its tarball plus core and protocol. The Node server needs its tarball plus protocol. Install all six for the full demo. The packages are not on the npm registry, so `npm install @pagesquire/...` will not work. Third-party dependencies still come from the internet or your cache. See the [runtime](runtime.md), [onboarding](onboarding.md) and [Node/Next.js](node-next.md) guides.
+React also needs the React tarball and a compatible React peer. The CLI needs its tarball plus core and protocol. The Node server needs its tarball plus protocol. Install all six for the full demo. Third-party dependencies still come from the internet or your cache. See the [runtime](runtime.md), [onboarding](onboarding.md) and [Node/Next.js](node-next.md) guides.
 
 ### Standalone PHP and Laravel
 
-Extract `pagesquire-server-0.1.0-beta.0.zip` and, for Laravel, `pagesquire-laravel-0.1.0-beta.0.zip` outside the web root. They contain the directories `pagesquire-server` and `pagesquire-laravel`. Merge the supplied `composer-repositories.json` fragment into your application's root `composer.json` and adjust the relative paths. Standalone PHP needs only the server entry. Keep your existing entries; do not replace the whole file.
+Most projects install from Packagist with `composer require pagesquire/server:^0.1@beta` (and `pagesquire/laravel:^0.1@beta` for Laravel). The ZIPs in a candidate are for offline installs. Extract `pagesquire-server-0.1.0-beta.0.zip` and, for Laravel, `pagesquire-laravel-0.1.0-beta.0.zip` outside the web root. They contain the directories `pagesquire-server` and `pagesquire-laravel`. Merge the supplied `composer-repositories.json` fragment into your application's root `composer.json` and adjust the relative paths. Standalone PHP needs only the server entry. Keep your existing entries; do not replace the whole file.
 
 The fragment sets explicit path-package versions and disables symlinks. The Laravel manifest requires the exact `pagesquire/server` version, so a path repository for the server needs that version too. Run your normal Composer install or update, then follow [standalone PHP](standalone-php.md) or [Laravel](laravel-react.md). Composer documents [path repositories](https://getcomposer.org/doc/05-repositories.md#path). The monorepo root is a development workspace, not a package, so do not submit it to Packagist.
 

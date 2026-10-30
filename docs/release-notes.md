@@ -1,6 +1,6 @@
 # PageSquire 0.1.0-beta.0 — development beta
 
-This is the first beta version of PageSquire. It works end to end and has a large automated test suite, but it has not yet been tried on many real sites, models or browsers. There is no tagged GitHub release yet, and nothing is published to npm, Packagist or WordPress.org. The source is at [naufaldenta/pagesquire](https://github.com/naufaldenta/pagesquire), where private vulnerability reporting is enabled. See the [beta guide](beta.md) for testing.
+This is the first beta version of PageSquire. It works end to end and has a large automated test suite, but it has not yet been tried on many real sites, models or browsers. The JavaScript packages are on npm and the PHP packages on Packagist ([install](../README.md#install-the-packages)). There is no tagged GitHub release yet, and the WordPress plugin is not on WordPress.org. The source is at [naufaldenta/pagesquire](https://github.com/naufaldenta/pagesquire), where private vulnerability reporting is enabled. See the [beta guide](beta.md) for testing.
 
 ## Included
 

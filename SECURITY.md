@@ -8,7 +8,7 @@ If GitHub reporting is unavailable, open a public issue that only asks for a pri
 
 ## Supported versions
 
-The only version is `0.1.0-beta.0`, and there is no published release yet. Older commits and production deployments are not supported. There is no guaranteed response time or backport policy. Security fixes will be listed in the release notes with the affected and fixed versions. See the [compatibility matrix](docs/compatibility.md) for what is tested.
+The only version is `0.1.0-beta.0`, published on npm and Packagist. There is no GitHub release yet. Older commits and production deployments are not supported. There is no guaranteed response time or backport policy. Security fixes will be listed in the release notes with the affected and fixed versions. See the [compatibility matrix](docs/compatibility.md) for what is tested.
 
 ## Security model
 

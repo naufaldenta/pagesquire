@@ -1,6 +1,6 @@
 # Detailed status
 
-PageSquire **0.1.0-beta.0** is in beta. It works end to end and has a large automated test suite, but it has not yet been tried on many real sites, models or browsers. Nothing is published to npm, Packagist or WordPress.org, and there is no GitHub release yet. See the [roadmap](ROADMAP.md) for what is next.
+PageSquire **0.1.0-beta.0** is in beta. It works end to end and has a large automated test suite, but it has not yet been tried on many real sites, models or browsers. The JavaScript packages are published on npm and the PHP packages on Packagist ([install](../README.md#install-the-packages)). The WordPress plugin is not on WordPress.org, and there is no GitHub release yet. See the [roadmap](ROADMAP.md) for what is next.
 
 ## What is implemented
 

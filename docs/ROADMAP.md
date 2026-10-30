@@ -4,7 +4,7 @@ This page lists what is built and what comes next. Milestone labels (F0, B1, C2 
 
 ## Where things stand
 
-PageSquire is at `0.1.0-beta.0`. Everything below works end to end and is covered by a large automated test suite, but it has not yet been tried on many real sites, models or browsers. Nothing is published to npm, Packagist or WordPress.org, and there is no GitHub release yet. The source is on [GitHub](https://github.com/naufaldenta/pagesquire).
+PageSquire is at `0.1.0-beta.0`. Everything below works end to end and is covered by a large automated test suite, but it has not yet been tried on many real sites, models or browsers. The JavaScript packages are published on npm and the PHP packages on Packagist ([install](../README.md#install-the-packages)). The WordPress plugin is not on WordPress.org, and there is no GitHub release yet. The source is on [GitHub](https://github.com/naufaldenta/pagesquire).
 
 Two public demos run on PageSquire: the [Kabarin demo](https://pagesquire-kabarin-demo.vercel.app/) and [OFFBEAT](../examples/brutalist-demo/README.md). The Kabarin demo has a shared daily AI quota.
 

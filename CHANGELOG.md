@@ -2,9 +2,9 @@
 
 PageSquire follows semantic versioning for its packages. The protocol contracts have their own version numbers.
 
-## Unreleased: 0.1.0-beta.0
+## 0.1.0-beta.0 (2026-10-29)
 
-The first beta. Package, CLI and WordPress versions are now `0.1.0-beta.0`; protocol and storage formats did not change. Nothing is published to npm, Packagist or WordPress.org yet.
+The first beta. Package, CLI and WordPress versions are now `0.1.0-beta.0`; protocol and storage formats did not change. The six JavaScript packages are published on npm under the `beta` tag, and `pagesquire/server` and `pagesquire/laravel` on Packagist. The WordPress plugin is not on WordPress.org yet.
 
 ### Added
 

@@ -1,6 +1,6 @@
 # Beta testing
 
-The current development version is **0.1.0-beta.0**. It works end to end and has a large automated test suite, but it has not yet been tried on many real sites, models or browsers. There is no tagged beta release yet: installing from the development branch means installing source, not a published package.
+The current development version is **0.1.0-beta.0**. It works end to end and has a large automated test suite, but it has not yet been tried on many real sites, models or browsers. The JavaScript packages are on npm and the PHP packages on Packagist ([install](../README.md#install-the-packages)). There is no tagged GitHub release yet, so the WordPress plugin ZIP still has to be built from source, and installing from the development branch means installing source, not a published package.
 
 ## Live demo
 
