@@ -90,6 +90,7 @@ test('an owner pairs WordPress with a Node partner, approves and revokes', async
 }) => {
   const partner = await partnerSite();
   const status = page.locator('#pagesquire-admin-status');
+  let passed = false;
   try {
     await login(page);
     await page.goto(`${origin}/wp-admin/admin.php?page=pagesquire`);
@@ -276,11 +277,18 @@ test('an owner pairs WordPress with a Node partner, approves and revokes', async
     await page.getByLabel('Invitation from a partner').fill('psq1.nonsense');
     await page.getByRole('button', { name: 'Accept invitation' }).click();
     await expect(status).toContainText('not a valid invitation');
+    passed = true;
   } finally {
-    await page.getByLabel('Enable PageSquire Link').uncheck();
-    await page.getByLabel('Let AI agents send requests (A2A)').uncheck();
-    await page.getByRole('button', { name: 'Save Link settings' }).click();
-    await expect(status).toContainText('Link is off.');
+    // Turn Link off for the tests that follow. When the test has already
+    // failed, a failing clean-up must not replace the original error.
+    try {
+      await page.getByLabel('Enable PageSquire Link').uncheck();
+      await page.getByLabel('Let AI agents send requests (A2A)').uncheck();
+      await page.getByRole('button', { name: 'Save Link settings' }).click();
+      await expect(status).toContainText('Link is off.');
+    } catch (error) {
+      if (passed) throw error;
+    }
     partner.server.close();
   }
 });
