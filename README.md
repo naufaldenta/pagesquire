@@ -14,6 +14,8 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT" /></a>
   <a href="packages/wordpress/LICENSE"><img src="https://img.shields.io/badge/WordPress%20plugin-GPL--3.0--or--later-blue" alt="WordPress plugin: GPL-3.0-or-later" /></a>
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.1.0--beta.0-orange" alt="Version 0.1.0-beta.0" /></a>
+  <a href="https://www.npmjs.com/package/@pagesquire/client"><img src="https://img.shields.io/npm/v/@pagesquire/client/beta?label=npm" alt="npm" /></a>
+  <a href="https://packagist.org/packages/pagesquire/server"><img src="https://img.shields.io/packagist/v/pagesquire/server?include_prereleases&label=packagist" alt="Packagist" /></a>
   <a href="https://github.com/naufaldenta/pagesquire/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/naufaldenta/pagesquire/ci.yml?branch=main&label=checks" alt="Checks" /></a>
   <a href="https://github.com/naufaldenta/pagesquire/commits/main"><img src="https://img.shields.io/github/last-commit/naufaldenta/pagesquire" alt="Last commit" /></a>
   <img src="https://img.shields.io/badge/node-%3E%3D24-339933" alt="Node.js 24 or later" />
@@ -66,6 +68,45 @@ npm run demo
 
 Open the address it prints. The demo runs real registered actions without an API key. `npm run demo:chat` adds a PHP conversation loop with a scripted model.
 
+### Install the packages
+
+The JavaScript packages are on [npm](https://www.npmjs.com/org/pagesquire) and the PHP packages on [Packagist](https://packagist.org/packages/pagesquire/). PageSquire is in beta, so ask for the `beta` tag on npm and add `@beta` in Composer. Keep every PageSquire package on the same version; they depend on each other exactly.
+
+```sh
+# Browser widget for any framework
+npm install @pagesquire/protocol@beta @pagesquire/core@beta @pagesquire/client@beta
+# React, Inertia or Next.js frontends also need
+npm install @pagesquire/react@beta
+# Node.js or Next.js backend
+npm install @pagesquire/server@beta
+```
+
+```sh
+# Plain PHP backend
+composer require pagesquire/server:^0.1@beta
+# Laravel backend
+composer require pagesquire/server:^0.1@beta pagesquire/laravel:^0.1@beta
+```
+
+To map an existing site, run the onboarding CLI from the website's folder without adding it to the project's dependencies:
+
+```sh
+npx @pagesquire/cli@beta init --root . --url http://127.0.0.1:8000/
+```
+
+| Package                                                                      | What it is                                             |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------ |
+| [`@pagesquire/protocol`](https://www.npmjs.com/package/@pagesquire/protocol) | Shared contracts, JSON Schemas and validators          |
+| [`@pagesquire/core`](https://www.npmjs.com/package/@pagesquire/core)         | Page observation, verified execution and WebMCP bridge |
+| [`@pagesquire/client`](https://www.npmjs.com/package/@pagesquire/client)     | Conversation loop, transport and chat widget           |
+| [`@pagesquire/react`](https://www.npmjs.com/package/@pagesquire/react)       | React components and Inertia and Next.js navigation    |
+| [`@pagesquire/server`](https://www.npmjs.com/package/@pagesquire/server)     | Node.js engine, model providers and storage            |
+| [`@pagesquire/cli`](https://www.npmjs.com/package/@pagesquire/cli)           | Onboarding CLI for existing projects                   |
+| [`pagesquire/server`](https://packagist.org/packages/pagesquire/server)      | PHP engine, endpoints, providers and storage           |
+| [`pagesquire/laravel`](https://packagist.org/packages/pagesquire/laravel)    | Laravel routes, gates and session handling             |
+
+Then follow the guide for your stack under [Integrations](#integrations). The one-tag bundle and the WordPress plugin are not registry packages; see [Add it to your site](#add-it-to-your-site) and the [WordPress plugin](packages/wordpress/README.md).
+
 ### Add it to your site
 
 ```html
@@ -79,7 +120,7 @@ Open the address it prints. The demo runs real registered actions without an API
 ></script>
 ```
 
-`npm run build` writes the bundle, stylesheet and action catalog to `packages/embed/dist/`. Host them on your site and point `data-endpoint` at a PageSquire backend that loads the same `manifest.json`. See the [one-tag embed guide](packages/embed/README.md).
+The one-tag bundle is not on npm. In a checkout of this repository, `npm run build` writes the bundle, stylesheet and action catalog to `packages/embed/dist/`. Host them on your site and point `data-endpoint` at a PageSquire backend that loads the same `manifest.json`. See the [one-tag embed guide](packages/embed/README.md).
 
 ### Connect a model
 
@@ -128,7 +169,7 @@ Page text, model output and browser results are treated as untrusted data. A bro
 
 ## Project status
 
-PageSquire is in beta (`0.1.0-beta.0`). It works end to end and is covered by a large test suite, but it has not been tested on every site, browser and model. Packages are not yet published to npm, Packagist or the WordPress plugin directory, so install from this repository for now. See [status](docs/status.md) and the [roadmap](docs/ROADMAP.md).
+PageSquire is in beta (`0.1.0-beta.0`). It works end to end and is covered by a large test suite, but it has not been tested on every site, browser and model. The JavaScript and PHP packages are published on npm and Packagist as `0.1.0-beta.0` ([install](#install-the-packages)). The WordPress plugin is not in the WordPress.org directory yet, so build its ZIP from this repository. See [status](docs/status.md) and the [roadmap](docs/ROADMAP.md).
 
 ## Run the tests
 
