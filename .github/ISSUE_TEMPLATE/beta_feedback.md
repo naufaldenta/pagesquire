@@ -10,7 +10,7 @@ assignees: ''
 
 - PageSquire version and commit:
 - Framework or plugin, runtime and browser versions:
-- Installed from (source, npm tarballs, Composer path archive, WordPress ZIP):
+- Installed from (npm, Packagist, source, npm tarballs, Composer path archive, WordPress ZIP):
 - Test site (staging or throwaway with synthetic data; no private URLs):
 
 ## Setup

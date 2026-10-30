@@ -14,7 +14,7 @@ What went wrong? For security problems, use private reporting instead (see SECUR
 
 - PageSquire version or commit:
 - Integration and host, framework, PHP, Node and browser versions:
-- Installed from (source, local tarballs or plugin ZIP):
+- Installed from (npm, Packagist, source, local tarballs or plugin ZIP):
 
 ## Steps to reproduce
 
