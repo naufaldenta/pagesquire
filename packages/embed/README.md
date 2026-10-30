@@ -11,7 +11,11 @@ For custom capabilities, use the npm packages and the [onboarding CLI](../../doc
 
 ## 1. Build or host the files
 
+The bundle is not one of the npm packages. Build it from a checkout of this repository:
+
 ```sh
+git clone https://github.com/naufaldenta/pagesquire.git
+cd pagesquire
 npm ci && npm run build
 ```
 
@@ -21,7 +25,7 @@ The build writes `packages/embed/dist/`:
 - `pagesquire.css`
 - `manifest.json`, the catalog the server must load
 
-Serve the two browser files from your own origin or CDN. PageSquire is not published yet, so there is no public CDN copy; once it is released, a CDN such as jsDelivr can serve the same files.
+Serve the two browser files from your own origin or CDN. There is no public CDN copy, because no published package contains the bundle.
 
 ## 2. Add the tag
 
@@ -59,8 +63,9 @@ Configuration is read only from the script element's attributes. Nothing is read
 
 The bundle never holds provider keys. Point `data-endpoint` at any PageSquire backend that loads `dist/manifest.json` as its catalog:
 
-- [Node / Next.js](../../docs/node-next.md): `new ConversationEngine({ manifest, provider })` with `createChatHandler`.
-- [Standalone PHP](../../docs/standalone-php.md) or [Laravel](../../docs/laravel-react.md): put the manifest in the engine or `pagesquire.manifest` config.
+- [Node / Next.js](../../docs/node-next.md): `npm install @pagesquire/server@beta`, then `new ConversationEngine({ manifest, provider })` with `createChatHandler`.
+- [Standalone PHP](../../docs/standalone-php.md): `composer require pagesquire/server:^0.1@beta`, then put the manifest in the engine.
+- [Laravel](../../docs/laravel-react.md): `composer require pagesquire/server:^0.1@beta pagesquire/laravel:^0.1@beta`, then set the `pagesquire.manifest` config.
 
 Allow the four capability IDs in the host's authorization (for example `capabilityIds` in Node, or the Laravel gates). The usual server rules still apply: exact Origin, a CSRF token bound to the session, private storage and budgets.
 

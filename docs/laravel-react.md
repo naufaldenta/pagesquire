@@ -10,7 +10,16 @@ These browser features plug into the same setup:
 
 ## 1. Install the packages
 
-The packages are not on Packagist or npm yet. Use Composer path repositories for `packages/php` and `packages/laravel`, each with an explicit version (`"options": { "versions": { "pagesquire/server": "0.1.0-beta.0" } }`, and the same for `pagesquire/laravel`), because the Laravel package requires that exact server version. Use npm workspaces or local tarballs for `protocol`, `core`, `client` and `react`. Build PageSquire first so that the JavaScript validators and PHP schemas exist. The [Laravel package guide](../packages/laravel/README.md) covers server configuration and test commands.
+The PHP packages are on Packagist and the browser packages on npm. PageSquire is in beta, so add `@beta` in Composer and ask for the `beta` tag on npm. From your Laravel project:
+
+```sh
+composer require pagesquire/server:^0.1@beta pagesquire/laravel:^0.1@beta
+npm install @pagesquire/protocol@beta @pagesquire/core@beta @pagesquire/client@beta @pagesquire/react@beta
+```
+
+Name both Composer packages: Composer only accepts a beta version for packages you require directly, and `pagesquire/laravel` requires the exact matching `pagesquire/server` version. Keep the npm packages on one version too. The packages already contain the built JavaScript validators and PHP schemas, so there is no build step. The [Laravel package guide](../packages/laravel/README.md) covers server configuration.
+
+To try unreleased changes, you can still point Composer path repositories at `packages/php` and `packages/laravel` in a built checkout, each with an explicit version (`"options": { "versions": { "pagesquire/server": "0.1.0-beta.0" } }`, and the same for `pagesquire/laravel`).
 
 ## 2. Register a site adapter
 

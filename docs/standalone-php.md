@@ -10,7 +10,17 @@ These browser features work with the PHP backend unchanged:
 
 ## Installing the package
 
-The package is not on Packagist yet. Build this checkout first (`npm ci`, `npm run build`) so that `packages/php/resources/schemas/*.json` exists. In your PHP project, add a Composer path repository that points at this checkout's `packages/php`, and require `pagesquire/server` with `@dev`. Install `ext-curl` for the native transport. The package does not depend on Laravel.
+The package is on [Packagist](https://packagist.org/packages/pagesquire/server). PageSquire is in beta, so the version constraint needs `@beta`. From your PHP project:
+
+```sh
+composer require pagesquire/server:^0.1@beta
+```
+
+Install `ext-curl` for the native transport. The package does not depend on Laravel and already contains the protocol's JSON Schemas.
+
+The browser side comes from npm (`npm install @pagesquire/protocol@beta @pagesquire/core@beta @pagesquire/client@beta`), or from the prebuilt [one-tag embed](../packages/embed/README.md) if your site has no JavaScript build.
+
+To try unreleased changes, build a checkout of this repository (`npm ci`, `npm run build`) so that `packages/php/resources/schemas/*.json` exists, add a Composer path repository that points at its `packages/php`, and require `pagesquire/server` with `@dev`.
 
 ## Endpoint
 

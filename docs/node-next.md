@@ -1,6 +1,6 @@
 # Node and Next.js integration
 
-PageSquire ships a Node.js 24 backend (`@pagesquire/server`) and a Next.js 16.4.2 App Router fixture. You do not train a model for each website. Use the [onboarding CLI](onboarding.md) to map the site's real controls, write verified capabilities and connect a catalog that the server owns. The packages are not on npm yet; install them from this repository.
+PageSquire ships a Node.js 24 backend (`@pagesquire/server`) and a Next.js 16.4.2 App Router fixture. You do not train a model for each website. Use the [onboarding CLI](onboarding.md) to map the site's real controls, write verified capabilities and connect a catalog that the server owns.
 
 These browser features work the same way in Next.js:
 
@@ -8,11 +8,22 @@ These browser features work the same way in Next.js:
 - [AppContext](app-context.md). Optional public state and feature availability from the runtime. It is not server identity or permission. Deploy matching schemas first, and read current host state rather than a stale React closure.
 - [Assistant driving](assistant-driving.md). Animated cursor, preparing host controls, scoped reading, tours and local speech. Wait until the destination is committed and ready before reading or summarizing; a path change is not enough. Keep the server catalog and permission checks identical to the browser definitions.
 
+## Install
+
+The packages are on npm. PageSquire is in beta, so ask for the `beta` tag, and keep every PageSquire package on the same version:
+
+```sh
+npm install @pagesquire/server@beta
+npm install @pagesquire/protocol@beta @pagesquire/core@beta @pagesquire/client@beta @pagesquire/react@beta
+```
+
+The first line is the Node.js 24 backend. The second is the browser side; leave out `@pagesquire/react` if your frontend does not use React. In a Next.js app, install both into the same project.
+
 ## Node backend
 
 Set `PAGESQUIRE_PROVIDER`, `PAGESQUIRE_API_KEY` and `PAGESQUIRE_MODEL` on the server. Custom or regional gateways also need `PAGESQUIRE_PROVIDER_URL`. See [providers](providers.md); presets do not choose a model for you. A React or browser-only app still needs a backend to keep the key private.
 
-Build PageSquire, install the packages into your project, and keep the server import out of client bundles. Your app must provide a real session and auth service and a private, persistent storage directory. `hostAuth` and `manifest` below are your own code, not part of PageSquire:
+Keep the `@pagesquire/server` import out of client bundles. Your app must provide a real session and auth service and a private, persistent storage directory. `hostAuth` and `manifest` below are your own code, not part of PageSquire:
 
 ```ts
 import {
