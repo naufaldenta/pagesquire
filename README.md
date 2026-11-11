@@ -215,6 +215,10 @@ Thanks to everyone who has helped build PageSquire.
       <sub>Creator and maintainer</sub>
     </td>
     <td align="center" valign="top" width="160">
+      <a href="https://github.com/dhendra-vibiano"><img src="https://github.com/dhendra-vibiano.png?size=200" width="100" height="100" alt="Dr. Dhendra Marutho, S.Kom, M.Kom" /><br /><sub><b>Dr. Dhendra Marutho, S.Kom, M.Kom</b></sub></a><br />
+      <sub>Initiator and project advisor</sub>
+    </td>
+    <td align="center" valign="top" width="160">
       <a href="https://github.com/athailahalfarabi"><img src="https://github.com/athailahalfarabi.png?size=200" width="100" height="100" alt="Ibnu Athailah" /><br /><sub><b>Ibnu Athailah</b></sub></a><br />
       <sub>Marketing</sub>
     </td>
