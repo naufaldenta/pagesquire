@@ -38,6 +38,8 @@ The repository and issue tracker are at [naufaldenta/pagesquire](https://github.
 
 For a bigger change, describe the integration boundary and what compatibility you are claiming before you start. Then add a fixture and a failing test, make the smallest safe change, and run the affected tests plus type, format and release checks. The PR template asks for the commands you ran, their results and anything you did not test. CI runs on Windows and Ubuntu; check the [results for your commit](https://github.com/naufaldenta/pagesquire/actions/workflows/ci.yml). A maintainer reviews every PR before merge.
 
+In your first pull request, add yourself to the [Contributors](README.md#contributors) table in the README: your name, a link to your GitHub profile and what you helped with. Beta testers and translators are welcome there too; ask in your issue and a maintainer will add you.
+
 Contributions must be your own work or come with compatible licensing. The packages are MIT-licensed. The WordPress plugin bundles them under GPL-3.0-or-later and keeps the dependency notices and corresponding source. Ask before changing licenses or adding dependencies.
 
 See [adapter authoring](docs/adapter-authoring.md) for capability contracts and [releasing](docs/releasing.md) for versions and release steps.
