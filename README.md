@@ -214,6 +214,10 @@ Thanks to everyone who has helped build PageSquire.
       <a href="https://github.com/naufaldenta"><img src="https://github.com/naufaldenta.png?size=200" width="100" height="100" alt="Naufal Denta" /><br /><sub><b>Naufal Denta</b></sub></a><br />
       <sub>Creator and maintainer</sub>
     </td>
+    <td align="center" valign="top" width="160">
+      <a href="https://github.com/athailahalfarabi"><img src="https://github.com/athailahalfarabi.png?size=200" width="100" height="100" alt="Ibnu Athailah" /><br /><sub><b>Ibnu Athailah</b></sub></a><br />
+      <sub>Marketing</sub>
+    </td>
   </tr>
 </table>
 
