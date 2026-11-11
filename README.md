@@ -18,6 +18,7 @@
   <a href="https://packagist.org/packages/pagesquire/server"><img src="https://img.shields.io/packagist/v/pagesquire/server?include_prereleases&label=packagist" alt="Packagist" /></a>
   <a href="https://github.com/naufaldenta/pagesquire/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/naufaldenta/pagesquire/ci.yml?branch=main&label=checks" alt="Checks" /></a>
   <a href="https://github.com/naufaldenta/pagesquire/commits/main"><img src="https://img.shields.io/github/last-commit/naufaldenta/pagesquire" alt="Last commit" /></a>
+  <a href="#contributors"><img src="https://img.shields.io/github/contributors/naufaldenta/pagesquire" alt="Contributors" /></a>
   <img src="https://img.shields.io/badge/node-%3E%3D24-339933" alt="Node.js 24 or later" />
   <img src="https://img.shields.io/badge/php-%3E%3D8.3-777BB4" alt="PHP 8.3 or later" />
 </p>
@@ -200,6 +201,23 @@ npm test
 ## Contributing
 
 Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [changelog](CHANGELOG.md). Please report security issues privately as described in [SECURITY.md](SECURITY.md).
+
+There are many ways to help besides code: report bugs, try the [beta](docs/beta.md) on your own site, improve the docs, add translations, or write an adapter for a framework we don't cover yet.
+
+### Contributors
+
+Thanks to everyone who has helped build PageSquire.
+
+<table>
+  <tr>
+    <td align="center" valign="top" width="160">
+      <a href="https://github.com/naufaldenta"><img src="https://github.com/naufaldenta.png?size=200" width="100" height="100" alt="Naufal Denta" /><br /><sub><b>Naufal Denta</b></sub></a><br />
+      <sub>Creator and maintainer</sub>
+    </td>
+  </tr>
+</table>
+
+Made your first contribution? Add yourself to this table in your pull request, with a link to your GitHub profile and what you helped with: code, docs, tests, design, translations or beta testing. The full history is on the [contributors graph](https://github.com/naufaldenta/pagesquire/graphs/contributors).
 
 ## License
 
